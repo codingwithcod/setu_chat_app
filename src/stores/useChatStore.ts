@@ -1,0 +1,103 @@
+import { create } from "zustand";
+import type {
+  ConversationWithDetails,
+  MessageWithSender,
+  TypingUser,
+} from "@/types";
+
+interface ChatState {
+  conversations: ConversationWithDetails[];
+  activeConversation: ConversationWithDetails | null;
+  messages: MessageWithSender[];
+  typingUsers: TypingUser[];
+  replyingTo: MessageWithSender | null;
+  isSidebarOpen: boolean;
+
+  setConversations: (conversations: ConversationWithDetails[]) => void;
+  addConversation: (conversation: ConversationWithDetails) => void;
+  updateConversation: (
+    id: string,
+    updates: Partial<ConversationWithDetails>
+  ) => void;
+  removeConversation: (id: string) => void;
+  setActiveConversation: (conversation: ConversationWithDetails | null) => void;
+  setMessages: (messages: MessageWithSender[]) => void;
+  addMessage: (message: MessageWithSender) => void;
+  updateMessage: (id: string, updates: Partial<MessageWithSender>) => void;
+  removeMessage: (id: string) => void;
+  prependMessages: (messages: MessageWithSender[]) => void;
+  setTypingUsers: (users: TypingUser[]) => void;
+  addTypingUser: (user: TypingUser) => void;
+  removeTypingUser: (userId: string) => void;
+  setReplyingTo: (message: MessageWithSender | null) => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+export const useChatStore = create<ChatState>((set) => ({
+  conversations: [],
+  activeConversation: null,
+  messages: [],
+  typingUsers: [],
+  replyingTo: null,
+  isSidebarOpen: true,
+
+  setConversations: (conversations) => set({ conversations }),
+  addConversation: (conversation) =>
+    set((state) => ({
+      conversations: [conversation, ...state.conversations],
+    })),
+  updateConversation: (id, updates) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, ...updates } : c
+      ),
+      activeConversation:
+        state.activeConversation?.id === id
+          ? { ...state.activeConversation, ...updates }
+          : state.activeConversation,
+    })),
+  removeConversation: (id) =>
+    set((state) => ({
+      conversations: state.conversations.filter((c) => c.id !== id),
+      activeConversation:
+        state.activeConversation?.id === id ? null : state.activeConversation,
+    })),
+  setActiveConversation: (conversation) =>
+    set({ activeConversation: conversation }),
+  setMessages: (messages) => set({ messages }),
+  addMessage: (message) =>
+    set((state) => ({
+      messages: [...state.messages, message],
+    })),
+  updateMessage: (id, updates) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
+      ),
+    })),
+  removeMessage: (id) =>
+    set((state) => ({
+      messages: state.messages.filter((m) => m.id !== id),
+    })),
+  prependMessages: (messages) =>
+    set((state) => ({
+      messages: [...messages, ...state.messages],
+    })),
+  setTypingUsers: (typingUsers) => set({ typingUsers }),
+  addTypingUser: (user) =>
+    set((state) => ({
+      typingUsers: [
+        ...state.typingUsers.filter((u) => u.user_id !== user.user_id),
+        user,
+      ],
+    })),
+  removeTypingUser: (userId) =>
+    set((state) => ({
+      typingUsers: state.typingUsers.filter((u) => u.user_id !== userId),
+    })),
+  setReplyingTo: (replyingTo) => set({ replyingTo }),
+  toggleSidebar: () =>
+    set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  setSidebarOpen: (isSidebarOpen) => set({ isSidebarOpen }),
+}));
