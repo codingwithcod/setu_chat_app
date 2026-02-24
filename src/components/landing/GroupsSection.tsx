@@ -68,11 +68,11 @@ export default function GroupsSection() {
               {/* Member list */}
               <div className="p-4 space-y-2">
                 {[
-                  { name: "Sarah M.", role: "Admin", online: true, color: "from-pink-500 to-rose-500" },
-                  { name: "Alex K.", role: "Member", online: true, color: "from-blue-500 to-cyan-500" },
-                  { name: "Jordan L.", role: "Member", online: true, color: "from-emerald-500 to-teal-500" },
-                  { name: "Taylor R.", role: "Member", online: false, color: "from-amber-500 to-orange-500" },
-                  { name: "Morgan P.", role: "Member", online: false, color: "from-violet-500 to-purple-500" },
+                  { name: "Harsh S.", role: "Admin", online: true, color: "from-pink-500 to-rose-500" },
+                  { name: "Shivam D.", role: "Member", online: true, color: "from-blue-500 to-cyan-500" },
+                  { name: "Shubham K.", role: "Member", online: true, color: "from-emerald-500 to-teal-500" },
+                  { name: "Abhishek S.", role: "Member", online: false, color: "from-amber-500 to-orange-500" },
+                  { name: "Hritvik G.", role: "Member", online: false, color: "from-violet-500 to-purple-500" },
                 ].map((m) => (
                   <div key={m.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
                     <div className="relative">
