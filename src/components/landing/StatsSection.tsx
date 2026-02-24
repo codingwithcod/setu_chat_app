@@ -1,27 +1,41 @@
 "use client";
 
-import { MessageSquare, Users, Zap, Globe } from "lucide-react";
+import { MessageSquare, Users, Zap, Globe, TrendingUp } from "lucide-react";
 
 const stats = [
-  { icon: MessageSquare, label: "Messages Sent Daily", value: "10M+", color: "text-primary" },
-  { icon: Users, label: "Active Users", value: "500K+", color: "text-emerald-500" },
-  { icon: Zap, label: "Uptime", value: "99.9%", color: "text-amber-500" },
-  { icon: Globe, label: "Countries", value: "120+", color: "text-blue-500" },
+  { icon: MessageSquare, label: "Messages Sent Daily", value: "10M+", color: "text-primary", gradient: "from-primary/20 to-violet-500/20", borderGlow: "group-hover:shadow-primary/20" },
+  { icon: Users, label: "Active Users", value: "500K+", color: "text-emerald-500", gradient: "from-emerald-500/20 to-teal-500/20", borderGlow: "group-hover:shadow-emerald-500/20" },
+  { icon: Zap, label: "Uptime Guarantee", value: "99.9%", color: "text-amber-500", gradient: "from-amber-500/20 to-orange-500/20", borderGlow: "group-hover:shadow-amber-500/20" },
+  { icon: Globe, label: "Countries", value: "120+", color: "text-blue-500", gradient: "from-blue-500/20 to-cyan-500/20", borderGlow: "group-hover:shadow-blue-500/20" },
 ];
 
 export default function StatsSection() {
   return (
     <section className="relative py-20 -mt-10 z-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="animate-on-scroll grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((s) => (
+        <div className="animate-on-scroll grid grid-cols-2 md:grid-cols-4 gap-5">
+          {stats.map((s, i) => (
             <div
               key={s.label}
-              className="landing-card rounded-2xl p-6 text-center group"
+              className={`group relative rounded-2xl border border-border/40 bg-card/50 backdrop-blur-xl p-6 text-center overflow-hidden transition-all duration-500 hover:shadow-2xl ${s.borderGlow} hover:border-transparent`}
+              style={{ transitionDelay: `${i * 80}ms` }}
             >
-              <s.icon className={`h-8 w-8 mx-auto mb-3 ${s.color} transition-transform group-hover:scale-110`} />
-              <p className="text-3xl sm:text-4xl font-extrabold tracking-tight">{s.value}</p>
-              <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
+              {/* Top gradient bar */}
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${s.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+              
+              {/* Background glow */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${s.gradient} opacity-0 group-hover:opacity-30 transition-opacity duration-500`} />
+              
+              <div className="relative z-10">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center mx-auto mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6`}>
+                  <s.icon className={`h-6 w-6 ${s.color}`} />
+                </div>
+                <p className="text-3xl sm:text-4xl font-extrabold tracking-tight counter-mono">{s.value}</p>
+                <p className="text-sm text-muted-foreground mt-1.5 flex items-center justify-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-emerald-500" />
+                  {s.label}
+                </p>
+              </div>
             </div>
           ))}
         </div>

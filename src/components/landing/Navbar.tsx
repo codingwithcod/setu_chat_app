@@ -30,6 +30,7 @@ export default function Navbar() {
     { label: "Features", href: "#features" },
     { label: "Security", href: "#security" },
     { label: "Download", href: "#download" },
+    { label: "API", href: "#api" },
     { label: "Groups", href: "#groups" },
   ];
 
