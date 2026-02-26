@@ -32,25 +32,44 @@ export function useRealtimeMessages(conversationId: string | null) {
           table: "messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload: { new: MessageWithSender }) => {
+        async (payload: { new: MessageWithSender }) => {
           const newMessage = payload.new;
           if (newMessage.sender_id !== userIdRef.current) {
             // Fetch sender info
-            supabase
+            const { data: sender } = await supabase
               .from("profiles")
               .select(
                 "id, username, first_name, last_name, avatar_url, is_online"
               )
               .eq("id", newMessage.sender_id)
-              .single()
-              .then(({ data: sender }) => {
-                if (sender) {
-                  addMessage({
-                    ...newMessage,
-                    sender,
-                  } as MessageWithSender);
-                }
-              });
+              .single();
+
+            // Fetch reply message info if this is a reply
+            let replyMessage = undefined;
+            if (newMessage.reply_to) {
+              const { data: replyData } = await supabase
+                .from("messages")
+                .select(
+                  `
+                  id, content, message_type, sender_id,
+                  sender:profiles(id, username, first_name, last_name, avatar_url)
+                `
+                )
+                .eq("id", newMessage.reply_to)
+                .single();
+
+              if (replyData) {
+                replyMessage = replyData;
+              }
+            }
+
+            if (sender) {
+              addMessage({
+                ...newMessage,
+                sender,
+                reply_message: replyMessage,
+              } as MessageWithSender);
+            }
           }
         }
       )

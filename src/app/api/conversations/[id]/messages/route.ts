@@ -162,6 +162,7 @@ export async function POST(
     .single();
 
   if (error) {
+    console.error("Message insert error:", error.message, "Body:", JSON.stringify(body));
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

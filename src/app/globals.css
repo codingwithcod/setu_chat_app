@@ -71,6 +71,18 @@
   to { transform: rotate(360deg); }
 }
 
+/* Message highlight animation (when scrolling to a replied message) */
+@keyframes message-highlight-pulse {
+  0% { background-color: hsl(var(--primary) / 0.3); }
+  40% { background-color: hsl(var(--primary) / 0.25); }
+  100% { background-color: transparent; }
+}
+
+.message-highlight {
+  border-radius: 0.75rem;
+  animation: message-highlight-pulse 2.5s ease-out forwards;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

@@ -50,6 +50,13 @@ export function MessageInput({
     }
   }, [message]);
 
+  // Auto-focus textarea when replying
+  useEffect(() => {
+    if (replyingTo && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [replyingTo]);
+
   const handleSend = () => {
     if (!message.trim()) return;
     onSend(message.trim());
@@ -118,18 +125,25 @@ export function MessageInput({
       {/* Reply preview */}
       {replyingTo && (
         <div className="flex items-center gap-2 mb-2 p-2 bg-muted rounded-lg">
-          <div className="flex-1 border-l-2 border-primary pl-2">
+          <div className="flex-1 min-w-0 border-l-2 border-primary pl-2">
             <p className="text-xs font-medium text-primary">
               Replying to {replyingTo.sender?.first_name}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
+            <p
+              className="text-xs text-muted-foreground overflow-hidden"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
               {replyingTo.content || "Media"}
             </p>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-6 w-6 shrink-0"
             onClick={() => setReplyingTo(null)}
           >
             <X className="h-3 w-3" />

@@ -100,6 +100,7 @@ export function MessageBubble({
   return (
     <div
       className={`flex ${isOwn ? "justify-end" : "justify-start"} py-0.5 group message-enter`}
+      data-message-id={message.id}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
@@ -136,24 +137,6 @@ export function MessageBubble({
             </p>
           )}
 
-          {/* Reply indicator */}
-          {message.reply_message && (
-            <div
-              className={`text-xs px-3 py-1.5 rounded-lg mb-1 border-l-2 border-primary/50 ${
-                isOwn
-                  ? "bg-primary/20 text-primary-foreground/70"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              <span className="font-medium">
-                {message.reply_message.sender?.first_name}
-              </span>
-              <p className="truncate">
-                {message.reply_message.content || "Media"}
-              </p>
-            </div>
-          )}
-
           {/* Message bubble */}
           <div className="relative">
             <div
@@ -163,6 +146,38 @@ export function MessageBubble({
                   : "bg-muted text-foreground rounded-bl-md"
               }`}
             >
+              {/* Reply indicator — INSIDE the bubble */}
+              {message.reply_message && (
+                <div
+                  onClick={() => {
+                    // Dispatch custom event to scroll to the original message
+                    window.dispatchEvent(
+                      new CustomEvent("scroll-to-message", {
+                        detail: { messageId: message.reply_message?.id },
+                      })
+                    );
+                  }}
+                  className={`text-xs px-2.5 py-1.5 rounded-lg mb-2 cursor-pointer border-l-2 transition-colors ${
+                    isOwn
+                      ? "bg-primary-foreground/10 border-primary-foreground/40 hover:bg-primary-foreground/20"
+                      : "bg-background/50 border-primary/50 hover:bg-background/80"
+                  }`}
+                >
+                  <span className="font-semibold text-[11px]">
+                    {message.reply_message.sender?.first_name}
+                  </span>
+                  <p
+                    className="mt-0.5 overflow-hidden"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {message.reply_message.content || "Media"}
+                  </p>
+                </div>
+              )}
               {/* Image */}
               {message.message_type === "image" && message.file_url && (
                 <div className="mb-2">

@@ -52,6 +52,7 @@ export default function ConversationPage() {
     setUnreadCount(0);
   }, [conversationId, resetUnreadCount]);
 
+
   // Load conversation details
   useEffect(() => {
     const loadConversation = async () => {
@@ -154,6 +155,39 @@ export default function ConversationPage() {
     direction: "up",
   });
 
+  // Listen for "scroll to message" events (when user clicks a reply preview)
+  useEffect(() => {
+    const handleScrollToMessage = (e: Event) => {
+      const { messageId } = (e as CustomEvent).detail;
+      if (!messageId || !containerRef.current) return;
+
+      const messageEl = containerRef.current.querySelector(
+        `[data-message-id="${messageId}"]`
+      ) as HTMLElement | null;
+
+      if (messageEl) {
+        // Scroll the message into view
+        messageEl.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        // Remove class first to allow re-triggering the animation
+        messageEl.classList.remove("message-highlight");
+        // Force reflow so the browser registers the removal
+        void messageEl.offsetWidth;
+        // Add highlight class
+        messageEl.classList.add("message-highlight");
+
+        // Remove highlight after animation completes
+        setTimeout(() => {
+          messageEl.classList.remove("message-highlight");
+        }, 2500);
+      }
+    };
+
+    window.addEventListener("scroll-to-message", handleScrollToMessage);
+    return () =>
+      window.removeEventListener("scroll-to-message", handleScrollToMessage);
+  }, [containerRef]);
+
   // Scroll to bottom on new message from self
   useEffect(() => {
     if (messages.length > 0) {
@@ -173,6 +207,14 @@ export default function ConversationPage() {
   ) => {
     if (!user) return;
 
+    // Capture replyingTo IMMEDIATELY before it gets cleared
+    const currentReplyingTo = useChatStore.getState().replyingTo;
+    // Guard: don't send temp IDs as reply_to (FK would fail)
+    const replyToId =
+      currentReplyingTo?.id && !currentReplyingTo.id.startsWith("temp-")
+        ? currentReplyingTo.id
+        : null;
+
     // Clear the unread divider once user sends a message
     setUnreadCount(0);
 
@@ -186,21 +228,21 @@ export default function ConversationPage() {
       file_url: fileData?.url || null,
       file_name: fileData?.name || null,
       file_size: fileData?.size || null,
-      reply_to: replyingTo?.id || null,
+      reply_to: replyToId,
       forwarded_from: null,
       is_edited: false,
       is_deleted: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       sender: user,
-      reply_message: replyingTo || undefined,
+      reply_message: currentReplyingTo || undefined,
     };
 
     addMessage(optimisticMessage);
     scrollToBottom();
 
     try {
-      await fetch(`/api/conversations/${conversationId}/messages`, {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -209,9 +251,13 @@ export default function ConversationPage() {
           file_url: fileData?.url,
           file_name: fileData?.name,
           file_size: fileData?.size,
-          reply_to: replyingTo?.id,
+          reply_to: replyToId,
         }),
       });
+      if (!res.ok) {
+        const errData = await res.json();
+        console.error("Failed to send message:", errData);
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
     }
