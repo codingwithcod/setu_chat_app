@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -13,7 +13,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { MessageListSkeleton } from "@/components/shared/LoadingSkeleton";
 import type { MessageWithSender, ConversationWithDetails } from "@/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 
 export default function ConversationPage() {
   const params = useParams();
@@ -28,16 +28,29 @@ export default function ConversationPage() {
     activeConversation,
     setActiveConversation,
     replyingTo,
+    resetUnreadCount,
   } = useChatStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // For scrolling to unread divider
+  const hasScrolledToUnread = useRef(false);
+  const unreadDividerRef = useRef<HTMLDivElement>(null);
 
   // Realtime hooks
   useRealtimeMessages(conversationId);
   const { typingUsers, sendTyping } = useTypingIndicator(conversationId);
+
+  // Reset unread count in sidebar when entering a conversation
+  useEffect(() => {
+    resetUnreadCount(conversationId);
+    hasScrolledToUnread.current = false;
+    setUnreadCount(0);
+  }, [conversationId, resetUnreadCount]);
 
   // Load conversation details
   useEffect(() => {
@@ -70,6 +83,10 @@ export default function ConversationPage() {
           setMessages(data.data as MessageWithSender[]);
           setHasMore(data.hasMore);
           setCursor(data.nextCursor);
+          // API returns the unread count (calculated BEFORE marking read)
+          if (data.unreadCount > 0) {
+            setUnreadCount(data.unreadCount);
+          }
         }
       } catch (error) {
         console.error("Failed to load messages:", error);
@@ -84,6 +101,31 @@ export default function ConversationPage() {
       setActiveConversation(null);
     };
   }, [conversationId, setMessages, setActiveConversation]);
+
+  // Smart scroll: scroll to unread divider or bottom after messages load
+  useEffect(() => {
+    if (isLoading || messages.length === 0 || hasScrolledToUnread.current)
+      return;
+
+    hasScrolledToUnread.current = true;
+
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      if (unreadCount > 0 && unreadDividerRef.current && containerRef.current) {
+        const container = containerRef.current;
+        const divider = unreadDividerRef.current;
+        const containerHeight = container.clientHeight;
+        const dividerOffset = divider.offsetTop;
+
+        // Position the divider in the upper-middle portion of the viewport
+        const scrollTarget = dividerOffset - containerHeight * 0.35;
+        container.scrollTop = Math.max(0, scrollTarget);
+      } else if (containerRef.current) {
+        // No unread messages — scroll to bottom
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      }
+    });
+  }, [isLoading, messages.length, unreadCount]);
 
   // Load more messages
   const loadMore = useCallback(async () => {
@@ -131,6 +173,9 @@ export default function ConversationPage() {
   ) => {
     if (!user) return;
 
+    // Clear the unread divider once user sends a message
+    setUnreadCount(0);
+
     // Optimistic update
     const optimisticMessage: MessageWithSender = {
       id: `temp-${Date.now()}`,
@@ -172,10 +217,19 @@ export default function ConversationPage() {
     }
   };
 
+  // Calculate where to place the unread divider
+  const unreadDividerIndex =
+    unreadCount > 0 && messages.length > 0
+      ? messages.length - unreadCount
+      : -1;
+
   if (!activeConversation) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2
+          className="h-8 w-8 text-primary"
+          style={{ animation: "spin 1s linear infinite" }}
+        />
       </div>
     );
   }
@@ -191,7 +245,10 @@ export default function ConversationPage() {
       >
         {loadingMore && (
           <div className="flex justify-center py-2">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2
+              className="h-5 w-5 text-primary"
+              style={{ animation: "spin 1s linear infinite" }}
+            />
           </div>
         )}
 
@@ -208,15 +265,32 @@ export default function ConversationPage() {
         ) : (
           <div className="space-y-1">
             {messages.map((message, index) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwn={message.sender_id === user?.id}
-                showAvatar={
-                  index === 0 ||
-                  messages[index - 1]?.sender_id !== message.sender_id
-                }
-              />
+              <div key={message.id}>
+                {/* Unread messages divider */}
+                {index === unreadDividerIndex && unreadDividerIndex > 0 && (
+                  <div
+                    ref={unreadDividerRef}
+                    className="flex items-center gap-3 my-4 px-2"
+                  >
+                    <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-primary/60" />
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                      <ChevronDown className="h-3 w-3 text-primary" />
+                      <span className="text-xs font-medium text-primary whitespace-nowrap">
+                        {unreadCount} unread message{unreadCount > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-primary/60 to-primary/60" />
+                  </div>
+                )}
+                <MessageBubble
+                  message={message}
+                  isOwn={message.sender_id === user?.id}
+                  showAvatar={
+                    index === 0 ||
+                    messages[index - 1]?.sender_id !== message.sender_id
+                  }
+                />
+              </div>
             ))}
           </div>
         )}

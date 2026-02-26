@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { usePresence } from "@/hooks/usePresence";
+import { useRealtimeConversations } from "@/hooks/useRealtimeConversations";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Loader2 } from "lucide-react";
 import type { ConversationWithDetails } from "@/types";
@@ -22,6 +23,7 @@ export default function MainLayout({
   const [mounted, setMounted] = useState(false);
 
   usePresence();
+  useRealtimeConversations();
 
   useEffect(() => {
     setMounted(true);

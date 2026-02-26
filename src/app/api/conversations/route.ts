@@ -79,6 +79,16 @@ export async function GET() {
           .neq("sender_id", user.id);
 
         unreadCount = count || 0;
+      } else {
+        // No read receipt = user has never opened this conversation
+        // Count ALL messages from other users as unread
+        const { count } = await serviceClient
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", conv.id)
+          .neq("sender_id", user.id);
+
+        unreadCount = count || 0;
       }
 
       return {

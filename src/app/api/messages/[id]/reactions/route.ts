@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // Toggle reaction on a message
 export async function POST(
@@ -7,6 +7,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -18,7 +19,7 @@ export async function POST(
   const { reaction } = await request.json();
 
   // Check if reaction exists
-  const { data: existing } = await supabase
+  const { data: existing } = await serviceClient
     .from("message_reactions")
     .select("id")
     .eq("message_id", params.id)
@@ -28,7 +29,7 @@ export async function POST(
 
   if (existing) {
     // Remove reaction
-    await supabase
+    await serviceClient
       .from("message_reactions")
       .delete()
       .eq("id", existing.id);
@@ -37,7 +38,7 @@ export async function POST(
   }
 
   // Add reaction
-  const { error } = await supabase.from("message_reactions").insert({
+  const { error } = await serviceClient.from("message_reactions").insert({
     message_id: params.id,
     user_id: user.id,
     reaction,

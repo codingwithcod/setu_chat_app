@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // Edit or delete a message
 export async function PATCH(
@@ -7,6 +7,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -17,7 +18,7 @@ export async function PATCH(
 
   const body = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceClient
     .from("messages")
     .update({
       content: body.content,
@@ -46,6 +47,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -54,7 +56,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase
+  const { error } = await serviceClient
     .from("messages")
     .update({
       is_deleted: true,

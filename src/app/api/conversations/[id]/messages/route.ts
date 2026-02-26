@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // Get messages for a conversation (paginated)
 export async function GET(
@@ -7,6 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -19,7 +20,7 @@ export async function GET(
   const cursor = searchParams.get("cursor");
   const limit = parseInt(searchParams.get("limit") || "50");
 
-  let query = supabase
+  let query = serviceClient
     .from("messages")
     .select(
       `
@@ -46,7 +47,7 @@ export async function GET(
   const messagesWithReplies = await Promise.all(
     (messages || []).map(async (msg) => {
       if (msg.reply_to) {
-        const { data: replyMsg } = await supabase
+        const { data: replyMsg } = await serviceClient
           .from("messages")
           .select(
             `
@@ -63,9 +64,40 @@ export async function GET(
     })
   );
 
-  // Update read receipt
+  // Calculate unread count BEFORE updating read receipt (only on initial load)
+  let unreadCount = 0;
+  if (!cursor && messages && messages.length > 0) {
+    const { data: readReceipt } = await serviceClient
+      .from("read_receipts")
+      .select("last_read_at")
+      .eq("conversation_id", params.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (readReceipt) {
+      const { count } = await serviceClient
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", params.id)
+        .gt("created_at", readReceipt.last_read_at)
+        .neq("sender_id", user.id);
+
+      unreadCount = count || 0;
+    } else {
+      // No read receipt = never opened → all messages from others are unread
+      const { count } = await serviceClient
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", params.id)
+        .neq("sender_id", user.id);
+
+      unreadCount = count || 0;
+    }
+  }
+
+  // Update read receipt (marks everything as read)
   if (messages && messages.length > 0) {
-    await supabase.from("read_receipts").upsert(
+    await serviceClient.from("read_receipts").upsert(
       {
         conversation_id: params.id,
         user_id: user.id,
@@ -87,6 +119,7 @@ export async function GET(
     data: messagesWithReplies?.reverse() || [],
     hasMore,
     nextCursor,
+    unreadCount,
   });
 }
 
@@ -96,6 +129,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -106,7 +140,7 @@ export async function POST(
 
   const body = await request.json();
 
-  const { data: message, error } = await supabase
+  const { data: message, error } = await serviceClient
     .from("messages")
     .insert({
       conversation_id: params.id,

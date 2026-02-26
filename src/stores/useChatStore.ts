@@ -5,6 +5,14 @@ import type {
   TypingUser,
 } from "@/types";
 
+// Helper to sort conversations by last_message_at descending
+const sortByLatest = (conversations: ConversationWithDetails[]) =>
+  [...conversations].sort(
+    (a, b) =>
+      new Date(b.last_message_at || b.created_at).getTime() -
+      new Date(a.last_message_at || a.created_at).getTime()
+  );
+
 interface ChatState {
   conversations: ConversationWithDetails[];
   activeConversation: ConversationWithDetails | null;
@@ -32,6 +40,8 @@ interface ChatState {
   setReplyingTo: (message: MessageWithSender | null) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  incrementUnreadCount: (conversationId: string) => void;
+  resetUnreadCount: (conversationId: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -42,21 +52,25 @@ export const useChatStore = create<ChatState>((set) => ({
   replyingTo: null,
   isSidebarOpen: true,
 
-  setConversations: (conversations) => set({ conversations }),
+  setConversations: (conversations) =>
+    set({ conversations: sortByLatest(conversations) }),
   addConversation: (conversation) =>
     set((state) => ({
-      conversations: [conversation, ...state.conversations],
+      conversations: sortByLatest([conversation, ...state.conversations]),
     })),
   updateConversation: (id, updates) =>
-    set((state) => ({
-      conversations: state.conversations.map((c) =>
+    set((state) => {
+      const updatedConversations = state.conversations.map((c) =>
         c.id === id ? { ...c, ...updates } : c
-      ),
-      activeConversation:
-        state.activeConversation?.id === id
-          ? { ...state.activeConversation, ...updates }
-          : state.activeConversation,
-    })),
+      );
+      return {
+        conversations: sortByLatest(updatedConversations),
+        activeConversation:
+          state.activeConversation?.id === id
+            ? { ...state.activeConversation, ...updates }
+            : state.activeConversation,
+      };
+    }),
   removeConversation: (id) =>
     set((state) => ({
       conversations: state.conversations.filter((c) => c.id !== id),
@@ -100,4 +114,20 @@ export const useChatStore = create<ChatState>((set) => ({
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   setSidebarOpen: (isSidebarOpen) => set({ isSidebarOpen }),
+  incrementUnreadCount: (conversationId) =>
+    set((state) => ({
+      conversations: sortByLatest(
+        state.conversations.map((c) =>
+          c.id === conversationId
+            ? { ...c, unread_count: (c.unread_count || 0) + 1 }
+            : c
+        )
+      ),
+    })),
+  resetUnreadCount: (conversationId) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === conversationId ? { ...c, unread_count: 0 } : c
+      ),
+    })),
 }));
