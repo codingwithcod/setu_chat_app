@@ -189,7 +189,7 @@ export default function ConversationPage() {
         // Remove highlight after animation completes
         setTimeout(() => {
           messageEl.classList.remove("message-highlight");
-        }, 2500);
+        }, 3200);
       }
     };
 

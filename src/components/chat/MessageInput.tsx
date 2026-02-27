@@ -124,13 +124,13 @@ export function MessageInput({
     <div className="border-t border-border px-4 py-3 bg-background">
       {/* Reply preview */}
       {replyingTo && (
-        <div className="flex items-center gap-2 mb-2 p-2 bg-muted rounded-lg">
-          <div className="flex-1 min-w-0 border-l-2 border-primary pl-2">
-            <p className="text-xs font-medium text-primary">
+        <div className="flex items-center gap-2 mb-2 p-2.5 reply-input-preview">
+          <div className="flex-1 min-w-0 pl-2">
+            <p className="text-xs font-semibold" style={{ color: "#22d3ee" }}>
               Replying to {replyingTo.sender?.first_name}
             </p>
             <p
-              className="text-xs text-muted-foreground overflow-hidden"
+              className="text-xs text-muted-foreground mt-0.5 overflow-hidden"
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -143,10 +143,10 @@ export function MessageInput({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 shrink-0"
+            className="h-7 w-7 shrink-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
             onClick={() => setReplyingTo(null)}
           >
-            <X className="h-3 w-3" />
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       )}

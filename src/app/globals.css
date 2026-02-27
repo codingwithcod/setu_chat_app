@@ -72,15 +72,73 @@
 }
 
 /* Message highlight animation (when scrolling to a replied message) */
-@keyframes message-highlight-pulse {
-  0% { background-color: hsl(var(--primary) / 0.3); }
-  40% { background-color: hsl(var(--primary) / 0.25); }
-  100% { background-color: transparent; }
+/* Using bright cyan/teal for maximum visibility against dark & purple backgrounds */
+@keyframes message-highlight-glow {
+  0% {
+    box-shadow: 0 0 0 2.5px #22d3ee, 0 0 20px 6px rgba(34, 211, 238, 0.35);
+    background-color: rgba(34, 211, 238, 0.12);
+  }
+  30% {
+    box-shadow: 0 0 0 2px #22d3ee, 0 0 28px 8px rgba(34, 211, 238, 0.25);
+    background-color: rgba(34, 211, 238, 0.08);
+  }
+  60% {
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.6), 0 0 18px 5px rgba(34, 211, 238, 0.18);
+    background-color: rgba(34, 211, 238, 0.06);
+  }
+  100% {
+    box-shadow: 0 0 0 0px transparent, 0 0 0 0px transparent;
+    background-color: transparent;
+  }
 }
 
 .message-highlight {
   border-radius: 0.75rem;
-  animation: message-highlight-pulse 2.5s ease-out forwards;
+  animation: message-highlight-glow 3s ease-out forwards;
+}
+
+/* Reply preview inside message bubbles — OWN messages (purple bg) */
+/* Using warm amber/yellow tint for contrast against purple */
+.reply-preview-own {
+  background: rgba(251, 191, 36, 0.14);
+  border-left: 3px solid rgba(251, 191, 36, 0.6);
+  border-radius: 0.5rem;
+}
+
+.reply-preview-own:hover {
+  background: rgba(251, 191, 36, 0.22);
+}
+
+/* Reply preview inside message bubbles — OTHER messages (dark bg) */
+/* Using teal/cyan accent */
+.reply-preview-other {
+  background: rgba(34, 211, 238, 0.08);
+  border-left: 3px solid rgba(34, 211, 238, 0.5);
+  border-radius: 0.5rem;
+}
+
+.reply-preview-other:hover {
+  background: rgba(34, 211, 238, 0.14);
+}
+
+/* Reply preview in message input */
+.reply-input-preview {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(34, 211, 238, 0.02));
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  border-left: 3px solid rgba(34, 211, 238, 0.6);
+  border-radius: 0.5rem;
+  animation: replySlideIn 0.2s ease-out;
+}
+
+@keyframes replySlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Scroll-to-bottom floating button */

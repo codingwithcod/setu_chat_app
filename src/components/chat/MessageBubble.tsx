@@ -100,7 +100,6 @@ export function MessageBubble({
   return (
     <div
       className={`flex ${isOwn ? "justify-end" : "justify-start"} py-0.5 group message-enter`}
-      data-message-id={message.id}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
@@ -140,6 +139,7 @@ export function MessageBubble({
           {/* Message bubble */}
           <div className="relative">
             <div
+              data-message-id={message.id}
               className={`px-4 py-2 rounded-2xl break-words ${
                 isOwn
                   ? "bg-primary text-primary-foreground rounded-br-md"
@@ -157,17 +157,22 @@ export function MessageBubble({
                       })
                     );
                   }}
-                  className={`text-xs px-2.5 py-1.5 rounded-lg mb-2 cursor-pointer border-l-2 transition-colors ${
-                    isOwn
-                      ? "bg-primary-foreground/10 border-primary-foreground/40 hover:bg-primary-foreground/20"
-                      : "bg-background/50 border-primary/50 hover:bg-background/80"
+                  className={`text-xs px-3 py-2 rounded-lg mb-2 cursor-pointer transition-all duration-200 ${
+                    isOwn ? "reply-preview-own" : "reply-preview-other"
                   }`}
                 >
-                  <span className="font-semibold text-[11px]">
+                  <span
+                    className="font-semibold text-[11px]"
+                    style={{ color: isOwn ? "#fbbf24" : "#22d3ee" }}
+                  >
                     {message.reply_message.sender?.first_name}
                   </span>
                   <p
-                    className="mt-0.5 overflow-hidden"
+                    className={`mt-0.5 overflow-hidden ${
+                      isOwn
+                        ? "text-white/75"
+                        : "text-foreground/70"
+                    }`}
                     style={{
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
