@@ -53,7 +53,7 @@ export function LoadingSkeleton({ className, variant = "text" }: LoadingSkeleton
 export function ConversationListSkeleton() {
   return (
     <div className="space-y-1 p-2">
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: 5 }).map((_, i) => (
         <LoadingSkeleton key={i} variant="card" />
       ))}
     </div>
