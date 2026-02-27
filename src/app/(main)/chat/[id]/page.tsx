@@ -37,9 +37,16 @@ export default function ConversationPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // New message indicator state (for messages arriving while scrolled up)
+  const [newMessageCount, setNewMessageCount] = useState(0);
+  const prevMessageCountRef = useRef(0);
+
   // For scrolling to unread divider
   const hasScrolledToUnread = useRef(false);
   const unreadDividerRef = useRef<HTMLDivElement>(null);
+
+  // Ref to track typing indicator element
+  const typingIndicatorRef = useRef<HTMLDivElement>(null);
 
   // Realtime hooks
   useRealtimeMessages(conversationId);
@@ -50,6 +57,7 @@ export default function ConversationPage() {
     resetUnreadCount(conversationId);
     hasScrolledToUnread.current = false;
     setUnreadCount(0);
+    setNewMessageCount(0);
   }, [conversationId, resetUnreadCount]);
 
 
@@ -88,6 +96,8 @@ export default function ConversationPage() {
           if (data.unreadCount > 0) {
             setUnreadCount(data.unreadCount);
           }
+          // Initialize prevMessageCount
+          prevMessageCountRef.current = (data.data as MessageWithSender[]).length;
         }
       } catch (error) {
         console.error("Failed to load messages:", error);
@@ -148,7 +158,7 @@ export default function ConversationPage() {
     setLoadingMore(false);
   }, [loadingMore, hasMore, cursor, conversationId, prependMessages]);
 
-  const { containerRef, scrollToBottom } = useInfiniteScroll({
+  const { containerRef, scrollToBottom, isAtBottom } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,
@@ -188,16 +198,57 @@ export default function ConversationPage() {
       window.removeEventListener("scroll-to-message", handleScrollToMessage);
   }, [containerRef]);
 
-  // Scroll to bottom on new message from self
+  // Smart auto-scroll on new messages
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length === 0 || isLoading) return;
+    
+    const currentCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    
+    // Only act if new message(s) were added (not prepended from load-more)
+    if (currentCount > prevCount && prevCount > 0) {
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage.sender_id === user?.id) {
-        scrollToBottom();
+      const isSelfMessage = lastMessage.sender_id === user?.id;
+
+      if (isSelfMessage || isAtBottom) {
+        // Auto-scroll if it's our own message OR we're already at the bottom
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+        // Reset new message count when auto-scrolling
+        setNewMessageCount(0);
+      } else {
+        // Not at bottom and received someone else's message — increment counter
+        setNewMessageCount((prev) => prev + (currentCount - prevCount));
       }
     }
+
+    prevMessageCountRef.current = currentCount;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, user?.id, scrollToBottom]);
+  }, [messages.length, user?.id, isAtBottom]);
+
+  // Auto-scroll to show typing indicator when user is at the bottom
+  useEffect(() => {
+    if (typingUsers.length > 0 && isAtBottom) {
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typingUsers.length, isAtBottom]);
+
+  // Reset new message count when user scrolls to bottom
+  useEffect(() => {
+    if (isAtBottom) {
+      setNewMessageCount(0);
+    }
+  }, [isAtBottom]);
+
+  // Handle scroll to bottom button click
+  const handleScrollToBottomClick = useCallback(() => {
+    scrollToBottom(true); // smooth scroll
+    setNewMessageCount(0);
+  }, [scrollToBottom]);
 
   // Send message
   const handleSendMessage = async (
@@ -269,6 +320,9 @@ export default function ConversationPage() {
       ? messages.length - unreadCount
       : -1;
 
+  // Show scroll-to-bottom button when not at bottom
+  const showScrollButton = !isAtBottom && !isLoading;
+
   if (!activeConversation) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -284,65 +338,85 @@ export default function ConversationPage() {
     <div className="flex h-full flex-col">
       <ChatHeader conversation={activeConversation} />
 
-      {/* Messages */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto px-4 py-2"
-      >
-        {loadingMore && (
-          <div className="flex justify-center py-2">
-            <Loader2
-              className="h-5 w-5 text-primary"
-              style={{ animation: "spin 1s linear infinite" }}
-            />
-          </div>
-        )}
-
-        {isLoading ? (
-          <MessageListSkeleton />
-        ) : messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center space-y-2">
-              <p className="text-muted-foreground">
-                No messages yet. Start the conversation! 👋
-              </p>
+      {/* Messages container wrapper (relative for FAB positioning) */}
+      <div className="relative flex-1">
+        <div
+          ref={containerRef}
+          className="absolute inset-0 overflow-y-auto px-4 py-2"
+        >
+          {loadingMore && (
+            <div className="flex justify-center py-2">
+              <Loader2
+                className="h-5 w-5 text-primary"
+                style={{ animation: "spin 1s linear infinite" }}
+              />
             </div>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {messages.map((message, index) => (
-              <div key={message.id}>
-                {/* Unread messages divider */}
-                {index === unreadDividerIndex && unreadDividerIndex > 0 && (
-                  <div
-                    ref={unreadDividerRef}
-                    className="flex items-center gap-3 my-4 px-2"
-                  >
-                    <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-primary/60" />
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-                      <ChevronDown className="h-3 w-3 text-primary" />
-                      <span className="text-xs font-medium text-primary whitespace-nowrap">
-                        {unreadCount} unread message{unreadCount > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-primary/60 to-primary/60" />
-                  </div>
-                )}
-                <MessageBubble
-                  message={message}
-                  isOwn={message.sender_id === user?.id}
-                  showAvatar={
-                    index === 0 ||
-                    messages[index - 1]?.sender_id !== message.sender_id
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        )}
+          )}
 
-        {typingUsers.length > 0 && (
-          <TypingIndicator users={typingUsers} />
+          {isLoading ? (
+            <MessageListSkeleton />
+          ) : messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center space-y-2">
+                <p className="text-muted-foreground">
+                  No messages yet. Start the conversation! 👋
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {messages.map((message, index) => (
+                <div key={message.id}>
+                  {/* Unread messages divider */}
+                  {index === unreadDividerIndex && unreadDividerIndex > 0 && (
+                    <div
+                      ref={unreadDividerRef}
+                      className="flex items-center gap-3 my-4 px-2"
+                    >
+                      <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-primary/60" />
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                        <ChevronDown className="h-3 w-3 text-primary" />
+                        <span className="text-xs font-medium text-primary whitespace-nowrap">
+                          {unreadCount} unread message{unreadCount > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-primary/60 to-primary/60" />
+                    </div>
+                  )}
+                  <MessageBubble
+                    message={message}
+                    isOwn={message.sender_id === user?.id}
+                    showAvatar={
+                      index === 0 ||
+                      messages[index - 1]?.sender_id !== message.sender_id
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {typingUsers.length > 0 && (
+            <div ref={typingIndicatorRef}>
+              <TypingIndicator users={typingUsers} />
+            </div>
+          )}
+        </div>
+
+        {/* Scroll to bottom FAB */}
+        {showScrollButton && (
+          <button
+            onClick={handleScrollToBottomClick}
+            className="scroll-to-bottom-btn"
+            aria-label="Scroll to bottom"
+          >
+            <ChevronDown className="h-5 w-5" />
+            {newMessageCount > 0 && (
+              <span className="new-message-badge">
+                {newMessageCount > 99 ? "99+" : newMessageCount}
+              </span>
+            )}
+          </button>
         )}
       </div>
 

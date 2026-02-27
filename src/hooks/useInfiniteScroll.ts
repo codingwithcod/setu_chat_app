@@ -9,6 +9,8 @@ interface UseInfiniteScrollOptions {
   direction?: "up" | "down";
 }
 
+const BOTTOM_THRESHOLD = 150; // px from bottom to consider "at bottom"
+
 export function useInfiniteScroll({
   onLoadMore,
   hasMore,
@@ -17,9 +19,21 @@ export function useInfiniteScroll({
 }: UseInfiniteScrollOptions) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const checkIfAtBottom = useCallback(() => {
+    if (!containerRef.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    return scrollHeight - scrollTop - clientHeight < BOTTOM_THRESHOLD;
+  }, []);
 
   const handleScroll = useCallback(() => {
-    if (!containerRef.current || isLoading || !hasMore) return;
+    if (!containerRef.current) return;
+
+    // Update isAtBottom state
+    setIsAtBottom(checkIfAtBottom());
+
+    if (isLoading || !hasMore) return;
 
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
 
@@ -34,7 +48,7 @@ export function useInfiniteScroll({
         onLoadMore();
       }
     }
-  }, [onLoadMore, hasMore, isLoading, direction]);
+  }, [onLoadMore, hasMore, isLoading, direction, checkIfAtBottom]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -52,11 +66,20 @@ export function useInfiniteScroll({
     }
   }, [initialLoad]);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((smooth = false) => {
     if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      if (smooth) {
+        containerRef.current.scrollTo({
+          top: containerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      } else {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      }
+      // Immediately set isAtBottom since we're scrolling there
+      setIsAtBottom(true);
     }
   }, []);
 
-  return { containerRef, scrollToBottom };
+  return { containerRef, scrollToBottom, isAtBottom, checkIfAtBottom };
 }
