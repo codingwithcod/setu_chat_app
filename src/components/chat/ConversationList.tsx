@@ -112,11 +112,11 @@ export function ConversationList() {
                   {lastMsg?.is_deleted
                     ? "This message was deleted"
                     : lastMsg?.content
-                    ? truncate(lastMsg.content, 40)
+                    ? `${lastMsg.sender_id === user?.id ? "You: " : ""}${truncate(lastMsg.content, 36)}`
                     : lastMsg?.message_type === "image"
-                    ? "📷 Image"
+                    ? `${lastMsg.sender_id === user?.id ? "You: " : ""}📷 Image`
                     : lastMsg?.message_type === "file"
-                    ? "📎 File"
+                    ? `${lastMsg.sender_id === user?.id ? "You: " : ""}📎 File`
                     : "Start a conversation"}
                 </p>
                 {(conversation.unread_count || 0) > 0 && (
