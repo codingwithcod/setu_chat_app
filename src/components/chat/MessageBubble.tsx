@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useChatStore } from "@/stores/useChatStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AnimatedEmoji } from "@/components/chat/AnimatedEmoji";
@@ -11,12 +11,21 @@ import {
   Forward,
   Edit3,
   Trash2,
-  Smile,
+  SmilePlus,
+  MoreHorizontal,
   FileText,
   CheckCheck,
 } from "lucide-react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import type { MessageWithSender } from "@/types";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[350px] w-[350px] bg-muted rounded-lg animate-pulse" />
+  ),
+});
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -31,8 +40,50 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const { setReplyingTo } = useChatStore();
   const [showActions, setShowActions] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || "");
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiPickerBtnRef = useRef<HTMLButtonElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const [emojiPickerPos, setEmojiPickerPos] = useState<{ top: number; left: number } | null>(null);
+  const [toolbarFlipped, setToolbarFlipped] = useState(false);
+
+  const QUICK_REACTIONS = ["👍", "❤️", "😂"];
+
+  // Close dropdown/emoji picker on click outside
+  useEffect(() => {
+    if (!showMoreMenu && !showEmojiPicker) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        showMoreMenu &&
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(target)
+      ) {
+        setShowMoreMenu(false);
+      }
+      if (
+        showEmojiPicker &&
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(target)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMoreMenu, showEmojiPicker]);
 
   // Detect emoji-only messages (1-3 emojis, no other text)
   const emojiInfo = useMemo(() => {
@@ -110,8 +161,6 @@ export function MessageBubble({
   return (
     <div
       className={`flex ${isOwn ? "justify-end" : "justify-start"} py-0.5 group message-enter`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
     >
       <div
         className={`flex items-end gap-2 max-w-[70%] ${
@@ -147,7 +196,22 @@ export function MessageBubble({
           )}
 
           {/* Message bubble */}
-          <div className="relative">
+          <div
+            className="relative"
+            ref={bubbleRef}
+            onMouseEnter={() => {
+              setShowActions(true);
+              if (bubbleRef.current) {
+                const rect = bubbleRef.current.getBoundingClientRect();
+                setToolbarFlipped(rect.top < 50);
+              }
+            }}
+            onMouseLeave={() => {
+              if (!showMoreMenu && !showEmojiPicker) {
+                setShowActions(false);
+              }
+            }}
+          >
             <div
               data-message-id={message.id}
               className={`rounded-2xl break-words ${
@@ -331,57 +395,157 @@ export function MessageBubble({
               </div>
             )}
 
-            {/* Action buttons */}
+            {/* Teams-style action toolbar */}
             {showActions && !isEditing && (
               <div
-                className={`absolute top-0 ${
-                  isOwn ? "-left-2 -translate-x-full" : "-right-2 translate-x-full"
-                } flex items-center gap-0.5 bg-popover border rounded-lg p-0.5 shadow-lg`}
+                className={`msg-action-toolbar absolute ${
+                  toolbarFlipped ? "bottom-0" : "top-0"
+                } ${
+                  toolbarFlipped ? "flipped" : ""
+                } ${
+                  isOwn ? "right-0" : "left-0"
+                }`}
               >
-                <button
-                  onClick={() => handleReaction("👍")}
-                  className="p-1 hover:bg-accent rounded text-xs"
-                  title="React"
-                >
-                  <Smile className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => setReplyingTo(message)}
-                  className="p-1 hover:bg-accent rounded"
-                  title="Reply"
-                >
-                  <Reply className="h-3.5 w-3.5" />
-                </button>
-                {isOwn && (
-                  <>
+                <div className="msg-action-toolbar-inner">
+                  {/* Quick reaction emojis */}
+                  {QUICK_REACTIONS.map((emoji) => (
                     <button
-                      onClick={() => setIsEditing(true)}
-                      className="p-1 hover:bg-accent rounded"
+                      key={emoji}
+                      onClick={() => handleReaction(emoji)}
+                      className="msg-action-quick-emoji"
+                      title={`React with ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+
+                  {/* Emoji picker button */}
+                  <div className="relative" ref={emojiPickerRef}>
+                    <button
+                      ref={emojiPickerBtnRef}
+                      onClick={() => {
+                        if (!showEmojiPicker && emojiPickerBtnRef.current) {
+                          const rect = emojiPickerBtnRef.current.getBoundingClientRect();
+                          setEmojiPickerPos({
+                            top: rect.top,
+                            left: Math.min(rect.left, window.innerWidth - 360),
+                          });
+                        }
+                        setShowEmojiPicker(!showEmojiPicker);
+                        setShowMoreMenu(false);
+                      }}
+                      className={`msg-action-btn ${showEmojiPicker ? "active" : ""}`}
+                      title="More reactions"
+                    >
+                      <SmilePlus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Separator */}
+                  <div className="msg-action-separator" />
+
+                  {/* Edit button (own messages only) */}
+                  {isOwn && (
+                    <button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setShowActions(false);
+                      }}
+                      className="msg-action-btn"
                       title="Edit"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
+                  )}
+
+                  {/* More options */}
+                  <div className="relative" ref={moreMenuRef}>
                     <button
-                      onClick={handleDelete}
-                      className="p-1 hover:bg-destructive/20 rounded text-destructive"
-                      title="Delete"
+                      onClick={() => {
+                        setShowMoreMenu(!showMoreMenu);
+                        setShowEmojiPicker(false);
+                      }}
+                      className={`msg-action-btn ${showMoreMenu ? "active" : ""}`}
+                      title="More options"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <MoreHorizontal className="h-3.5 w-3.5" />
                     </button>
-                  </>
-                )}
-                <button
-                  onClick={handleForward}
-                  className="p-1 hover:bg-accent rounded"
-                  title="Forward"
-                >
-                  <Forward className="h-3.5 w-3.5" />
-                </button>
+                    {showMoreMenu && (
+                      <div className={`msg-action-dropdown ${
+                        isOwn ? "right-0" : "left-0"
+                      }`}>
+                        <button
+                          className="msg-action-dropdown-item"
+                          onClick={() => {
+                            setReplyingTo(message);
+                            setShowMoreMenu(false);
+                            setShowActions(false);
+                          }}
+                        >
+                          <Reply className="h-4 w-4" />
+                          Reply
+                        </button>
+                        <button
+                          className="msg-action-dropdown-item"
+                          onClick={() => {
+                            handleForward();
+                            setShowMoreMenu(false);
+                          }}
+                        >
+                          <Forward className="h-4 w-4" />
+                          Forward
+                        </button>
+                        {isOwn && (
+                          <button
+                            className="msg-action-dropdown-item text-destructive"
+                            onClick={() => {
+                              handleDelete();
+                              setShowMoreMenu(false);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Fixed emoji picker overlay — outside all nested containers to prevent clipping */}
+      {showEmojiPicker && emojiPickerPos && (
+        <>
+          <div
+            className="fixed inset-0 z-[60]"
+            onClick={() => setShowEmojiPicker(false)}
+          />
+          <div
+            ref={emojiPickerRef}
+            className="fixed z-[61] rounded-xl overflow-hidden shadow-2xl"
+            style={{
+              top: Math.max(8, emojiPickerPos.top - 358),
+              left: Math.max(8, emojiPickerPos.left - 175),
+            }}
+          >
+            <EmojiPicker
+              onEmojiClick={(emojiData: { emoji: string }) => {
+                handleReaction(emojiData.emoji);
+                setShowEmojiPicker(false);
+              }}
+              // @ts-expect-error - theme type mismatch
+              theme="auto"
+              height={350}
+              width={350}
+              searchPlaceHolder="Search emoji..."
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
