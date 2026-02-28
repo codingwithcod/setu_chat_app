@@ -113,6 +113,8 @@ export function MessageBubble({
 
   const handleReaction = async (reaction: string) => {
     if (!user) return;
+    // Guard: don't call API with temp IDs
+    if (message.id.startsWith("temp-")) return;
 
     // Optimistic update
     const currentReactions = message.reactions || [];
@@ -158,20 +160,44 @@ export function MessageBubble({
   };
 
   const handleEdit = async () => {
-    if (!editContent.trim()) return;
+    if (!editContent.trim() || editContent.trim() === message.content) {
+      setIsEditing(false);
+      return;
+    }
+    // Guard: don't call API with temp IDs
+    if (message.id.startsWith("temp-")) {
+      setIsEditing(false);
+      return;
+    }
+
+    const previousContent = message.content;
+    // Optimistic update
+    updateMessage(message.id, {
+      content: editContent.trim(),
+      is_edited: true,
+    });
+    setIsEditing(false);
+
     try {
-      await fetch(`/api/messages/${message.id}`, {
+      const res = await fetch(`/api/messages/${message.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: editContent }),
+        body: JSON.stringify({ content: editContent.trim() }),
       });
-      setIsEditing(false);
+      if (!res.ok) throw new Error("API error");
     } catch (error) {
       console.error("Failed to edit message:", error);
+      // Rollback
+      updateMessage(message.id, {
+        content: previousContent,
+        is_edited: message.is_edited,
+      });
     }
   };
 
   const handleDelete = async () => {
+    // Guard: don't call API with temp IDs
+    if (message.id.startsWith("temp-")) return;
     try {
       await fetch(`/api/messages/${message.id}`, {
         method: "DELETE",
@@ -353,27 +379,48 @@ export function MessageBubble({
 
               {/* Text content — emoji-only or regular */}
               {isEditing ? (
-                <div className="space-y-2">
+                <div className="msg-edit-container">
+                  <div className="msg-edit-label">
+                    <Edit3 className="h-3 w-3" />
+                    Editing
+                  </div>
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full bg-transparent border border-primary-foreground/30 rounded p-1 text-sm resize-none"
-                    rows={2}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleEdit();
+                      }
+                      if (e.key === "Escape") {
+                        setIsEditing(false);
+                        setEditContent(message.content || "");
+                      }
+                    }}
+                    className="msg-edit-textarea"
+                    rows={Math.min(Math.max(editContent.split("\n").length, 2), 6)}
                     autoFocus
                   />
-                  <div className="flex gap-1 justify-end">
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="text-xs opacity-70 hover:opacity-100 px-2 py-1"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleEdit}
-                      className="text-xs bg-primary-foreground/20 rounded px-2 py-1"
-                    >
-                      Save
-                    </button>
+                  <div className="msg-edit-actions">
+                    <span className="msg-edit-hint">Esc to cancel · Enter to save</span>
+                    <div className="msg-edit-buttons">
+                      <button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditContent(message.content || "");
+                        }}
+                        className="msg-edit-btn cancel"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEdit}
+                        className="msg-edit-btn save"
+                        disabled={!editContent.trim() || editContent.trim() === message.content}
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : emojiInfo.isEmojiOnly && !message.reply_message ? (

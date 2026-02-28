@@ -308,6 +308,15 @@ export default function ConversationPage() {
       if (!res.ok) {
         const errData = await res.json();
         console.error("Failed to send message:", errData);
+      } else {
+        // Replace temp ID with real ID from the server
+        const { data: savedMessage } = await res.json();
+        if (savedMessage?.id) {
+          useChatStore.getState().updateMessage(optimisticMessage.id, {
+            ...savedMessage,
+            reply_message: optimisticMessage.reply_message,
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
