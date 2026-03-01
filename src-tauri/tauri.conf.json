@@ -14,6 +14,7 @@
       {
         "title": "Setu Chat",
         "label": "main",
+        "url": "/login",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
