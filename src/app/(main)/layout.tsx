@@ -65,6 +65,14 @@ export default function MainLayout({
       }
     };
 
+    const ensureSelfConversation = async () => {
+      try {
+        await fetch("/api/conversations/self", { method: "POST" });
+      } catch (error) {
+        console.error("Failed to ensure self conversation:", error);
+      }
+    };
+
     const loadConversations = async () => {
       try {
         const res = await fetch("/api/conversations");
@@ -77,7 +85,7 @@ export default function MainLayout({
       }
     };
 
-    getUser().then(() => loadConversations());
+    getUser().then(() => ensureSelfConversation()).then(() => loadConversations());
 
     // Listen for auth changes
     const {

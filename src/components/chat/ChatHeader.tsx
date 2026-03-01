@@ -14,6 +14,7 @@ import {
   MoreVertical,
   Users,
   Settings,
+  Bookmark,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,26 +34,33 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
   const { setSidebarOpen } = useChatStore();
 
   const isGroup = conversation.type === "group";
-  const otherMember = !isGroup
+  const isSelf = conversation.type === "self";
+  const otherMember = !isGroup && !isSelf
     ? conversation.members?.find((m) => m.user_id !== user?.id)
     : null;
   const otherProfile = otherMember?.profile;
 
-  const name = isGroup
+  const name = isSelf
+    ? "Saved Messages"
+    : isGroup
     ? conversation.name || "Group Chat"
     : otherProfile
     ? `${otherProfile.first_name} ${otherProfile.last_name}`
     : "Unknown User";
 
-  const avatar = isGroup ? conversation.avatar_url : otherProfile?.avatar_url;
-  const isOnline = otherProfile?.is_online || false;
-  const initials = isGroup
+  const avatar = isSelf ? null : isGroup ? conversation.avatar_url : otherProfile?.avatar_url;
+  const isOnline = isSelf ? false : otherProfile?.is_online || false;
+  const initials = isSelf
+    ? "SM"
+    : isGroup
     ? (conversation.name || "GC").substring(0, 2).toUpperCase()
     : otherProfile
     ? getInitials(otherProfile.first_name, otherProfile.last_name)
     : "??";
 
-  const subtitle = isGroup
+  const subtitle = isSelf
+    ? "Your personal space"
+    : isGroup
     ? `${conversation.members?.length || 0} members`
     : isOnline
     ? "Online"
@@ -81,10 +89,10 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
           <Avatar className="h-10 w-10">
             <AvatarImage src={avatar || ""} alt={name} />
             <AvatarFallback>
-              {isGroup ? <Users className="h-5 w-5" /> : initials}
+              {isSelf ? <Bookmark className="h-5 w-5 text-primary" /> : isGroup ? <Users className="h-5 w-5" /> : initials}
             </AvatarFallback>
           </Avatar>
-          {!isGroup && (
+          {!isGroup && !isSelf && (
             <OnlineIndicator
               isOnline={isOnline}
               size="sm"

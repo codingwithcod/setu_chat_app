@@ -20,7 +20,7 @@ export interface Profile {
 
 export interface Conversation {
   id: string;
-  type: "private" | "group";
+  type: "private" | "group" | "self";
   name: string | null;
   description: string | null;
   avatar_url: string | null;

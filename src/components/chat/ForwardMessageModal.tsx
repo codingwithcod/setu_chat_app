@@ -22,6 +22,7 @@ import {
   User,
   FileText,
   ImageIcon,
+  Bookmark,
 } from "lucide-react";
 import type {
   ConversationWithDetails,
@@ -114,6 +115,9 @@ export function ForwardMessageModal() {
       return conv.name?.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .slice(0, searchQuery ? 20 : 3);
+
+  // Get self conversation (Saved Messages)
+  const selfConversation = conversations.find((conv) => conv.type === "self");
 
   // Get filtered private conversations (when no search query, show recent chats)
   const recentPrivateChats = conversations
@@ -356,6 +360,41 @@ export function ForwardMessageModal() {
                 </div>
               ) : (
                 <>
+                  {/* Saved Messages (self conversation) */}
+                  {selfConversation && !searchQuery && (
+                    <div className="fwd-results-section">
+                      <button
+                        onClick={() => toggleConversationRecipient(selfConversation)}
+                        className={`fwd-result-item ${
+                          isRecipientSelected(`conv-${selfConversation.id}`)
+                            ? "selected"
+                            : ""
+                        }`}
+                      >
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarFallback className="text-xs bg-primary/20">
+                            <Bookmark className="h-4 w-4 text-primary" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="fwd-result-info">
+                          <span className="fwd-result-name">Saved Messages</span>
+                          <span className="fwd-result-meta">Forward to yourself</span>
+                        </div>
+                        <div
+                          className={`fwd-result-check ${
+                            isRecipientSelected(`conv-${selfConversation.id}`)
+                              ? "checked"
+                              : ""
+                          }`}
+                        >
+                          {isRecipientSelected(`conv-${selfConversation.id}`) && (
+                            <Check className="h-3 w-3" />
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Group conversations */}
                   {filteredGroups.length > 0 && (
                     <div className="fwd-results-section">
