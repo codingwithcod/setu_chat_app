@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/stores/useToastStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -90,17 +89,25 @@ export default function ProfilePage() {
       });
 
       const data = await res.json();
-      if (data.data) {
-        const supabase = createClient();
-        await supabase
-          .from("profiles")
-          .update({ avatar_url: data.data.url })
-          .eq("id", user?.id);
+      if (data.data?.url) {
+        // Update profile via API (server-side, bypasses RLS)
+        const updateRes = await fetch(`/api/users/${user?.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatarUrl: data.data.url }),
+        });
 
-        updateUser({ avatar_url: data.data.url });
+        if (updateRes.ok) {
+          updateUser({ avatar_url: data.data.url });
+          toast.success("Profile photo updated");
+        } else {
+          toast.error("Failed to update profile photo");
+        }
+      } else {
+        toast.error(data.error || "Upload failed");
       }
     } catch {
-      console.error("Avatar upload failed");
+      toast.error("Avatar upload failed");
     }
     setUploadingAvatar(false);
   };

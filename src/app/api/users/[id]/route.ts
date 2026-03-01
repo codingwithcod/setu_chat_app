@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(
   request: Request,
@@ -30,6 +30,7 @@ export async function GET(
 
 export async function PATCH(request: Request) {
   const supabase = await createClient();
+  const serviceClient = await createServiceClient();
 
   const {
     data: { user },
@@ -44,9 +45,10 @@ export async function PATCH(request: Request) {
 
   if (body.firstName !== undefined) updates.first_name = body.firstName;
   if (body.lastName !== undefined) updates.last_name = body.lastName;
+  if (body.avatarUrl !== undefined) updates.avatar_url = body.avatarUrl;
   if (body.username !== undefined) {
     // Check username uniqueness
-    const { data: existing } = await supabase
+    const { data: existing } = await serviceClient
       .from("profiles")
       .select("id")
       .eq("username", body.username)
@@ -62,7 +64,7 @@ export async function PATCH(request: Request) {
     updates.username = body.username;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceClient
     .from("profiles")
     .update(updates)
     .eq("id", user.id)
