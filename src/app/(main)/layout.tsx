@@ -48,12 +48,12 @@ export default function MainLayout({
           .single();
 
         if (profile) {
-          setUser(profile);
-
           if (!profile.username) {
             router.push("/select-username");
             return;
           }
+
+          setUser(profile);
         } else {
           setUser(null);
           router.push("/login");

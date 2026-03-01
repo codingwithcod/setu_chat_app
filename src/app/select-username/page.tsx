@@ -1,15 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usernameSchema, type UsernameInput } from "@/lib/validations";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, MessageSquare, AtSign } from "lucide-react";
+
+const selectUsernameSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(50),
+  lastName: z.string().max(50).optional(),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be at most 30 characters")
+    .regex(
+      /^[a-zA-Z0-9_]+$/,
+      "Username can only contain letters, numbers, and underscores"
+    ),
+});
+
+type SelectUsernameInput = z.infer<typeof selectUsernameSchema>;
 
 export default function SelectUsernamePage() {
   const router = useRouter();
@@ -21,12 +36,62 @@ export default function SelectUsernamePage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<UsernameInput>({
-    resolver: zodResolver(usernameSchema),
+  } = useForm<SelectUsernameInput>({
+    resolver: zodResolver(selectUsernameSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      username: "",
+    },
   });
 
   const username = watch("username");
+
+  // Pre-fill first name and last name from Google OAuth if available
+  useEffect(() => {
+    const loadProfile = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const meta = user.user_metadata || {};
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", user.id)
+          .single();
+
+        // Try to get name from metadata (Google OAuth) or existing profile
+        const fullName = meta.full_name || meta.name || "";
+        const nameParts = fullName.trim().split(/\s+/);
+        const googleFirst = meta.given_name || nameParts[0] || "";
+        const googleLast =
+          meta.family_name || nameParts.slice(1).join(" ") || "";
+
+        const currentFirst = profile?.first_name || "";
+        const emailPrefix = user.email?.split("@")[0] || "";
+
+        // Only pre-fill if we have a real name (not just email prefix)
+        const firstName =
+          currentFirst && currentFirst !== emailPrefix
+            ? currentFirst
+            : googleFirst && googleFirst !== emailPrefix
+            ? googleFirst
+            : "";
+        const lastName =
+          profile?.last_name || googleLast || "";
+
+        if (firstName) setValue("firstName", firstName);
+        if (lastName) setValue("lastName", lastName);
+      }
+    };
+
+    loadProfile();
+  }, [setValue]);
 
   const checkAvailability = async (value: string) => {
     if (!value || value.length < 3) {
@@ -45,7 +110,7 @@ export default function SelectUsernamePage() {
     setChecking(false);
   };
 
-  const onSubmit = async (data: UsernameInput) => {
+  const onSubmit = async (data: SelectUsernameInput) => {
     setError("");
     const supabase = createClient();
     const {
@@ -59,12 +124,23 @@ export default function SelectUsernamePage() {
 
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ username: data.username })
+      .update({
+        username: data.username,
+        first_name: data.firstName,
+        last_name: data.lastName || "",
+      })
       .eq("id", user.id);
 
     if (updateError) {
       setError(updateError.message);
       return;
+    }
+
+    // Create "Saved Messages" self conversation for this user
+    try {
+      await fetch("/api/conversations/self", { method: "POST" });
+    } catch (e) {
+      console.error("Failed to create self conversation:", e);
     }
 
     router.push("/chat");
@@ -82,9 +158,9 @@ export default function SelectUsernamePage() {
         </div>
 
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">Choose your username</h2>
+          <h2 className="text-2xl font-bold">Complete your profile</h2>
           <p className="text-muted-foreground">
-            This is how others will find and mention you. Choose wisely!
+            Tell us your name and choose a unique username.
           </p>
         </div>
 
@@ -94,9 +170,37 @@ export default function SelectUsernamePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* First Name & Last Name */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name *</Label>
+              <Input
+                id="firstName"
+                placeholder="John"
+                {...register("firstName")}
+                className="h-12 text-base"
+              />
+              {errors.firstName && (
+                <p className="text-xs text-destructive">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                placeholder="Doe"
+                {...register("lastName")}
+                className="h-12 text-base"
+              />
+            </div>
+          </div>
+
+          {/* Username */}
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">Username *</Label>
             <div className="relative">
               <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
