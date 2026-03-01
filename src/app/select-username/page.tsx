@@ -177,9 +177,9 @@ export default function SelectUsernamePage() {
               <Label htmlFor="firstName">First Name *</Label>
               <Input
                 id="firstName"
-                placeholder="John"
+                placeholder="Abhi"
                 {...register("firstName")}
-                className="h-12 text-base"
+                className="h-12 text-base placeholder:text-muted-foreground/50"
               />
               {errors.firstName && (
                 <p className="text-xs text-destructive">
@@ -191,9 +191,9 @@ export default function SelectUsernamePage() {
               <Label htmlFor="lastName">Last Name</Label>
               <Input
                 id="lastName"
-                placeholder="Doe"
+                placeholder="Patel"
                 {...register("lastName")}
-                className="h-12 text-base"
+                className="h-12 text-base placeholder:text-muted-foreground/50"
               />
             </div>
           </div>
@@ -215,7 +215,7 @@ export default function SelectUsernamePage() {
                     return () => clearTimeout(timer);
                   },
                 })}
-                className="h-12 pl-9 text-base"
+                className="h-12 pl-9 text-base placeholder:text-muted-foreground/50"
               />
               {checking && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
