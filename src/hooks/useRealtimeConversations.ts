@@ -4,7 +4,35 @@ import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
+import { useBrowserNotification } from "@/hooks/useBrowserNotification";
 import type { ConversationWithDetails, MessageWithSender } from "@/types";
+
+/**
+ * Returns a display title and message body for a notification.
+ */
+function getNotificationInfo(
+  conversation: ConversationWithDetails | undefined,
+  senderName: string,
+  messageContent: string | null,
+  messageType: string
+): { title: string; body: string } {
+  // Determine the message body text
+  let body = messageContent || "";
+  if (!messageContent) {
+    if (messageType === "image") body = "📷 Sent an image";
+    else if (messageType === "file") body = "📎 Sent a file";
+    else body = "Sent a message";
+  }
+
+  // For group chats, show "Sender in GroupName"
+  if (conversation?.type === "group") {
+    const groupName = conversation.name || "Group Chat";
+    return { title: `${senderName} in ${groupName}`, body };
+  }
+
+  // For private chats, just show the sender name
+  return { title: senderName, body };
+}
 
 /**
  * Subscribes to realtime changes to keep the sidebar conversation list
@@ -19,6 +47,7 @@ export function useRealtimeConversations() {
   const incrementUnreadCount = useChatStore(
     (state) => state.incrementUnreadCount
   );
+  const { showNotification, isDocumentVisibleRef } = useBrowserNotification();
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -118,11 +147,38 @@ export function useRealtimeConversations() {
             // and this conversation is NOT the active one
             const activeConversation =
               useChatStore.getState().activeConversation;
+            const isActiveChat =
+              activeConversation?.id === newMessage.conversation_id;
+            const isTabVisible = isDocumentVisibleRef.current;
+
             if (
               newMessage.sender_id !== currentUserId &&
-              activeConversation?.id !== newMessage.conversation_id
+              !isActiveChat
             ) {
               incrementUnreadCount(newMessage.conversation_id);
+            }
+
+            // Show browser notification if:
+            // 1. Message is from someone else
+            // 2. Not a self-conversation (Saved Messages)
+            // 3. Either the chat is not active OR the tab is not visible
+            if (
+              newMessage.sender_id !== currentUserId &&
+              conversation.type !== "self" &&
+              (!isActiveChat || !isTabVisible)
+            ) {
+              const senderName = sender
+                ? `${sender.first_name} ${sender.last_name}`.trim() || sender.username
+                : "Someone";
+
+              const { title, body } = getNotificationInfo(
+                conversation,
+                senderName,
+                newMessage.content,
+                newMessage.message_type
+              );
+
+              showNotification(title, body, newMessage.conversation_id);
             }
           } else {
             // Conversation NOT in sidebar — this means someone started a new
@@ -144,6 +200,25 @@ export function useRealtimeConversations() {
                   newConv.unread_count = 1;
                 }
                 addConversation(newConv);
+
+                // Show browser notification for new conversation messages
+                if (
+                  newMessage.sender_id !== currentUserId &&
+                  newConv.type !== "self"
+                ) {
+                  const senderName = sender
+                    ? `${sender.first_name} ${sender.last_name}`.trim() || sender.username
+                    : "Someone";
+
+                  const { title, body } = getNotificationInfo(
+                    newConv,
+                    senderName,
+                    newMessage.content,
+                    newMessage.message_type
+                  );
+
+                  showNotification(title, body, newMessage.conversation_id);
+                }
               }
             } catch (error) {
               console.error("Failed to fetch new conversation:", error);
@@ -164,5 +239,7 @@ export function useRealtimeConversations() {
     updateConversation,
     removeConversation,
     incrementUnreadCount,
+    showNotification,
+    isDocumentVisibleRef,
   ]);
 }
