@@ -91,6 +91,7 @@ export interface VerificationToken {
 export interface MessageWithSender extends Message {
   sender: Profile;
   reply_message?: Message & { sender: Profile };
+  forwarded_message?: { id: string; content: string | null; message_type: string; sender_id: string; created_at: string; sender: Profile };
   reactions?: MessageReaction[];
 }
 

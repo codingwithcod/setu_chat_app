@@ -43,9 +43,11 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Get reply messages if any
+  // Get reply messages and forwarded message info
   const messagesWithReplies = await Promise.all(
     (messages || []).map(async (msg) => {
+      let enriched = { ...msg };
+
       if (msg.reply_to) {
         const { data: replyMsg } = await serviceClient
           .from("messages")
@@ -58,9 +60,27 @@ export async function GET(
           .eq("id", msg.reply_to)
           .single();
 
-        return { ...msg, reply_message: replyMsg };
+        enriched = { ...enriched, reply_message: replyMsg };
       }
-      return msg;
+
+      if (msg.forwarded_from) {
+        const { data: fwdMsg } = await serviceClient
+          .from("messages")
+          .select(
+            `
+            id, content, message_type, sender_id, created_at,
+            sender:profiles(id, username, first_name, last_name, avatar_url)
+          `
+          )
+          .eq("id", msg.forwarded_from)
+          .single();
+
+        if (fwdMsg) {
+          enriched = { ...enriched, forwarded_message: fwdMsg };
+        }
+      }
+
+      return enriched;
     })
   );
 

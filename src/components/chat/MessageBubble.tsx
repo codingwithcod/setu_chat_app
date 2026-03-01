@@ -334,7 +334,15 @@ export function MessageBubble({
               {message.forwarded_from && (
                 <div className={`fwd-indicator ${isOwn ? "own" : ""}`}>
                   <Forward className="h-3 w-3" />
-                  <span>Forwarded</span>
+                  <span>
+                    Forwarded
+                    {message.forwarded_message?.sender && (
+                      <> from <strong>{message.forwarded_message.sender.first_name} {message.forwarded_message.sender.last_name}</strong></>
+                    )}
+                    {message.forwarded_message?.created_at && (
+                      <> · {formatTime(message.forwarded_message.created_at)}</>
+                    )}
+                  </span>
                 </div>
               )}
 

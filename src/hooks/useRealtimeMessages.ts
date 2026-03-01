@@ -78,11 +78,31 @@ export function useRealtimeMessages(conversationId: string | null) {
               }
             }
 
+            // Fetch forwarded message info if this is a forward
+            let forwardedMessage = undefined;
+            if (newMessage.forwarded_from) {
+              const { data: fwdData } = await supabase
+                .from("messages")
+                .select(
+                  `
+                  id, content, message_type, sender_id, created_at,
+                  sender:profiles(id, username, first_name, last_name, avatar_url)
+                `
+                )
+                .eq("id", newMessage.forwarded_from)
+                .single();
+
+              if (fwdData) {
+                forwardedMessage = fwdData;
+              }
+            }
+
             if (sender) {
               addMessage({
                 ...newMessage,
                 sender,
                 reply_message: replyMessage,
+                forwarded_message: forwardedMessage,
               } as MessageWithSender);
             }
           }

@@ -1601,13 +1601,27 @@ html {
   font-style: italic;
   color: rgba(255, 255, 255, 0.55);
   margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.fwd-indicator strong {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .fwd-indicator.own {
   color: rgba(255, 255, 255, 0.55);
 }
 
+.fwd-indicator.own strong {
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .dark .fwd-indicator:not(.own) {
   color: hsl(var(--muted-foreground) / 0.7);
+}
+
+.dark .fwd-indicator:not(.own) strong {
+  color: hsl(var(--muted-foreground) / 0.9);
 }
 
