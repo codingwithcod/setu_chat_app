@@ -11,6 +11,7 @@ import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import { VideoPlayer } from "@/components/chat/VideoPlayer";
 import { AudioPlayer } from "@/components/chat/AudioPlayer";
 import { FileCard } from "@/components/chat/FileCard";
+import { MessageStatus } from "@/components/chat/MessageStatus";
 import { getInitials, formatTime } from "@/lib/utils";
 import { getEmojiInfo, getEmojiSize } from "@/lib/emoji";
 import {
@@ -20,7 +21,6 @@ import {
   Trash2,
   SmilePlus,
   MoreHorizontal,
-  CheckCheck,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { MessageWithSender, ConversationMember, Profile } from "@/types";
@@ -492,11 +492,10 @@ export function MessageBubble({
                   <span className="text-[10px] opacity-50">edited</span>
                 )}
                 {isOwn && (
-                  <CheckCheck className={`h-3 w-3 ${
-                    emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia
-                      ? "text-muted-foreground"
-                      : "opacity-60"
-                  }`} />
+                  <MessageStatus
+                    status={message.status || (message.id.startsWith("temp-") ? "sending" : "sent")}
+                    isEmojiOnly={emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia}
+                  />
                 )}
               </div>
             </div>

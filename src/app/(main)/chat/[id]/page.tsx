@@ -13,7 +13,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { MessageListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
-import type { MessageWithSender, ConversationWithDetails, UploadedFileData } from "@/types";
+import type { MessageWithSender, ConversationWithDetails, UploadedFileData, OtherReadReceipt, MessageStatus } from "@/types";
 import { Loader2, ChevronDown } from "lucide-react";
 
 export default function ConversationPage() {
@@ -90,7 +90,26 @@ export default function ConversationPage() {
         );
         const data = await res.json();
         if (data.data) {
-          setMessages(data.data as MessageWithSender[]);
+          // Compute statuses from otherReadReceipts
+          const receipts: OtherReadReceipt[] = data.otherReadReceipts || [];
+          const messagesWithStatus = (data.data as MessageWithSender[]).map((msg) => {
+            if (msg.sender_id !== user?.id) return msg; // Only show status for own messages
+            let status: MessageStatus = "sent";
+            // Check if any other user has read past this message
+            for (const receipt of receipts) {
+              if (receipt.last_read_at && msg.created_at <= receipt.last_read_at) {
+                status = "read";
+                break;
+              }
+            }
+            // If not read but receipts exist, mark as delivered
+            // (they have the conversation open / fetched messages before)
+            if (status !== "read" && receipts.length > 0) {
+              status = "delivered";
+            }
+            return { ...msg, status };
+          });
+          setMessages(messagesWithStatus);
           setHasMore(data.hasMore);
           setCursor(data.nextCursor);
           // API returns the unread count (calculated BEFORE marking read)
@@ -291,6 +310,7 @@ export default function ConversationPage() {
       updated_at: new Date().toISOString(),
       sender: user,
       reply_message: currentReplyingTo || undefined,
+      status: "sending" as MessageStatus,
       files: files?.map((f, i) => ({
         id: `temp-file-${i}`,
         message_id: `temp-${Date.now()}`,
@@ -327,18 +347,27 @@ export default function ConversationPage() {
       if (!res.ok) {
         const errData = await res.json();
         console.error("Failed to send message:", errData);
+        // Mark as failed
+        useChatStore.getState().updateMessage(optimisticMessage.id, {
+          status: "failed",
+        });
       } else {
-        // Replace temp ID with real ID from the server
+        // Replace temp ID with real ID from the server, mark as sent
         const { data: savedMessage } = await res.json();
         if (savedMessage?.id) {
           useChatStore.getState().updateMessage(optimisticMessage.id, {
             ...savedMessage,
+            status: "sent",
             reply_message: optimisticMessage.reply_message,
           });
         }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
+      // Mark as failed
+      useChatStore.getState().updateMessage(optimisticMessage.id, {
+        status: "failed",
+      });
     }
   };
 

@@ -140,6 +140,13 @@ export async function GET(
     );
   }
 
+  // Fetch read receipts of OTHER users in this conversation (for status indicators)
+  const { data: otherReadReceipts } = await serviceClient
+    .from("read_receipts")
+    .select("user_id, last_read_at, last_read_message_id")
+    .eq("conversation_id", params.id)
+    .neq("user_id", user.id);
+
   const hasMore = messages?.length === limit;
   const nextCursor = messages?.length
     ? messages[messages.length - 1].created_at
@@ -150,6 +157,7 @@ export async function GET(
     hasMore,
     nextCursor,
     unreadCount,
+    otherReadReceipts: otherReadReceipts || [],
   });
 }
 

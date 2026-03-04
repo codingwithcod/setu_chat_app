@@ -66,6 +66,8 @@ export interface Message {
   updated_at: string;
 }
 
+export type MessageStatus = "sending" | "sent" | "delivered" | "read" | "failed";
+
 export interface MessageReaction {
   id: string;
   message_id: string;
@@ -105,6 +107,14 @@ export interface MessageWithSender extends Message {
   forwarded_message?: { id: string; content: string | null; message_type: string; sender_id: string; created_at: string; sender: Profile };
   reactions?: MessageReaction[];
   files?: MessageFile[];
+  status?: MessageStatus;
+}
+
+// Read receipt info for the other user(s) — returned by the messages API
+export interface OtherReadReceipt {
+  user_id: string;
+  last_read_at: string;
+  last_read_message_id: string | null;
 }
 
 export interface ConversationWithDetails extends Conversation {

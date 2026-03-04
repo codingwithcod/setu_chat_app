@@ -1,16 +1,37 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { createClient } from "@/lib/supabase/client";
+import {
+  isNotificationSoundEnabled,
+  setNotificationSoundEnabled,
+  playNotificationSound,
+} from "@/lib/notification-sound";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { ArrowLeft, Moon, Bell, Shield, HelpCircle, LogOut } from "lucide-react";
+import { ArrowLeft, Moon, Bell, Volume2, VolumeX, Shield, HelpCircle, LogOut } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    setSoundEnabled(isNotificationSoundEnabled());
+  }, []);
+
+  const handleToggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    setNotificationSoundEnabled(newValue);
+    // Play a preview so user hears what it sounds like
+    if (newValue) {
+      playNotificationSound();
+    }
+  };
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -65,6 +86,35 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+            <button
+              onClick={handleToggleSound}
+              className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                {soundEnabled ? (
+                  <Volume2 className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <VolumeX className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">Notification Sound</p>
+                  <p className="text-xs text-muted-foreground">
+                    {soundEnabled ? "Sound plays when you receive a message" : "Notification sound is muted"}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+                  soundEnabled ? "bg-primary" : "bg-muted-foreground/30"
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                    soundEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </div>
+            </button>
           </div>
 
           <Separator />

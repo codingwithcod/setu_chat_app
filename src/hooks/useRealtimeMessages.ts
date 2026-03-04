@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { playNotificationSound } from "@/lib/notification-sound";
 import type { MessageWithSender } from "@/types";
 
 // Shared reference to the reaction broadcast channel so MessageBubble can use it
@@ -37,7 +38,8 @@ export function useRealtimeMessages(conversationId: string | null) {
 
     const supabase = createClient();
 
-    const channel = supabase
+    // ─── Message channel: INSERT + UPDATE ───
+    const messageChannel = supabase
       .channel(`messages:${conversationId}`)
       .on(
         "postgres_changes",
@@ -104,6 +106,26 @@ export function useRealtimeMessages(conversationId: string | null) {
                 reply_message: replyMessage,
                 forwarded_message: forwardedMessage,
               } as MessageWithSender);
+
+              // Play notification sound for incoming messages
+              playNotificationSound();
+
+              // Since we're actively viewing this conversation, update our read receipt
+              supabase
+                .from("read_receipts")
+                .upsert(
+                  {
+                    conversation_id: conversationId,
+                    user_id: userIdRef.current!,
+                    last_read_message_id: newMessage.id,
+                    last_read_at: new Date().toISOString(),
+                  },
+                  { onConflict: "conversation_id,user_id" }
+                )
+                .then(() => {
+                  // The read_receipts postgres_changes listener on the sender's
+                  // side will pick this up and update the status automatically
+                });
             }
           }
         }
@@ -117,12 +139,57 @@ export function useRealtimeMessages(conversationId: string | null) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload: { new: MessageWithSender }) => {
-          updateMessage(payload.new.id, payload.new);
+          // Preserve client-side status when merging DB updates
+          const existing = useChatStore
+            .getState()
+            .messages.find((m) => m.id === payload.new.id);
+          updateMessage(payload.new.id, {
+            ...payload.new,
+            status: existing?.status, // keep existing status
+          });
         }
       )
       .subscribe();
 
-    // Broadcast channel for reaction sync (works without table-level Realtime)
+    // ─── Read receipts listener: track when OTHER users read our messages ───
+    // This fires whenever any user in this conversation updates their read_receipt
+    const readReceiptChannel = supabase
+      .channel(`read-receipts:${conversationId}`)
+      .on(
+        "postgres_changes" as "system",
+        {
+          event: "*",
+          schema: "public",
+          table: "read_receipts",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => {
+          const receipt = payload.new as {
+            user_id: string;
+            last_read_at: string;
+            conversation_id: string;
+          };
+          if (!receipt?.user_id) return;
+          // Only care about OTHER users' receipts
+          if (receipt.user_id === userIdRef.current) return;
+
+          // Mark all our messages created before their last_read_at as "read"
+          const messages = useChatStore.getState().messages;
+          messages.forEach((msg) => {
+            if (
+              msg.sender_id === userIdRef.current &&
+              msg.status !== "read" &&
+              msg.created_at <= receipt.last_read_at
+            ) {
+              updateMessage(msg.id, { status: "read" });
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    // ─── Reaction sync channel (broadcast) ───
     const reactionChannel = supabase
       .channel(`reaction-sync:${conversationId}`)
       .on(
@@ -132,7 +199,6 @@ export function useRealtimeMessages(conversationId: string | null) {
           const messageId = payload.payload?.message_id;
           if (!messageId) return;
 
-          // Fetch updated reactions for this message
           const { data: reactions } = await supabase
             .from("message_reactions")
             .select("id, message_id, user_id, reaction, created_at")
@@ -145,14 +211,13 @@ export function useRealtimeMessages(conversationId: string | null) {
       )
       .subscribe();
 
-    // Store reference so broadcastReactionUpdate can use it
     reactionChannelRef = reactionChannel;
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messageChannel);
+      supabase.removeChannel(readReceiptChannel);
       supabase.removeChannel(reactionChannel);
       reactionChannelRef = null;
     };
-    // addMessage and updateMessage are stable zustand selectors
   }, [conversationId, addMessage, updateMessage]);
 }
