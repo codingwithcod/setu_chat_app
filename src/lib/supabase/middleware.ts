@@ -38,32 +38,37 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register") ||
-    request.nextUrl.pathname.startsWith("/verify-email");
-
-  const isPublicPage = request.nextUrl.pathname === "/";
+  // Allow API routes and callback without auth check
   const isApiRoute = request.nextUrl.pathname.startsWith("/api");
   const isCallbackRoute = request.nextUrl.pathname.startsWith("/auth/callback");
-
-  // Allow API routes and callback
   if (isApiRoute || isCallbackRoute) {
     return response;
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && isAuthPage) {
-    return NextResponse.redirect(new URL("/chat", request.url));
-  }
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated users to login
-  if (!user && !isAuthPage && !isPublicPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const isAuthPage =
+      request.nextUrl.pathname.startsWith("/login") ||
+      request.nextUrl.pathname.startsWith("/register") ||
+      request.nextUrl.pathname.startsWith("/verify-email");
+
+    const isPublicPage = request.nextUrl.pathname === "/";
+
+    // Redirect authenticated users away from auth pages
+    if (user && isAuthPage) {
+      return NextResponse.redirect(new URL("/chat", request.url));
+    }
+
+    // Redirect unauthenticated users to login
+    if (!user && !isAuthPage && !isPublicPage) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  } catch {
+    // Network error (e.g. no internet) — allow the request through.
+    // The client-side auth will handle the offline state gracefully.
   }
 
   return response;

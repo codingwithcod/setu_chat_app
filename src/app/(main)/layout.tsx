@@ -8,6 +8,7 @@ import { useChatStore } from "@/stores/useChatStore";
 import { usePresence } from "@/hooks/usePresence";
 import { useRealtimeConversations } from "@/hooks/useRealtimeConversations";
 import { Sidebar } from "@/components/chat/Sidebar";
+import { NetworkBanner } from "@/components/shared/NetworkBanner";
 import { Loader2 } from "lucide-react";
 import type { ConversationWithDetails } from "@/types";
 
@@ -112,8 +113,13 @@ export default function MainLayout({
         }
       } catch (error) {
         console.error("Failed to get user:", error);
-        setUser(null);
-        router.push("/login");
+        // Only redirect to login if we DON'T already have a user in the store.
+        // If we do, it's likely a network error (offline) — keep the current session.
+        const existingUser = useAuthStore.getState().user;
+        if (!existingUser) {
+          setUser(null);
+          router.push("/login");
+        }
       }
     };
 
@@ -191,6 +197,7 @@ export default function MainLayout({
           !isConversationView ? "hidden md:flex" : "flex"
         }`}
       >
+        <NetworkBanner />
         {children}
       </div>
     </div>
