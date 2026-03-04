@@ -13,6 +13,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { MessageListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
+import { getFailedMessages, addFailedMessage, removeFailedMessage } from "@/lib/failed-messages";
 import type { MessageWithSender, ConversationWithDetails, UploadedFileData, OtherReadReceipt, MessageStatus } from "@/types";
 import { Loader2, ChevronDown } from "lucide-react";
 
@@ -109,7 +110,12 @@ export default function ConversationPage() {
             }
             return { ...msg, status };
           });
-          setMessages(messagesWithStatus);
+
+          // Merge in any failed messages from localStorage
+          const savedFailed = getFailedMessages(conversationId);
+          const allMessages = [...messagesWithStatus, ...savedFailed];
+
+          setMessages(allMessages);
           setHasMore(data.hasMore);
           setCursor(data.nextCursor);
           // API returns the unread count (calculated BEFORE marking read)
@@ -117,7 +123,7 @@ export default function ConversationPage() {
             setUnreadCount(data.unreadCount);
           }
           // Initialize prevMessageCount
-          prevMessageCountRef.current = (data.data as MessageWithSender[]).length;
+          prevMessageCountRef.current = allMessages.length;
         }
       } catch (error) {
         console.error("Failed to load messages:", error);
@@ -347,10 +353,10 @@ export default function ConversationPage() {
       if (!res.ok) {
         const errData = await res.json();
         console.error("Failed to send message:", errData);
-        // Mark as failed
-        useChatStore.getState().updateMessage(optimisticMessage.id, {
-          status: "failed",
-        });
+        // Mark as failed and persist
+        const failedMsg = { ...optimisticMessage, status: "failed" as MessageStatus };
+        useChatStore.getState().updateMessage(optimisticMessage.id, { status: "failed" });
+        addFailedMessage(conversationId, failedMsg);
       } else {
         // Replace temp ID with real ID from the server, mark as sent
         const { data: savedMessage } = await res.json();
@@ -360,14 +366,67 @@ export default function ConversationPage() {
             status: "sent",
             reply_message: optimisticMessage.reply_message,
           });
+          // In case this was a retry, remove from failed storage
+          removeFailedMessage(conversationId, optimisticMessage.id);
         }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Mark as failed
-      useChatStore.getState().updateMessage(optimisticMessage.id, {
-        status: "failed",
+      // Mark as failed and persist
+      const failedMsg = { ...optimisticMessage, status: "failed" as MessageStatus };
+      useChatStore.getState().updateMessage(optimisticMessage.id, { status: "failed" });
+      addFailedMessage(conversationId, failedMsg);
+    }
+  };
+
+  // Retry sending a failed message
+  const handleRetry = async (failedMessage: MessageWithSender) => {
+    if (!user) return;
+
+    // Update UI to show "sending" again
+    useChatStore.getState().updateMessage(failedMessage.id, { status: "sending" });
+
+    const replyToId =
+      failedMessage.reply_to && !failedMessage.reply_to.startsWith("temp-")
+        ? failedMessage.reply_to
+        : null;
+
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: failedMessage.content || null,
+          message_type: failedMessage.message_type,
+          reply_to: replyToId,
+          files: failedMessage.files?.map((f) => ({
+            url: f.file_url,
+            name: f.file_name,
+            size: f.file_size,
+            file_type: f.file_type,
+            mime_type: f.mime_type,
+          })),
+        }),
       });
+
+      if (!res.ok) {
+        console.error("Retry failed:", await res.json());
+        useChatStore.getState().updateMessage(failedMessage.id, { status: "failed" });
+      } else {
+        const { data: savedMessage } = await res.json();
+        if (savedMessage?.id) {
+          useChatStore.getState().updateMessage(failedMessage.id, {
+            ...savedMessage,
+            status: "sent",
+            reply_message: failedMessage.reply_message,
+          });
+          // Remove from localStorage on success
+          removeFailedMessage(conversationId, failedMessage.id);
+        }
+      }
+    } catch (error) {
+      console.error("Retry failed:", error);
+      useChatStore.getState().updateMessage(failedMessage.id, { status: "failed" });
     }
   };
 
@@ -448,6 +507,7 @@ export default function ConversationPage() {
                       messages[index - 1]?.sender_id !== message.sender_id
                     }
                     members={activeConversation?.members}
+                    onRetry={handleRetry}
                   />
                 </div>
               ))}

@@ -175,11 +175,14 @@ export function useRealtimeMessages(conversationId: string | null) {
           if (receipt.user_id === userIdRef.current) return;
 
           // Mark all our messages created before their last_read_at as "read"
+          // Skip failed and temp messages — they were never actually sent
           const messages = useChatStore.getState().messages;
           messages.forEach((msg) => {
             if (
               msg.sender_id === userIdRef.current &&
               msg.status !== "read" &&
+              msg.status !== "failed" &&
+              !msg.id.startsWith("temp-") &&
               msg.created_at <= receipt.last_read_at
             ) {
               updateMessage(msg.id, { status: "read" });

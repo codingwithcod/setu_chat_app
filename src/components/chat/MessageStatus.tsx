@@ -56,8 +56,8 @@ export function MessageStatus({ status, isEmojiOnly }: MessageStatusProps) {
 
     case "failed":
       return (
-        <span className="inline-flex items-center text-rose-400" title="Failed to send — tap to retry">
-          <svg width={SIZE} height={SIZE} viewBox="0 0 16 16" fill="none">
+        <span className="inline-flex items-center text-rose-400 hover:text-rose-300 transition-colors" title="Failed to send — click to retry">
+          <svg width={SIZE + 2} height={SIZE + 2} viewBox="0 0 16 16" fill="none" className="animate-pulse">
             <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" />
             <line x1="8" y1="5" x2="8" y2="8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             <circle cx="8" cy="11" r="0.9" fill="currentColor" />

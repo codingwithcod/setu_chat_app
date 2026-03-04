@@ -37,6 +37,7 @@ interface MessageBubbleProps {
   isOwn: boolean;
   showAvatar: boolean;
   members?: (ConversationMember & { profile: Profile })[];
+  onRetry?: (message: MessageWithSender) => void;
 }
 
 export function MessageBubble({
@@ -44,6 +45,7 @@ export function MessageBubble({
   isOwn,
   showAvatar,
   members,
+  onRetry,
 }: MessageBubbleProps) {
   const { setReplyingTo, setForwardingMessage, updateMessage } = useChatStore();
   const { user } = useAuthStore();
@@ -492,10 +494,21 @@ export function MessageBubble({
                   <span className="text-[10px] opacity-50">edited</span>
                 )}
                 {isOwn && (
-                  <MessageStatus
-                    status={message.status || (message.id.startsWith("temp-") ? "sending" : "sent")}
-                    isEmojiOnly={emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia}
-                  />
+                  <span
+                    onClick={(e) => {
+                      if (message.status === "failed" && onRetry) {
+                        e.stopPropagation();
+                        onRetry(message);
+                      }
+                    }}
+                    className={message.status === "failed" ? "cursor-pointer" : ""}
+                    title={message.status === "failed" ? "Click to retry" : undefined}
+                  >
+                    <MessageStatus
+                      status={message.status || (message.id.startsWith("temp-") ? "sending" : "sent")}
+                      isEmojiOnly={emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia}
+                    />
+                  </span>
                 )}
               </div>
             </div>
