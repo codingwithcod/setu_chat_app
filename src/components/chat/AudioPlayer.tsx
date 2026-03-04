@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Play, Pause, Download, Volume2, VolumeX } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Download,
+  Volume2,
+  VolumeX,
+  RotateCcw,
+  RotateCw,
+} from "lucide-react";
 import { formatFileSize } from "@/lib/file-validation";
 import type { MessageFile } from "@/types";
 
@@ -19,6 +27,7 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [speed, setSpeed] = useState(1);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -51,6 +60,26 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
     },
     []
   );
+
+  const skipBackward = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) audio.currentTime = Math.max(0, audio.currentTime - 10);
+  }, []);
+
+  const skipForward = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+  }, []);
+
+  const cycleSpeed = useCallback(() => {
+    const speeds = [1, 1.5, 2];
+    setSpeed((prev) => {
+      const nextIdx = (speeds.indexOf(prev) + 1) % speeds.length;
+      const next = speeds[nextIdx];
+      if (audioRef.current) audioRef.current.playbackRate = next;
+      return next;
+    });
+  }, []);
 
   const handleTimeUpdate = useCallback(() => {
     const audio = audioRef.current;
@@ -106,13 +135,16 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const btnClass = isOwn
+    ? "text-primary-foreground/60 hover:text-primary-foreground"
+    : "text-muted-foreground hover:text-foreground";
+
   return (
     <div
       className={`rounded-xl max-w-[300px] ${
         isOwn ? "bg-primary-foreground/10" : "bg-background/50"
       }`}
     >
-      {/* Hidden audio element */}
       <audio
         ref={audioRef}
         src={file.file_url}
@@ -122,9 +154,8 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
         preload="metadata"
       />
 
-      {/* Top row: play button + file info + download */}
-      <div className="flex items-center gap-3 p-3 pb-2">
-        {/* Play/Pause button */}
+      {/* Top row: play + info + download */}
+      <div className="flex items-center gap-3 p-3 pb-1.5">
         <button
           onClick={togglePlay}
           className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-colors ${
@@ -140,7 +171,6 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
           )}
         </button>
 
-        {/* File info */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{file.file_name}</p>
           <div className="flex items-center gap-2 mt-0.5">
@@ -155,10 +185,9 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
           </div>
         </div>
 
-        {/* Download button */}
         <button
           onClick={handleDownload}
-          className={`shrink-0 p-2 rounded-full transition-colors ${
+          className={`shrink-0 p-1.5 rounded-full transition-colors ${
             isOwn
               ? "hover:bg-primary-foreground/20 text-primary-foreground/70"
               : "hover:bg-accent text-muted-foreground"
@@ -170,7 +199,7 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
       </div>
 
       {/* Progress bar */}
-      <div className="px-3">
+      <div className="px-3 py-1.5">
         <div
           ref={progressRef}
           className={`relative h-1 rounded-full cursor-pointer ${
@@ -185,31 +214,61 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
         </div>
       </div>
 
-      {/* Bottom row: volume control */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      {/* Controls row: -10s | +10s | speed | volume (hover expand) */}
+      <div className="flex items-center gap-1 px-3 pb-2.5 pt-0.5">
+        {/* Rewind 10s */}
         <button
-          onClick={toggleMute}
-          className={`shrink-0 transition-colors ${
-            isOwn
-              ? "text-primary-foreground/60 hover:text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          onClick={skipBackward}
+          className={`p-1 rounded transition-colors ${btnClass}`}
+          title="Rewind 10s"
         >
-          {isMuted || volume === 0 ? (
-            <VolumeX className="h-3.5 w-3.5" />
-          ) : (
-            <Volume2 className="h-3.5 w-3.5" />
-          )}
+          <RotateCcw className="h-3.5 w-3.5" />
         </button>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          value={isMuted ? 0 : volume}
-          onChange={handleVolumeChange}
-          className="w-16 accent-pink-400 h-1 cursor-pointer"
-        />
+
+        {/* Forward 10s */}
+        <button
+          onClick={skipForward}
+          className={`p-1 rounded transition-colors ${btnClass}`}
+          title="Forward 10s"
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Speed toggle */}
+        <button
+          onClick={cycleSpeed}
+          className={`px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums transition-colors ${btnClass}`}
+          title="Playback speed"
+        >
+          {speed}x
+        </button>
+
+        <div className="flex-1" />
+
+        {/* Volume — hover to expand like video */}
+        <div className="flex items-center group/vol">
+          <button
+            onClick={toggleMute}
+            className={`shrink-0 z-10 p-1 rounded transition-colors ${btnClass}`}
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX className="h-3.5 w-3.5" />
+            ) : (
+              <Volume2 className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <div className="w-0 overflow-hidden group-hover/vol:w-16 transition-all duration-300 ease-in-out ml-0 group-hover/vol:ml-1 flex items-center h-3.5">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={isMuted ? 0 : volume}
+              onChange={handleVolumeChange}
+              className="w-full accent-pink-400 h-1 cursor-pointer"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
