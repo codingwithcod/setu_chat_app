@@ -1,4 +1,8 @@
-// Allowed MIME types for each upload context
+// ============================================
+// File Validation for Setu Chat Application
+// ============================================
+
+// Allowed MIME types for each category
 const IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -16,16 +20,42 @@ const DOCUMENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/zip",
+  "application/x-rar-compressed",
+  "application/vnd.rar",
 ];
 
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
-const CHAT_FILE_TYPES = [...IMAGE_TYPES, ...DOCUMENT_TYPES, ...VIDEO_TYPES];
+const AUDIO_TYPES = [
+  "audio/mpeg",       // .mp3
+  "audio/wav",        // .wav
+  "audio/ogg",        // .ogg
+  "audio/webm",       // .webm audio
+  "audio/aac",        // .aac
+  "audio/mp4",        // .m4a (sometimes reported as audio/mp4)
+  "audio/x-m4a",      // .m4a (alternative)
+  "audio/flac",       // .flac
+  "audio/x-flac",     // .flac (alternative)
+];
+
+const CHAT_FILE_TYPES = [
+  ...IMAGE_TYPES,
+  ...DOCUMENT_TYPES,
+  ...VIDEO_TYPES,
+  ...AUDIO_TYPES,
+];
+
+// Size limit from env (in MB), default 5 MB
+function getMaxChatFileSizeBytes(): number {
+  const envMB = process.env.NEXT_PUBLIC_MAX_CHAT_FILE_SIZE_MB;
+  const mb = envMB ? parseFloat(envMB) : 5;
+  return mb * 1024 * 1024;
+}
 
 // Size limits in bytes
 const SIZE_LIMITS = {
-  avatar: 1 * 1024 * 1024, // 1 MB
-  chatFile: 5 * 1024 * 1024, // 5 MB
+  avatar: 1 * 1024 * 1024, // 1 MB — fixed
 };
 
 type UploadContext = "avatar" | "chatFile";
@@ -44,7 +74,9 @@ export function validateFile(
   context: UploadContext
 ): ValidationResult {
   // Size check
-  const maxSize = SIZE_LIMITS[context];
+  const maxSize =
+    context === "avatar" ? SIZE_LIMITS.avatar : getMaxChatFileSizeBytes();
+
   if (file.size > maxSize) {
     const limitMB = maxSize / (1024 * 1024);
     return {
@@ -66,11 +98,23 @@ export function validateFile(
     return {
       valid: false,
       error:
-        "This file type is not supported. Allowed: images, PDF, Word, Excel, PowerPoint, and videos (MP4, WebM)",
+        "This file type is not supported. Allowed: images, videos, audio, PDF, Word, Excel, PowerPoint, ZIP/RAR",
     };
   }
 
   return { valid: true };
+}
+
+/**
+ * Determine file category from a File object
+ */
+export function getFileCategory(
+  file: File
+): "image" | "video" | "audio" | "file" {
+  if (IMAGE_TYPES.includes(file.type)) return "image";
+  if (VIDEO_TYPES.includes(file.type)) return "video";
+  if (AUDIO_TYPES.includes(file.type)) return "audio";
+  return "file";
 }
 
 /**

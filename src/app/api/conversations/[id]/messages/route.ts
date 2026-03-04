@@ -26,7 +26,8 @@ export async function GET(
       `
       *,
       sender:profiles(id, username, first_name, last_name, avatar_url, is_online),
-      reactions:message_reactions(id, user_id, reaction)
+      reactions:message_reactions(id, user_id, reaction),
+      files:message_files(id, file_url, file_name, file_size, file_type, mime_type, display_order)
     `
     )
     .eq("conversation_id", params.id)
@@ -43,9 +44,18 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Sort files by display_order within each message
+  const messagesWithSortedFiles = (messages || []).map((msg) => ({
+    ...msg,
+    files: (msg.files || []).sort(
+      (a: { display_order: number }, b: { display_order: number }) =>
+        a.display_order - b.display_order
+    ),
+  }));
+
   // Get reply messages and forwarded message info
   const messagesWithReplies = await Promise.all(
-    (messages || []).map(async (msg) => {
+    messagesWithSortedFiles.map(async (msg) => {
       let enriched = { ...msg };
 
       if (msg.reply_to) {
@@ -160,6 +170,7 @@ export async function POST(
 
   const body = await request.json();
 
+  // Insert the message
   const { data: message, error } = await serviceClient
     .from("messages")
     .insert({
@@ -167,9 +178,6 @@ export async function POST(
       sender_id: user.id,
       content: body.content,
       message_type: body.message_type || "text",
-      file_url: body.file_url || null,
-      file_name: body.file_name || null,
-      file_size: body.file_size || null,
       reply_to: body.reply_to || null,
       forwarded_from: body.forwarded_from || null,
     })
@@ -186,5 +194,44 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ data: message }, { status: 201 });
+  // Insert message files if provided
+  if (body.files && Array.isArray(body.files) && body.files.length > 0) {
+    const fileRows = body.files.map(
+      (
+        f: {
+          url: string;
+          name: string;
+          size: number;
+          file_type: string;
+          mime_type: string;
+        },
+        index: number
+      ) => ({
+        message_id: message.id,
+        file_url: f.url,
+        file_name: f.name,
+        file_size: f.size,
+        file_type: f.file_type,
+        mime_type: f.mime_type,
+        display_order: index,
+      })
+    );
+
+    const { data: insertedFiles, error: filesError } = await serviceClient
+      .from("message_files")
+      .insert(fileRows)
+      .select("id, file_url, file_name, file_size, file_type, mime_type, display_order");
+
+    if (filesError) {
+      console.error("Message files insert error:", filesError.message);
+    }
+
+    // Attach files to the response
+    return NextResponse.json(
+      { data: { ...message, files: insertedFiles || [] } },
+      { status: 201 }
+    );
+  }
+
+  return NextResponse.json({ data: { ...message, files: [] } }, { status: 201 });
 }

@@ -40,15 +40,24 @@ export interface ConversationMember {
   pinned_at: string | null;
 }
 
+export interface MessageFile {
+  id: string;
+  message_id: string;
+  file_url: string;
+  file_name: string;
+  file_size: number | null;
+  file_type: "image" | "video" | "audio" | "file";
+  mime_type: string | null;
+  display_order: number;
+  created_at: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
   sender_id: string;
   content: string | null;
-  message_type: "text" | "image" | "file" | "system";
-  file_url: string | null;
-  file_name: string | null;
-  file_size: number | null;
+  message_type: "text" | "image" | "file" | "video" | "audio" | "system";
   reply_to: string | null;
   forwarded_from: string | null;
   is_edited: boolean;
@@ -95,6 +104,7 @@ export interface MessageWithSender extends Message {
   reply_message?: Message & { sender: Profile };
   forwarded_message?: { id: string; content: string | null; message_type: string; sender_id: string; created_at: string; sender: Profile };
   reactions?: MessageReaction[];
+  files?: MessageFile[];
 }
 
 export interface ConversationWithDetails extends Conversation {
@@ -124,4 +134,21 @@ export interface TypingUser {
   user_id: string;
   username: string;
   timestamp: number;
+}
+
+// Client-side staged file for attachment preview
+export interface StagedFile {
+  id: string;
+  file: File;
+  preview?: string; // object URL for image thumbnails
+  category: "image" | "video" | "audio" | "file";
+}
+
+// Data returned after a successful upload
+export interface UploadedFileData {
+  url: string;
+  name: string;
+  size: number;
+  file_type: "image" | "video" | "audio" | "file";
+  mime_type: string;
 }

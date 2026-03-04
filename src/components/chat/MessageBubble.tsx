@@ -6,7 +6,12 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { broadcastReactionUpdate } from "@/hooks/useRealtimeMessages";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AnimatedEmoji } from "@/components/chat/AnimatedEmoji";
-import { getInitials, formatTime, formatFileSize } from "@/lib/utils";
+import { ImageCollage } from "@/components/chat/ImageCollage";
+import { ImageLightbox } from "@/components/chat/ImageLightbox";
+import { VideoPlayer } from "@/components/chat/VideoPlayer";
+import { AudioPlayer } from "@/components/chat/AudioPlayer";
+import { FileCard } from "@/components/chat/FileCard";
+import { getInitials, formatTime } from "@/lib/utils";
 import { getEmojiInfo, getEmojiSize } from "@/lib/emoji";
 import {
   Reply,
@@ -15,10 +20,8 @@ import {
   Trash2,
   SmilePlus,
   MoreHorizontal,
-  FileText,
   CheckCheck,
 } from "lucide-react";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { MessageWithSender, ConversationMember, Profile } from "@/types";
 
@@ -49,6 +52,7 @@ export function MessageBubble({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || "");
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiPickerBtnRef = useRef<HTMLButtonElement>(null);
@@ -57,6 +61,14 @@ export function MessageBubble({
   const [toolbarFlipped, setToolbarFlipped] = useState(false);
 
   const QUICK_REACTIONS = ["👍", "❤️", "😂"];
+
+  // Get files from message
+  const files = message.files || [];
+  const imageFiles = files.filter((f) => f.file_type === "image");
+  const videoFiles = files.filter((f) => f.file_type === "video");
+  const audioFiles = files.filter((f) => f.file_type === "audio");
+  const otherFiles = files.filter((f) => f.file_type === "file");
+  const hasMedia = files.length > 0;
 
   // Close dropdown/emoji picker on click outside
   useEffect(() => {
@@ -113,10 +125,8 @@ export function MessageBubble({
 
   const handleReaction = async (reaction: string) => {
     if (!user) return;
-    // Guard: don't call API with temp IDs
     if (message.id.startsWith("temp-")) return;
 
-    // Optimistic update
     const currentReactions = message.reactions || [];
     const existingIdx = currentReactions.findIndex(
       (r) => r.user_id === user.id && r.reaction === reaction
@@ -124,10 +134,8 @@ export function MessageBubble({
 
     let optimisticReactions: typeof currentReactions;
     if (existingIdx >= 0) {
-      // Remove reaction (toggle off)
       optimisticReactions = currentReactions.filter((_, i) => i !== existingIdx);
     } else {
-      // Add reaction
       optimisticReactions = [
         ...currentReactions,
         {
@@ -140,7 +148,6 @@ export function MessageBubble({
       ];
     }
 
-    // Update store immediately
     updateMessage(message.id, { reactions: optimisticReactions });
 
     try {
@@ -150,11 +157,9 @@ export function MessageBubble({
         body: JSON.stringify({ reaction }),
       });
       if (!res.ok) throw new Error("API error");
-      // Broadcast to other users so they see the reaction in real-time
       broadcastReactionUpdate(message.id);
     } catch (error) {
       console.error("Failed to toggle reaction:", error);
-      // Rollback on failure
       updateMessage(message.id, { reactions: currentReactions });
     }
   };
@@ -164,14 +169,12 @@ export function MessageBubble({
       setIsEditing(false);
       return;
     }
-    // Guard: don't call API with temp IDs
     if (message.id.startsWith("temp-")) {
       setIsEditing(false);
       return;
     }
 
     const previousContent = message.content;
-    // Optimistic update
     updateMessage(message.id, {
       content: editContent.trim(),
       is_edited: true,
@@ -187,7 +190,6 @@ export function MessageBubble({
       if (!res.ok) throw new Error("API error");
     } catch (error) {
       console.error("Failed to edit message:", error);
-      // Rollback
       updateMessage(message.id, {
         content: previousContent,
         is_edited: message.is_edited,
@@ -196,21 +198,16 @@ export function MessageBubble({
   };
 
   const handleDelete = async () => {
-    // Guard: don't call API with temp IDs
     if (message.id.startsWith("temp-")) return;
 
-    // Save original state for rollback
     const previousState = {
       content: message.content,
-      file_url: message.file_url,
       is_deleted: message.is_deleted,
     };
 
-    // Optimistic update — immediately show "This message was deleted"
     updateMessage(message.id, {
       is_deleted: true,
       content: null,
-      file_url: null,
     });
 
     try {
@@ -220,7 +217,6 @@ export function MessageBubble({
       if (!res.ok) throw new Error("API error");
     } catch (error) {
       console.error("Failed to delete message:", error);
-      // Rollback on failure
       updateMessage(message.id, previousState);
     }
   };
@@ -251,7 +247,6 @@ export function MessageBubble({
             isOwn ? "flex-row-reverse" : "flex-row"
           }`}
         >
-          {/* Avatar spacer to match normal messages */}
           {!isOwn && <div className="w-7 shrink-0" />}
           <div className="px-4 py-2 rounded-2xl bg-muted/50">
             <p className="text-sm text-muted-foreground italic">
@@ -268,7 +263,7 @@ export function MessageBubble({
       className={`flex ${isOwn ? "justify-end" : "justify-start"} py-0.5 group message-enter`}
     >
       <div
-        className={`flex items-start gap-2 max-w-[70%] ${
+        className={`flex items-start gap-2 ${hasMedia ? "max-w-[85%]" : "max-w-[70%]"} ${
           isOwn ? "flex-row-reverse" : "flex-row"
         }`}
       >
@@ -320,7 +315,7 @@ export function MessageBubble({
             <div
               data-message-id={message.id}
               className={`rounded-2xl break-words ${
-                emojiInfo.isEmojiOnly && !message.reply_message
+                emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia
                   ? "px-1 py-1"
                   : `px-4 py-2 ${
                       isOwn
@@ -328,7 +323,7 @@ export function MessageBubble({
                         : "bg-muted text-foreground rounded-bl-md"
                     }`
               }`}
-              style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+              style={{ overflowWrap: "anywhere", wordBreak: "break-word", minWidth: hasMedia ? 280 : 100 }}
             >
               {/* Forwarded indicator */}
               {message.forwarded_from && (
@@ -346,18 +341,17 @@ export function MessageBubble({
                 </div>
               )}
 
-              {/* Reply indicator — INSIDE the bubble */}
+              {/* Reply indicator */}
               {message.reply_message && (
                 <div
                   onClick={() => {
-                    // Dispatch custom event to scroll to the original message
                     window.dispatchEvent(
                       new CustomEvent("scroll-to-message", {
                         detail: { messageId: message.reply_message?.id },
                       })
                     );
                   }}
-                  className={`text-xs px-3 py-2 rounded-lg mb-2 cursor-pointer transition-all duration-200 ${
+                  className={`text-xs px-3 py-2 rounded-lg mb-2 cursor-pointer transition-all duration-200 min-w-[220px] ${
                     isOwn ? "reply-preview-own" : "reply-preview-other"
                   }`}
                 >
@@ -383,41 +377,38 @@ export function MessageBubble({
                   </p>
                 </div>
               )}
-              {/* Image */}
-              {message.message_type === "image" && message.file_url && (
-                <div className="mb-2">
-                  <Image
-                    src={message.file_url}
-                    alt="Shared image"
-                    width={400}
-                    height={256}
-                    className="rounded-lg max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+
+              {/* === MEDIA RENDERING === */}
+
+              {/* Images (collage) */}
+              {message.message_type === "image" && imageFiles.length > 0 && (
+                <div className="mb-2 -mx-2 -mt-0.5">
+                  <ImageCollage
+                    files={imageFiles}
+                    onImageClick={(index) => setLightboxIndex(index)}
                   />
                 </div>
               )}
 
-              {/* File */}
-              {message.message_type === "file" && message.file_url && (
-                <a
-                  href={message.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-2 p-2 rounded-lg mb-2 ${
-                    isOwn ? "bg-primary-foreground/10" : "bg-background/50"
-                  }`}
-                >
-                  <FileText className="h-8 w-8 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {message.file_name}
-                    </p>
-                    {message.file_size && (
-                      <p className="text-xs opacity-70">
-                        {formatFileSize(message.file_size)}
-                      </p>
-                    )}
-                  </div>
-                </a>
+              {/* Video */}
+              {message.message_type === "video" && videoFiles.length > 0 && (
+                <div className="mb-2 -mx-2 -mt-0.5">
+                  <VideoPlayer file={videoFiles[0]} />
+                </div>
+              )}
+
+              {/* Audio */}
+              {message.message_type === "audio" && audioFiles.length > 0 && (
+                <div className="mb-1">
+                  <AudioPlayer file={audioFiles[0]} isOwn={isOwn} />
+                </div>
+              )}
+
+              {/* Files */}
+              {message.message_type === "file" && otherFiles.length > 0 && (
+                <div className="mb-1">
+                  <FileCard file={otherFiles[0]} isOwn={isOwn} />
+                </div>
               )}
 
               {/* Text content — emoji-only or regular */}
@@ -466,7 +457,7 @@ export function MessageBubble({
                     </div>
                   </div>
                 </div>
-              ) : emojiInfo.isEmojiOnly && !message.reply_message ? (
+              ) : emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia ? (
                 <div className="flex items-center gap-1 py-1">
                   {emojiInfo.emojis.map((emoji, i) => (
                     <AnimatedEmoji
@@ -491,7 +482,7 @@ export function MessageBubble({
                 }`}
               >
                 <span className={`text-[10px] ${
-                  emojiInfo.isEmojiOnly && !message.reply_message
+                  emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia
                     ? "text-muted-foreground"
                     : "opacity-60"
                 }`}>
@@ -502,7 +493,7 @@ export function MessageBubble({
                 )}
                 {isOwn && (
                   <CheckCheck className={`h-3 w-3 ${
-                    emojiInfo.isEmojiOnly && !message.reply_message
+                    emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia
                       ? "text-muted-foreground"
                       : "opacity-60"
                   }`} />
@@ -670,7 +661,7 @@ export function MessageBubble({
         </div>
       </div>
 
-      {/* Fixed emoji picker overlay — outside all nested containers to prevent clipping */}
+      {/* Fixed emoji picker overlay */}
       {showEmojiPicker && emojiPickerPos && (
         <>
           <div
@@ -698,6 +689,15 @@ export function MessageBubble({
             />
           </div>
         </>
+      )}
+
+      {/* Image lightbox */}
+      {lightboxIndex !== null && imageFiles.length > 0 && (
+        <ImageLightbox
+          files={imageFiles}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   );

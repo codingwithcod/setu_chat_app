@@ -13,24 +13,23 @@ export async function POST(request: Request) {
   }
 
   const formData = await request.formData();
-  const file = formData.get("file") as File;
+  const files = formData.getAll("file") as File[];
   const bucket = (formData.get("bucket") as string) || "chat-files";
   // For avatars: pass entityId (userId for profile, conversationId for group)
   const entityId = formData.get("entityId") as string | null;
 
-  if (!file) {
+  if (!files || files.length === 0) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
   const isAvatarBucket =
     bucket === "profile-avatars" || bucket === "group-avatars";
 
-  let filePath: string;
-
+  // Avatar upload — single file only
   if (isAvatarBucket && entityId) {
-    // Avatar upload: use fixed path per entity — always overwrite
+    const file = files[0];
     const fileExt = file.name.split(".").pop() || "jpg";
-    filePath = `${entityId}/avatar.${fileExt}`;
+    const filePath = `${entityId}/avatar.${fileExt}`;
 
     // Delete any existing files in this entity's folder first
     const { data: existingFiles } = await serviceClient.storage
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
       await serviceClient.storage.from(bucket).remove(filesToDelete);
     }
 
-    // Upload with upsert (in case delete didn't work or race condition)
+    // Upload with upsert
     const { data, error } = await serviceClient.storage
       .from(bucket)
       .upload(filePath, file, {
@@ -55,7 +54,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Add cache-busting param so browsers load the new image
     const {
       data: { publicUrl },
     } = serviceClient.storage.from(bucket).getPublicUrl(data.path);
@@ -71,32 +69,42 @@ export async function POST(request: Request) {
     });
   }
 
-  // Regular file upload (chat attachments) — unique name per file
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+  // Regular chat file upload — supports multiple files
+  const uploadedFiles = [];
 
-  const { data, error } = await serviceClient.storage
-    .from(bucket)
-    .upload(fileName, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
+  for (const file of files) {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
 
-  if (error) {
-    console.error(`[Upload] Failed to upload to ${bucket}:`, error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    const { data, error } = await serviceClient.storage
+      .from(bucket)
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
 
-  const {
-    data: { publicUrl },
-  } = serviceClient.storage.from(bucket).getPublicUrl(data.path);
+    if (error) {
+      console.error(`[Upload] Failed to upload to ${bucket}:`, error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-  return NextResponse.json({
-    data: {
+    const {
+      data: { publicUrl },
+    } = serviceClient.storage.from(bucket).getPublicUrl(data.path);
+
+    uploadedFiles.push({
       url: publicUrl,
       path: data.path,
       name: file.name,
       size: file.size,
-    },
-  });
+      mime_type: file.type,
+    });
+  }
+
+  // Return array for multi-file, maintain backward compat shape for single file
+  if (uploadedFiles.length === 1) {
+    return NextResponse.json({ data: uploadedFiles[0] });
+  }
+
+  return NextResponse.json({ data: uploadedFiles });
 }

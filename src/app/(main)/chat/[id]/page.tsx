@@ -13,7 +13,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { MessageListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
-import type { MessageWithSender, ConversationWithDetails } from "@/types";
+import type { MessageWithSender, ConversationWithDetails, UploadedFileData } from "@/types";
 import { Loader2, ChevronDown } from "lucide-react";
 
 export default function ConversationPage() {
@@ -251,11 +251,10 @@ export default function ConversationPage() {
     setNewMessageCount(0);
   }, [scrollToBottom]);
 
-  // Send message
+  // Send message (new signature: content + optional files array)
   const handleSendMessage = async (
     content: string,
-    messageType: string = "text",
-    fileData?: { url: string; name: string; size: number }
+    files?: UploadedFileData[]
   ) => {
     if (!user) return;
 
@@ -270,16 +269,20 @@ export default function ConversationPage() {
     // Clear the unread divider once user sends a message
     setUnreadCount(0);
 
+    // Determine message_type from files
+    let messageType: "text" | "image" | "video" | "audio" | "file" = "text";
+    if (files && files.length > 0) {
+      const firstFileType = files[0].file_type;
+      messageType = firstFileType;
+    }
+
     // Optimistic update
     const optimisticMessage: MessageWithSender = {
       id: `temp-${Date.now()}`,
       conversation_id: conversationId,
       sender_id: user.id,
-      content,
-      message_type: messageType as "text" | "image" | "file",
-      file_url: fileData?.url || null,
-      file_name: fileData?.name || null,
-      file_size: fileData?.size || null,
+      content: content || null,
+      message_type: messageType,
       reply_to: replyToId,
       forwarded_from: null,
       is_edited: false,
@@ -288,6 +291,17 @@ export default function ConversationPage() {
       updated_at: new Date().toISOString(),
       sender: user,
       reply_message: currentReplyingTo || undefined,
+      files: files?.map((f, i) => ({
+        id: `temp-file-${i}`,
+        message_id: `temp-${Date.now()}`,
+        file_url: f.url,
+        file_name: f.name,
+        file_size: f.size,
+        file_type: f.file_type,
+        mime_type: f.mime_type,
+        display_order: i,
+        created_at: new Date().toISOString(),
+      })),
     };
 
     addMessage(optimisticMessage);
@@ -298,12 +312,16 @@ export default function ConversationPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content,
+          content: content || null,
           message_type: messageType,
-          file_url: fileData?.url,
-          file_name: fileData?.name,
-          file_size: fileData?.size,
           reply_to: replyToId,
+          files: files?.map((f) => ({
+            url: f.url,
+            name: f.name,
+            size: f.size,
+            file_type: f.file_type,
+            mime_type: f.mime_type,
+          })),
         }),
       });
       if (!res.ok) {

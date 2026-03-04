@@ -61,7 +61,6 @@ export async function DELETE(
     .update({
       is_deleted: true,
       content: null,
-      file_url: null,
     })
     .eq("id", params.id)
     .eq("sender_id", user.id);

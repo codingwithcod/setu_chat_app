@@ -24,8 +24,6 @@ export async function POST(request: Request) {
     userIds: string[];
   };
 
-  console.log("[Forward] Request:", { messageId, conversationIds, userIds });
-
   if (!messageId) {
     return NextResponse.json(
       { error: "messageId is required" },
@@ -40,22 +38,19 @@ export async function POST(request: Request) {
     );
   }
 
-  // Fetch the original message
+  // Fetch the original message with its files
   const { data: originalMessage, error: msgError } = await serviceClient
     .from("messages")
-    .select("*")
+    .select("*, files:message_files(id, file_url, file_name, file_size, file_type, mime_type, display_order)")
     .eq("id", messageId)
     .single();
 
   if (msgError || !originalMessage) {
-    console.error("[Forward] Original message not found:", msgError?.message);
     return NextResponse.json(
       { error: "Message not found" },
       { status: 404 }
     );
   }
-
-  console.log("[Forward] Original message found:", originalMessage.id, "type:", originalMessage.message_type);
 
   // Collect all target conversation IDs
   const targetConversationIds = [...conversationIds];
@@ -64,7 +59,6 @@ export async function POST(request: Request) {
   for (const targetUserId of userIds) {
     let foundConvId: string | null = null;
 
-    // Check if a private conversation already exists between current user and target
     const { data: myMemberships } = await serviceClient
       .from("conversation_members")
       .select("conversation_id")
@@ -95,9 +89,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // If no existing conversation, create one
     if (!foundConvId) {
-      console.log("[Forward] Creating new private conversation with:", targetUserId);
       const { data: newConv, error: convError } = await serviceClient
         .from("conversations")
         .insert({
@@ -108,7 +100,6 @@ export async function POST(request: Request) {
         .single();
 
       if (convError || !newConv) {
-        console.error("[Forward] Failed to create conversation:", convError?.message);
         continue;
       }
 
@@ -118,7 +109,6 @@ export async function POST(request: Request) {
       ]);
 
       if (membersError) {
-        console.error("[Forward] Failed to add members:", membersError.message);
         continue;
       }
 
@@ -130,8 +120,6 @@ export async function POST(request: Request) {
     }
   }
 
-  console.log("[Forward] Target conversations:", targetConversationIds);
-
   // Send forwarded message to each conversation
   const results = [];
   const errors = [];
@@ -141,13 +129,8 @@ export async function POST(request: Request) {
       sender_id: user.id,
       content: originalMessage.content,
       message_type: originalMessage.message_type || "text",
-      file_url: originalMessage.file_url || null,
-      file_name: originalMessage.file_name || null,
-      file_size: originalMessage.file_size || null,
       forwarded_from: originalMessage.id,
     };
-
-    console.log("[Forward] Inserting message to conv:", convId);
 
     const { data: forwardedMsg, error: insertError } = await serviceClient
       .from("messages")
@@ -161,10 +144,24 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError) {
-      console.error("[Forward] Insert failed for conv", convId, ":", insertError.message, insertError.details, insertError.hint);
       errors.push({ convId, error: insertError.message });
-    } else {
-      console.log("[Forward] Message forwarded successfully to:", convId, "msg id:", forwardedMsg?.id);
+    } else if (forwardedMsg) {
+      // Copy files from original message to forwarded message
+      const originalFiles = originalMessage.files || [];
+      if (originalFiles.length > 0) {
+        const fileRows = originalFiles.map((f: { file_url: string; file_name: string; file_size: number; file_type: string; mime_type: string; display_order: number }) => ({
+          message_id: forwardedMsg.id,
+          file_url: f.file_url,
+          file_name: f.file_name,
+          file_size: f.file_size,
+          file_type: f.file_type,
+          mime_type: f.mime_type,
+          display_order: f.display_order,
+        }));
+
+        await serviceClient.from("message_files").insert(fileRows);
+      }
+
       // Update conversation's last_message_at
       await serviceClient
         .from("conversations")
@@ -174,8 +171,6 @@ export async function POST(request: Request) {
       results.push(forwardedMsg);
     }
   }
-
-  console.log("[Forward] Results:", results.length, "successes,", errors.length, "failures");
 
   if (results.length === 0 && errors.length > 0) {
     return NextResponse.json(

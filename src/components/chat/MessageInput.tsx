@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useChatStore } from "@/stores/useChatStore";
 import { toast } from "@/stores/useToastStore";
-import { validateFile } from "@/lib/file-validation";
+import { validateFile, getFileCategory } from "@/lib/file-validation";
+import { AttachmentMenu } from "@/components/chat/AttachmentMenu";
+import { FilePreviewBar } from "@/components/chat/FilePreviewBar";
 import {
   Send,
   Paperclip,
@@ -12,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import type { StagedFile, UploadedFileData } from "@/types";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -21,11 +24,7 @@ const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
 });
 
 interface MessageInputProps {
-  onSend: (
-    content: string,
-    messageType?: string,
-    fileData?: { url: string; name: string; size: number }
-  ) => void;
+  onSend: (content: string, files?: UploadedFileData[]) => void;
   onTyping: () => void;
   conversationId: string;
 }
@@ -39,13 +38,15 @@ export function MessageInput({
   const { replyingTo, setReplyingTo } = useChatStore();
   const [message, setMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
 
-  const hasContent = message.trim().length > 0;
+  const hasContent = message.trim().length > 0 || stagedFiles.length > 0;
 
   // Auto-resize textarea
   useEffect(() => {
@@ -64,6 +65,16 @@ export function MessageInput({
       textareaRef.current.focus();
     }
   }, [replyingTo]);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      stagedFiles.forEach((f) => {
+        if (f.preview) URL.revokeObjectURL(f.preview);
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Close emoji picker on click outside
   useEffect(() => {
@@ -97,66 +108,224 @@ export function MessageInput({
     };
   }, [showEmoji]);
 
-  const handleSend = useCallback(() => {
-    if (!message.trim()) return;
-    onSend(message.trim());
+  // Close attachment menu on click outside
+  useEffect(() => {
+    if (!showAttachMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        attachMenuRef.current &&
+        !attachMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowAttachMenu(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowAttachMenu(false);
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showAttachMenu]);
+
+  // Determine what file category is currently staged
+  const getStagedCategory = useCallback((): "image" | "video" | "audio" | "file" | null => {
+    if (stagedFiles.length === 0) return null;
+    return stagedFiles[0].category;
+  }, [stagedFiles]);
+
+  const addStagedFiles = useCallback(
+    (files: FileList, category: "image" | "video" | "audio" | "file") => {
+      const fileArray = Array.from(files);
+      const newStaged: StagedFile[] = [];
+      const existingCategory = getStagedCategory();
+
+      for (const file of fileArray) {
+        // Validate each file
+        const validation = validateFile(file, "chatFile");
+        if (!validation.valid) {
+          toast.error(validation.error!);
+          continue;
+        }
+
+        const detectedCategory = getFileCategory(file);
+
+        // FIX 4: Enforce single file type per message
+        if (existingCategory && existingCategory !== detectedCategory) {
+          const categoryLabels: Record<string, string> = {
+            image: "photos",
+            video: "a video",
+            audio: "an audio file",
+            file: "a file",
+          };
+          toast.error(
+            `You already have ${categoryLabels[existingCategory]} staged. Remove ${existingCategory === "image" ? "them" : "it"} first to add ${categoryLabels[detectedCategory]}.`
+          );
+          return;
+        }
+
+        // Check if new files being added mix with previous new files in this batch
+        if (newStaged.length > 0 && newStaged[0].category !== detectedCategory) {
+          toast.error("You can only send one type of attachment per message.");
+          return;
+        }
+
+        // Enforce limits by category
+        if (detectedCategory === "image") {
+          const currentImages = stagedFiles.filter((f) => f.category === "image");
+          if (currentImages.length + newStaged.filter((f) => f.category === "image").length >= 10) {
+            toast.error("Maximum 10 images allowed per message.");
+            break;
+          }
+        } else {
+          // Non-image: only 1 at a time — replace if already exists
+          if (stagedFiles.some((f) => f.category === detectedCategory)) {
+            // Clear existing and add new
+            stagedFiles.forEach((f) => {
+              if (f.preview) URL.revokeObjectURL(f.preview);
+            });
+            setStagedFiles([]);
+          }
+        }
+
+        const staged: StagedFile = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          file,
+          category: detectedCategory,
+          preview:
+            detectedCategory === "image"
+              ? URL.createObjectURL(file)
+              : undefined,
+        };
+        newStaged.push(staged);
+      }
+
+      if (newStaged.length > 0) {
+        setStagedFiles((prev) => {
+          // Non-image: replace all
+          if (newStaged[0].category !== "image") {
+            prev.forEach((f) => {
+              if (f.preview) URL.revokeObjectURL(f.preview);
+            });
+            return [...newStaged];
+          }
+          return [...prev, ...newStaged];
+        });
+      }
+
+      textareaRef.current?.focus();
+    },
+    [stagedFiles, getStagedCategory]
+  );
+
+  const handleRemoveStagedFile = useCallback((fileId: string) => {
+    setStagedFiles((prev) => {
+      const file = prev.find((f) => f.id === fileId);
+      if (file?.preview) URL.revokeObjectURL(file.preview);
+      return prev.filter((f) => f.id !== fileId);
+    });
+  }, []);
+
+  const handlePhotosSelect = useCallback(
+    (files: FileList) => addStagedFiles(files, "image"),
+    [addStagedFiles]
+  );
+
+  const handleVideoSelect = useCallback(
+    (files: FileList) => addStagedFiles(files, "video"),
+    [addStagedFiles]
+  );
+
+  const handleFileSelect = useCallback(
+    (files: FileList) => addStagedFiles(files, "file"),
+    [addStagedFiles]
+  );
+
+  const handleSend = useCallback(async () => {
+    if (!message.trim() && stagedFiles.length === 0) return;
+
+    const textContent = message.trim();
+
+    // If we have files, upload them first
+    if (stagedFiles.length > 0) {
+      setUploading(true);
+
+      try {
+        const formData = new FormData();
+        stagedFiles.forEach((sf) => formData.append("file", sf.file));
+        formData.append("bucket", "chat-files");
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.error || "Upload failed");
+          setUploading(false);
+          return;
+        }
+
+        // Normalize response to array
+        const uploadedArray = Array.isArray(data.data)
+          ? data.data
+          : [data.data];
+
+        const uploadedFiles: UploadedFileData[] = uploadedArray.map(
+          (
+            f: { url: string; name: string; size: number; mime_type: string },
+            i: number
+          ) => ({
+            url: f.url,
+            name: f.name,
+            size: f.size,
+            file_type: stagedFiles[i]?.category || "file",
+            mime_type: f.mime_type || stagedFiles[i]?.file.type || "",
+          })
+        );
+
+        onSend(textContent, uploadedFiles);
+      } catch (error) {
+        console.error("Upload failed:", error);
+        toast.error("Upload failed. Please try again.");
+        setUploading(false);
+        return;
+      }
+
+      setUploading(false);
+    } else {
+      // Text-only message
+      onSend(textContent);
+    }
+
+    // Cleanup
     setMessage("");
+    stagedFiles.forEach((f) => {
+      if (f.preview) URL.revokeObjectURL(f.preview);
+    });
+    setStagedFiles([]);
     setReplyingTo(null);
     setShowEmoji(false);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [message, onSend, setReplyingTo]);
+  }, [message, stagedFiles, onSend, setReplyingTo]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validation = validateFile(file, "chatFile");
-    if (!validation.valid) {
-      toast.error(validation.error!);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("bucket", "chat-files");
-
-    const isImage = file.type.startsWith("image/");
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.data) {
-        onSend(isImage ? "" : file.name, isImage ? "image" : "file", {
-          url: data.data.url,
-          name: data.data.name,
-          size: data.data.size,
-        });
-      } else {
-        toast.error(data.error || "Upload failed");
-      }
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error("Upload failed. Please try again.");
-    }
-    setUploading(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
     }
   };
 
@@ -189,31 +358,36 @@ export function MessageInput({
         </div>
       )}
 
+      {/* Staged files preview */}
+      <FilePreviewBar files={stagedFiles} onRemove={handleRemoveStagedFile} />
+
       {/* Unified input container */}
       <div className={`msg-input-container ${isFocused ? "focused" : ""}`}>
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileUpload}
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.mp3,.mp4"
-        />
-
         {/* Attach button (left side) */}
-        <button
-          className="msg-input-action-btn attach-btn group"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          aria-label="Attach file"
-          title="Attach file"
-        >
-          {uploading ? (
-            <Loader2 className="h-[18px] w-[18px] animate-spin" />
-          ) : (
-            <Paperclip className="h-[18px] w-[18px]" />
+        <div className="relative" ref={attachMenuRef}>
+          <button
+            className="msg-input-action-btn attach-btn group"
+            onClick={() => setShowAttachMenu(!showAttachMenu)}
+            disabled={uploading}
+            aria-label="Attach file"
+            title="Attach file"
+          >
+            {uploading ? (
+              <Loader2 className="h-[18px] w-[18px] animate-spin" />
+            ) : (
+              <Paperclip className="h-[18px] w-[18px]" />
+            )}
+          </button>
+
+          {showAttachMenu && (
+            <AttachmentMenu
+              onPhotosSelect={handlePhotosSelect}
+              onVideoSelect={handleVideoSelect}
+              onFileSelect={handleFileSelect}
+              onClose={() => setShowAttachMenu(false)}
+            />
           )}
-        </button>
+        </div>
 
         {/* Textarea */}
         <textarea
@@ -265,7 +439,11 @@ export function MessageInput({
             aria-label="Send message"
             title="Send message"
           >
-            <Send className="h-4 w-4" />
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>
