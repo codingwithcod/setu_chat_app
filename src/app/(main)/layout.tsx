@@ -7,8 +7,19 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { usePresence } from "@/hooks/usePresence";
 import { useRealtimeConversations } from "@/hooks/useRealtimeConversations";
+import { useRealtimeSessions } from "@/hooks/useRealtimeSessions";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { NetworkBanner } from "@/components/shared/NetworkBanner";
+import {
+  NewLoginBannerStack,
+  useNewLoginBanner,
+} from "@/components/shared/NewLoginBanner";
+import { getDeviceInfo } from "@/lib/device-info";
+import {
+  getOrCreateSessionToken,
+  setCurrentSessionId,
+  clearSessionToken,
+} from "@/lib/session-manager";
 import { Loader2, WifiOff, Wifi, RefreshCw, CheckCircle2 } from "lucide-react";
 import type { ConversationWithDetails } from "@/types";
 
@@ -81,6 +92,25 @@ export default function MainLayout({
   usePresence();
   useRealtimeConversations();
 
+  // Session management
+  const { pendingSessions, addNewLogin, dismissSession } =
+    useNewLoginBanner();
+
+  useRealtimeSessions({
+    onNewLogin: addNewLogin,
+    onSessionRevoked: useCallback(() => {
+      // Our session was revoked from another device — sign out
+      const signOut = async () => {
+        const supabase = createClient();
+        clearSessionToken();
+        await supabase.auth.signOut();
+        setUser(null);
+        router.push("/login");
+      };
+      signOut();
+    }, [router, setUser]),
+  });
+
   // Reusable app initialization (used for first load + retry)
   const initializeApp = useCallback(async () => {
     const supabase = createClient();
@@ -125,6 +155,29 @@ export default function MainLayout({
 
         setUser(profile);
         setLoadFailed(false);
+
+        // Track session after successful auth
+        try {
+          const deviceInfo = await getDeviceInfo();
+          const sessionToken = getOrCreateSessionToken();
+          const trackRes = await fetch("/api/sessions/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionToken,
+              deviceName: deviceInfo.deviceName,
+              deviceType: deviceInfo.deviceType,
+              browserName: deviceInfo.browserName,
+              osName: deviceInfo.osName,
+            }),
+          });
+          const trackData = await trackRes.json();
+          if (trackData.data?.id) {
+            setCurrentSessionId(trackData.data.id);
+          }
+        } catch (sessionError) {
+          console.error("Failed to track session:", sessionError);
+        }
 
         // Load conversations after successful auth
         try {
@@ -347,6 +400,10 @@ export default function MainLayout({
           !isConversationView ? "hidden md:flex" : "flex"
         }`}
       >
+        <NewLoginBannerStack
+          sessions={pendingSessions}
+          onDismiss={dismissSession}
+        />
         <NetworkBanner />
         {children}
       </div>

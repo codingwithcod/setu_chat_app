@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { createClient } from "@/lib/supabase/client";
+import {
+  clearSessionToken,
+  getCurrentSessionId,
+} from "@/lib/session-manager";
 import {
   isNotificationSoundEnabled,
   setNotificationSoundEnabled,
@@ -12,15 +16,40 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { ArrowLeft, Moon, Bell, Volume2, VolumeX, Shield, HelpCircle, LogOut } from "lucide-react";
+import { ActiveSessions } from "@/components/settings/ActiveSessions";
+import {
+  ArrowLeft,
+  Moon,
+  Bell,
+  Volume2,
+  VolumeX,
+  Shield,
+  HelpCircle,
+  LogOut,
+  Smartphone,
+} from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, setUser } = useAuthStore();
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const sessionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSoundEnabled(isNotificationSoundEnabled());
+  }, []);
+
+  // Auto-scroll to sessions section if URL has #sessions
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#sessions") {
+      // Small delay to ensure section is rendered
+      setTimeout(() => {
+        sessionsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 300);
+    }
   }, []);
 
   const handleToggleSound = () => {
@@ -35,6 +64,22 @@ export default function SettingsPage() {
 
   const handleSignOut = async () => {
     const supabase = createClient();
+
+    // Delete the current session record
+    const currentSessionId = getCurrentSessionId();
+    if (currentSessionId) {
+      try {
+        await fetch(`/api/sessions/${currentSessionId}`, {
+          method: "DELETE",
+        });
+      } catch {
+        // Best-effort cleanup
+      }
+    }
+
+    // Clear session token from localStorage
+    clearSessionToken();
+
     await supabase
       .from("profiles")
       .update({ is_online: false, last_seen: new Date().toISOString() })
@@ -115,6 +160,24 @@ export default function SettingsPage() {
                 />
               </div>
             </button>
+          </div>
+
+          <Separator />
+
+          {/* Active Sessions Section */}
+          <div ref={sessionsRef} id="sessions" className="space-y-3 scroll-mt-4">
+            <div className="flex items-center gap-3 p-3">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+                  Active Sessions
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Manage your active sessions across devices
+                </p>
+              </div>
+            </div>
+            <ActiveSessions />
           </div>
 
           <Separator />

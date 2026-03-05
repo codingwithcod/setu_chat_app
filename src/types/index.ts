@@ -162,3 +162,24 @@ export interface UploadedFileData {
   file_type: "image" | "video" | "audio" | "file";
   mime_type: string;
 }
+
+// Multi-session management
+export interface UserSession {
+  id: string;
+  user_id: string;
+  session_token: string;
+  device_name: string;
+  device_type:
+    | "desktop_app"
+    | "desktop_browser"
+    | "mobile_app"
+    | "mobile_browser"
+    | "tablet_browser";
+  browser_name: string | null;
+  os_name: string | null;
+  ip_address: string | null;
+  location: string | null;
+  is_current?: boolean; // computed client-side
+  last_active_at: string;
+  created_at: string;
+}
