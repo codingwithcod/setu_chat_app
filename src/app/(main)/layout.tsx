@@ -383,43 +383,48 @@ export default function MainLayout({
   const isConversationView = pathname.startsWith("/chat/");
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <div
-        className={`${isSidebarOpen ? "flex" : "hidden"} ${isConversationView ? "hidden md:flex" : "flex"} w-full md:w-auto flex-col border-r border-border bg-sidebar shrink-0`}
-        style={{ width: undefined }}
-      >
-        <div className="flex flex-col h-full w-full md:hidden">
-          <Sidebar />
-        </div>
-        <div
-          className="hidden md:flex flex-col h-full"
-          style={{ width: sidebarWidth }}
-        >
-          <Sidebar />
-        </div>
-      </div>
-
-      {/* Resize Handle — overlaps sidebar border, only on md+ screens */}
-      <div
-        className={`hidden md:flex shrink-0 relative
-          ${isDragging ? "sidebar-resize-handle dragging" : "sidebar-resize-handle"}`}
-        style={{ width: "6px", marginLeft: "-3px", marginRight: "-3px" }}
-        onMouseDown={handleMouseDown}
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+      {/* Full-width banners — above everything */}
+      <NewLoginBannerStack
+        sessions={pendingSessions}
+        onDismiss={dismissSession}
       />
+      <NetworkBanner />
 
-      {/* Main content */}
-      <div
-        className={`flex-1 flex flex-col min-w-0 ${
-          !isConversationView ? "hidden md:flex" : "flex"
-        }`}
-      >
-        <NewLoginBannerStack
-          sessions={pendingSessions}
-          onDismiss={dismissSession}
+      {/* Main layout row — sidebar + content */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Sidebar */}
+        <div
+          className={`${isSidebarOpen ? "flex" : "hidden"} ${isConversationView ? "hidden md:flex" : "flex"} w-full md:w-auto flex-col border-r border-border bg-sidebar shrink-0`}
+          style={{ width: undefined }}
+        >
+          <div className="flex flex-col h-full w-full md:hidden">
+            <Sidebar />
+          </div>
+          <div
+            className="hidden md:flex flex-col h-full"
+            style={{ width: sidebarWidth }}
+          >
+            <Sidebar />
+          </div>
+        </div>
+
+        {/* Resize Handle — overlaps sidebar border, only on md+ screens */}
+        <div
+          className={`hidden md:flex shrink-0 relative
+            ${isDragging ? "sidebar-resize-handle dragging" : "sidebar-resize-handle"}`}
+          style={{ width: "6px", marginLeft: "-3px", marginRight: "-3px" }}
+          onMouseDown={handleMouseDown}
         />
-        <NetworkBanner />
-        {children}
+
+        {/* Main content */}
+        <div
+          className={`flex-1 flex flex-col min-w-0 ${
+            !isConversationView ? "hidden md:flex" : "flex"
+          }`}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
