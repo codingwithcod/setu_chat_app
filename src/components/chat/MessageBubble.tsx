@@ -22,6 +22,11 @@ import {
   SmilePlus,
   MoreHorizontal,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import dynamic from "next/dynamic";
 import type { MessageWithSender, ConversationMember, Profile } from "@/types";
 
@@ -494,21 +499,29 @@ export function MessageBubble({
                   <span className="text-[10px] opacity-50">edited</span>
                 )}
                 {isOwn && (
-                  <span
-                    onClick={(e) => {
-                      if (message.status === "failed" && onRetry) {
-                        e.stopPropagation();
-                        onRetry(message);
-                      }
-                    }}
-                    className={message.status === "failed" ? "cursor-pointer" : ""}
-                    title={message.status === "failed" ? "Click to retry" : undefined}
-                  >
-                    <MessageStatus
-                      status={message.status || (message.id.startsWith("temp-") ? "sending" : "sent")}
-                      isEmojiOnly={emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia}
-                    />
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        onClick={(e) => {
+                          if (message.status === "failed" && onRetry) {
+                            e.stopPropagation();
+                            onRetry(message);
+                          }
+                        }}
+                        className={message.status === "failed" ? "cursor-pointer" : ""}
+                      >
+                        <MessageStatus
+                          status={message.status || (message.id.startsWith("temp-") ? "sending" : "sent")}
+                          isEmojiOnly={emojiInfo.isEmojiOnly && !message.reply_message && !hasMedia}
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    {message.status === "failed" && (
+                      <TooltipContent side="top">
+                        <p>Click to retry</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
                 )}
               </div>
             </div>
@@ -536,17 +549,22 @@ export function MessageBubble({
                     {} as Record<string, { count: number; hasOwn: boolean; userIds: string[] }>
                   )
                 ).map(([reaction, { count, hasOwn, userIds }]) => (
-                  <button
-                    key={reaction}
-                    onClick={() => handleReaction(reaction)}
-                    className={`msg-reaction-badge ${
-                      hasOwn ? "own" : ""
-                    }`}
-                    title={getReactorNames(userIds)}
-                  >
-                    <span className="msg-reaction-emoji">{reaction}</span>
-                    {count > 1 && <span className="msg-reaction-count">{count}</span>}
-                  </button>
+                  <Tooltip key={reaction}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => handleReaction(reaction)}
+                        className={`msg-reaction-badge ${
+                          hasOwn ? "own" : ""
+                        }`}
+                      >
+                        <span className="msg-reaction-emoji">{reaction}</span>
+                        {count > 1 && <span className="msg-reaction-count">{count}</span>}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{getReactorNames(userIds)}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             )}
@@ -565,36 +583,47 @@ export function MessageBubble({
                 <div className="msg-action-toolbar-inner">
                   {/* Quick reaction emojis */}
                   {QUICK_REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => handleReaction(emoji)}
-                      className="msg-action-quick-emoji"
-                      title={`React with ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
+                    <Tooltip key={emoji}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleReaction(emoji)}
+                          className="msg-action-quick-emoji"
+                        >
+                          {emoji}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>React with {emoji}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
 
                   {/* Emoji picker button */}
                   <div className="relative" ref={emojiPickerRef}>
-                    <button
-                      ref={emojiPickerBtnRef}
-                      onClick={() => {
-                        if (!showEmojiPicker && emojiPickerBtnRef.current) {
-                          const rect = emojiPickerBtnRef.current.getBoundingClientRect();
-                          setEmojiPickerPos({
-                            top: rect.top,
-                            left: Math.min(rect.left, window.innerWidth - 360),
-                          });
-                        }
-                        setShowEmojiPicker(!showEmojiPicker);
-                        setShowMoreMenu(false);
-                      }}
-                      className={`msg-action-btn ${showEmojiPicker ? "active" : ""}`}
-                      title="More reactions"
-                    >
-                      <SmilePlus className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          ref={emojiPickerBtnRef}
+                          onClick={() => {
+                            if (!showEmojiPicker && emojiPickerBtnRef.current) {
+                              const rect = emojiPickerBtnRef.current.getBoundingClientRect();
+                              setEmojiPickerPos({
+                                top: rect.top,
+                                left: Math.min(rect.left, window.innerWidth - 360),
+                              });
+                            }
+                            setShowEmojiPicker(!showEmojiPicker);
+                            setShowMoreMenu(false);
+                          }}
+                          className={`msg-action-btn ${showEmojiPicker ? "active" : ""}`}
+                        >
+                          <SmilePlus className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>More reactions</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
 
                   {/* Separator */}
@@ -602,30 +631,42 @@ export function MessageBubble({
 
                   {/* Edit button (own messages only) */}
                   {isOwn && (
-                    <button
-                      onClick={() => {
-                        setIsEditing(true);
-                        setShowActions(false);
-                      }}
-                      className="msg-action-btn"
-                      title="Edit"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setIsEditing(true);
+                            setShowActions(false);
+                          }}
+                          className="msg-action-btn"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Edit</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
 
                   {/* More options */}
                   <div className="relative" ref={moreMenuRef}>
-                    <button
-                      onClick={() => {
-                        setShowMoreMenu(!showMoreMenu);
-                        setShowEmojiPicker(false);
-                      }}
-                      className={`msg-action-btn ${showMoreMenu ? "active" : ""}`}
-                      title="More options"
-                    >
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setShowMoreMenu(!showMoreMenu);
+                            setShowEmojiPicker(false);
+                          }}
+                          className={`msg-action-btn ${showMoreMenu ? "active" : ""}`}
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>More options</p>
+                      </TooltipContent>
+                    </Tooltip>
                     {showMoreMenu && (
                       <div className={`msg-action-dropdown ${
                         isOwn ? "right-0" : "left-0"

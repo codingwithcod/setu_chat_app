@@ -16,6 +16,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { getSessionToken } from "@/lib/session-manager";
 import {
   markSessionAsRevoking,
@@ -343,13 +348,19 @@ export function ActiveSessions() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setConfirmRevokeId(session.id)}
-                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Revoke session"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => setConfirmRevokeId(session.id)}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>Revoke session</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 )}

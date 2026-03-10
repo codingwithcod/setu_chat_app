@@ -10,6 +10,11 @@ import {
   RotateCcw,
   RotateCw,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { formatFileSize } from "@/lib/file-validation";
 import type { MessageFile } from "@/types";
 
@@ -185,17 +190,23 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
           </div>
         </div>
 
-        <button
-          onClick={handleDownload}
-          className={`shrink-0 p-1.5 rounded-full transition-colors ${
-            isOwn
-              ? "hover:bg-primary-foreground/20 text-primary-foreground/70"
-              : "hover:bg-accent text-muted-foreground"
-          }`}
-          title="Download"
-        >
-          <Download className="h-4 w-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleDownload}
+              className={`shrink-0 p-1.5 rounded-full transition-colors ${
+                isOwn
+                  ? "hover:bg-primary-foreground/20 text-primary-foreground/70"
+                  : "hover:bg-accent text-muted-foreground"
+              }`}
+            >
+              <Download className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Download</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Progress bar */}
@@ -217,31 +228,49 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
       {/* Controls row: -10s | +10s | speed | volume (hover expand) */}
       <div className="flex items-center gap-1 px-3 pb-2.5 pt-0.5">
         {/* Rewind 10s */}
-        <button
-          onClick={skipBackward}
-          className={`p-1 rounded transition-colors ${btnClass}`}
-          title="Rewind 10s"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={skipBackward}
+              className={`p-1 rounded transition-colors ${btnClass}`}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Rewind 10s</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Forward 10s */}
-        <button
-          onClick={skipForward}
-          className={`p-1 rounded transition-colors ${btnClass}`}
-          title="Forward 10s"
-        >
-          <RotateCw className="h-3.5 w-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={skipForward}
+              className={`p-1 rounded transition-colors ${btnClass}`}
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Forward 10s</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Speed toggle */}
-        <button
-          onClick={cycleSpeed}
-          className={`px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums transition-colors ${btnClass}`}
-          title="Playback speed"
-        >
-          {speed}x
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={cycleSpeed}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums transition-colors ${btnClass}`}
+            >
+              {speed}x
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Playback speed</p>
+          </TooltipContent>
+        </Tooltip>
 
         <div className="flex-1" />
 

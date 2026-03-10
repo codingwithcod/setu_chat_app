@@ -10,6 +10,11 @@ import {
   Minimize,
   Download,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import type { MessageFile } from "@/types";
 
 interface VideoPlayerProps {
@@ -257,13 +262,19 @@ export function VideoPlayer({ file }: VideoPlayerProps) {
           </div>
 
           {/* Download */}
-          <button
-            onClick={handleDownload}
-            className="text-white hover:text-primary transition-colors"
-            title="Download"
-          >
-            <Download className="h-4 w-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleDownload}
+                className="text-white hover:text-primary transition-colors"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Download</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Fullscreen */}
           <button

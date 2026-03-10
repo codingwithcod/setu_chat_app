@@ -8,6 +8,11 @@ import { getDraft, saveDraft, clearDraft } from "@/lib/draft-messages";
 import { AttachmentMenu } from "@/components/chat/AttachmentMenu";
 import { FilePreviewBar } from "@/components/chat/FilePreviewBar";
 import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
   Send,
   Paperclip,
   Smile,
@@ -427,19 +432,25 @@ export function MessageInput({
       <div className={`msg-input-container ${isFocused ? "focused" : ""}`}>
         {/* Attach button (left side) */}
         <div className="relative" ref={attachMenuRef}>
-          <button
-            className="msg-input-action-btn attach-btn group"
-            onClick={() => setShowAttachMenu(!showAttachMenu)}
-            disabled={uploading}
-            aria-label="Attach file"
-            title="Attach file"
-          >
-            {uploading ? (
-              <Loader2 className="h-[18px] w-[18px] animate-spin" />
-            ) : (
-              <Paperclip className="h-[18px] w-[18px]" />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="msg-input-action-btn attach-btn group"
+                onClick={() => setShowAttachMenu(!showAttachMenu)}
+                disabled={uploading}
+                aria-label="Attach file"
+              >
+                {uploading ? (
+                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
+                ) : (
+                  <Paperclip className="h-[18px] w-[18px]" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Attach file</p>
+            </TooltipContent>
+          </Tooltip>
 
           {showAttachMenu && (
             <AttachmentMenu
@@ -471,14 +482,20 @@ export function MessageInput({
         <div className="msg-input-right-actions">
           {/* Emoji picker */}
           <div className="relative" ref={emojiPickerRef}>
-            <button
-              className={`msg-input-action-btn emoji-btn ${showEmoji ? "active" : ""}`}
-              onClick={() => setShowEmoji(!showEmoji)}
-              aria-label="Emoji"
-              title="Emoji"
-            >
-              <Smile className="h-[18px] w-[18px]" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={`msg-input-action-btn emoji-btn ${showEmoji ? "active" : ""}`}
+                  onClick={() => setShowEmoji(!showEmoji)}
+                  aria-label="Emoji"
+                >
+                  <Smile className="h-[18px] w-[18px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Emoji</p>
+              </TooltipContent>
+            </Tooltip>
             {showEmoji && (
               <div className="msg-input-emoji-dropdown">
                 <EmojiPicker
@@ -494,19 +511,25 @@ export function MessageInput({
           </div>
 
           {/* Send button */}
-          <button
-            className={`msg-input-send-btn ${hasContent ? "active" : ""}`}
-            onClick={handleSend}
-            disabled={!hasContent || uploading}
-            aria-label="Send message"
-            title="Send message"
-          >
-            {uploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={`msg-input-send-btn ${hasContent ? "active" : ""}`}
+                onClick={handleSend}
+                disabled={!hasContent || uploading}
+                aria-label="Send message"
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Send message</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

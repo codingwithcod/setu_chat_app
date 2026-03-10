@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { WifiOff, Wifi, X } from "lucide-react";
 
 /**
@@ -66,14 +71,20 @@ export function NetworkBanner() {
 
       {/* Dismiss button — only for offline banner */}
       {isOffline && (
-        <button
-          onClick={() => setDismissed(true)}
-          className="network-banner__dismiss"
-          aria-label="Dismiss"
-          title="Hide banner"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setDismissed(true)}
+              className="network-banner__dismiss"
+              aria-label="Dismiss"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Hide banner</p>
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );

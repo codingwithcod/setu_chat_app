@@ -1,6 +1,11 @@
 "use client";
 
 import { FileText, FileSpreadsheet, FileIcon, Download, FileArchive, Music } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { formatFileSize } from "@/lib/file-validation";
 import type { MessageFile } from "@/types";
 
@@ -91,17 +96,23 @@ export function FileCard({ file, isOwn }: FileCardProps) {
       </div>
 
       {/* Download button */}
-      <button
-        onClick={handleDownload}
-        className={`shrink-0 p-2 rounded-full transition-colors ${
-          isOwn
-            ? "hover:bg-primary-foreground/20 text-primary-foreground/70"
-            : "hover:bg-accent text-muted-foreground"
-        }`}
-        title="Download"
-      >
-        <Download className="h-4 w-4" />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={handleDownload}
+            className={`shrink-0 p-2 rounded-full transition-colors ${
+              isOwn
+                ? "hover:bg-primary-foreground/20 text-primary-foreground/70"
+                : "hover:bg-accent text-muted-foreground"
+            }`}
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Download</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
