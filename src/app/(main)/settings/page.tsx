@@ -6,7 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { createClient } from "@/lib/supabase/client";
-import { setPasswordSchema, type SetPasswordInput } from "@/lib/validations";
+import {
+  setPasswordSchema,
+  changePasswordSchema,
+  type SetPasswordInput,
+  type ChangePasswordInput,
+} from "@/lib/validations";
 import {
   clearSessionToken,
   getCurrentSessionId,
@@ -39,6 +44,7 @@ import {
   KeyRound,
   CheckCircle2,
   Loader2,
+  Pencil,
 } from "lucide-react";
 
 // Google icon SVG component
@@ -71,11 +77,18 @@ export default function SettingsPage() {
 
   // Linked accounts state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showChangePasswordForm, setShowChangePasswordForm] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [showConfirmPasswordField, setShowConfirmPasswordField] = useState(false);
+  const [showCurrentPasswordField, setShowCurrentPasswordField] = useState(false);
+  const [showNewPasswordField, setShowNewPasswordField] = useState(false);
+  const [showConfirmNewPasswordField, setShowConfirmNewPasswordField] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState("");
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
   const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
   const [googleLinkError, setGoogleLinkError] = useState("");
 
@@ -86,6 +99,15 @@ export default function SettingsPage() {
     reset,
   } = useForm<SetPasswordInput>({
     resolver: zodResolver(setPasswordSchema),
+  });
+
+  const {
+    register: registerChange,
+    handleSubmit: handleSubmitChange,
+    formState: { errors: changeErrors },
+    reset: resetChange,
+  } = useForm<ChangePasswordInput>({
+    resolver: zodResolver(changePasswordSchema),
   });
 
   const hasGoogle = user?.auth_providers?.includes("google") ?? false;
@@ -147,6 +169,37 @@ export default function SettingsPage() {
       setPasswordError("Something went wrong. Please try again.");
     } finally {
       setIsSettingPassword(false);
+    }
+  };
+
+  const handleChangePassword = async (data: ChangePasswordInput) => {
+    setIsChangingPassword(true);
+    setChangePasswordError("");
+    setChangePasswordSuccess("");
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setChangePasswordError(result.error || "Failed to change password");
+        return;
+      }
+
+      setChangePasswordSuccess("Password changed successfully!");
+      setShowChangePasswordForm(false);
+      resetChange();
+    } catch {
+      setChangePasswordError("Something went wrong. Please try again.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -389,25 +442,43 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 </div>
-                {hasPassword ? (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                    Set
-                  </Badge>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowPasswordForm(!showPasswordForm);
-                      setPasswordError("");
-                      setPasswordSuccess("");
-                    }}
-                  >
-                    <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                    Create Password
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {hasPassword ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setShowChangePasswordForm(!showChangePasswordForm);
+                          setChangePasswordError("");
+                          setChangePasswordSuccess("");
+                          resetChange();
+                        }}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" />
+                        Change
+                      </Button>
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        Set
+                      </Badge>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowPasswordForm(!showPasswordForm);
+                        setPasswordError("");
+                        setPasswordSuccess("");
+                      }}
+                    >
+                      <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                      Create Password
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Google Link Error */}
@@ -513,6 +584,142 @@ export default function SettingsPage() {
                         setShowPasswordForm(false);
                         setPasswordError("");
                         reset();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              {/* Change Password Success */}
+              {changePasswordSuccess && (
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-500">
+                  {changePasswordSuccess}
+                </div>
+              )}
+
+              {/* Change Password Form */}
+              {showChangePasswordForm && hasPassword && (
+                <form
+                  onSubmit={handleSubmitChange(handleChangePassword)}
+                  className="space-y-3 p-4 rounded-lg border border-border bg-muted/10"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    Enter your current password and choose a new one.
+                  </p>
+
+                  {/* Current Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword" className="text-sm">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPasswordField ? "text" : "password"}
+                        placeholder="Enter current password"
+                        {...registerChange("currentPassword")}
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPasswordField(!showCurrentPasswordField)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showCurrentPasswordField ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {changeErrors.currentPassword && (
+                      <p className="text-xs text-destructive">{changeErrors.currentPassword.message}</p>
+                    )}
+                  </div>
+
+                  {/* New Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-sm">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPasswordField ? "text" : "password"}
+                        placeholder="Enter new password"
+                        {...registerChange("newPassword")}
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPasswordField(!showNewPasswordField)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showNewPasswordField ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {changeErrors.newPassword && (
+                      <p className="text-xs text-destructive">{changeErrors.newPassword.message}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Min. 8 characters, one uppercase letter, one number
+                    </p>
+                  </div>
+
+                  {/* Confirm New Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmNewPassword" className="text-sm">Confirm New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmNewPassword"
+                        type={showConfirmNewPasswordField ? "text" : "password"}
+                        placeholder="Confirm new password"
+                        {...registerChange("confirmNewPassword")}
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmNewPasswordField(!showConfirmNewPasswordField)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmNewPasswordField ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {changeErrors.confirmNewPassword && (
+                      <p className="text-xs text-destructive">{changeErrors.confirmNewPassword.message}</p>
+                    )}
+                  </div>
+
+                  {changePasswordError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-sm text-destructive">
+                      {changePasswordError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={isChangingPassword}
+                      className="flex-1"
+                    >
+                      {isChangingPassword && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                      Change Password
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowChangePasswordForm(false);
+                        setChangePasswordError("");
+                        resetChange();
                       }}
                     >
                       Cancel
