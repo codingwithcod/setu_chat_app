@@ -10,7 +10,7 @@ export interface Profile {
   last_name: string;
   full_name: string;
   avatar_url: string | null;
-  auth_provider: "email" | "google";
+  auth_providers: string[];
   is_email_verified: boolean;
   is_online: boolean;
   last_seen: string;

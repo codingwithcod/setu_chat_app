@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,10 +16,21 @@ import { Eye, EyeOff, LogIn, Loader2, MessageSquare } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [googleNotLinkedError, setGoogleNotLinkedError] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isWaitingForBrowser, setIsWaitingForBrowser] = useState(false);
+
+  // Check for google_not_linked error from callback redirect
+  useEffect(() => {
+    if (searchParams.get("error") === "google_not_linked") {
+      setGoogleNotLinkedError(true);
+      // Clean up URL
+      window.history.replaceState({}, "", "/login");
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -64,13 +75,13 @@ export default function LoginPage() {
         console.log("[Login] User found:", user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("is_email_verified, auth_provider")
+          .select("is_email_verified, auth_providers")
           .eq("id", user.id)
           .single();
 
         console.log("[Login] Profile:", profile);
 
-        if (profile?.auth_provider === "email" && !profile.is_email_verified) {
+        if (profile?.auth_providers?.includes("email") && !profile?.auth_providers?.includes("google") && !profile.is_email_verified) {
           await supabase.auth.signOut({ scope: "local" });
           setError(
             "Please verify your email before logging in. Check your inbox."
@@ -202,6 +213,19 @@ export default function LoginPage() {
               Sign in to your account to continue
             </p>
           </div>
+
+          {googleNotLinkedError && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 space-y-1.5">
+              <p className="text-sm font-medium text-amber-500">
+                Google account not linked
+              </p>
+              <p className="text-xs text-amber-500/80 leading-relaxed">
+                Your account was created with email and password. To sign in with Google, 
+                first log in with your password, then connect Google from{" "}
+                <span className="font-medium">Settings → Linked Accounts</span>.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">

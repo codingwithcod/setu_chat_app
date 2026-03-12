@@ -74,9 +74,22 @@ export const groupSchema = z.object({
   memberIds: z.array(z.string().uuid()).min(1, "Select at least one member"),
 });
 
+export const setPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UsernameInput = z.infer<typeof usernameSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type MessageInput = z.infer<typeof messageSchema>;
 export type GroupInput = z.infer<typeof groupSchema>;
+export type SetPasswordInput = z.infer<typeof setPasswordSchema>;

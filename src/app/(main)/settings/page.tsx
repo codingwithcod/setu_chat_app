@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { createClient } from "@/lib/supabase/client";
+import { setPasswordSchema, type SetPasswordInput } from "@/lib/validations";
 import {
   clearSessionToken,
   getCurrentSessionId,
@@ -14,7 +17,10 @@ import {
   playNotificationSound,
 } from "@/lib/notification-sound";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { ActiveSessions } from "@/components/settings/ActiveSessions";
 import {
@@ -27,13 +33,63 @@ import {
   HelpCircle,
   LogOut,
   Smartphone,
+  Link2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
+
+// Google icon SVG component
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+);
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, updateUser } = useAuthStore();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const sessionsRef = useRef<HTMLDivElement>(null);
+
+  // Linked accounts state
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [showConfirmPasswordField, setShowConfirmPasswordField] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
+  const [googleLinkError, setGoogleLinkError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<SetPasswordInput>({
+    resolver: zodResolver(setPasswordSchema),
+  });
+
+  const hasGoogle = user?.auth_providers?.includes("google") ?? false;
+  const hasPassword = user?.auth_providers?.includes("email") ?? false;
 
   useEffect(() => {
     setSoundEnabled(isNotificationSoundEnabled());
@@ -61,6 +117,96 @@ export default function SettingsPage() {
       playNotificationSound();
     }
   };
+
+  const handleSetPassword = async (data: SetPasswordInput) => {
+    setIsSettingPassword(true);
+    setPasswordError("");
+    setPasswordSuccess("");
+    try {
+      const res = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setPasswordError(result.error || "Failed to set password");
+        return;
+      }
+
+      // Update local user state
+      if (result.auth_providers) {
+        updateUser({ auth_providers: result.auth_providers });
+      }
+      setPasswordSuccess("Password created successfully!");
+      setShowPasswordForm(false);
+      reset();
+    } catch {
+      setPasswordError("Something went wrong. Please try again.");
+    } finally {
+      setIsSettingPassword(false);
+    }
+  };
+
+  const handleLinkGoogle = async () => {
+    setIsLinkingGoogle(true);
+    setGoogleLinkError("");
+
+    try {
+      const supabase = createClient();
+
+      // Use standard OAuth redirect with a "linking" flag
+      // The callback route will handle adding 'google' to auth_providers
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?linking=google`,
+        },
+      });
+
+      if (error) {
+        setGoogleLinkError(error.message);
+        setIsLinkingGoogle(false);
+      }
+      // If successful, user will be redirected to Google OAuth,
+      // then to /auth/callback?linking=google, which redirects to /settings?linked=google
+    } catch {
+      setGoogleLinkError("Failed to connect Google account.");
+      setIsLinkingGoogle(false);
+    }
+  };
+
+  // Handle the return from Google OAuth linking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("linked") === "google") {
+      // The callback already updated auth_providers in the DB.
+      // Just refresh the local user state from the DB.
+      const refreshUser = async () => {
+        try {
+          const supabase = createClient();
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("auth_providers")
+              .eq("id", authUser.id)
+              .single();
+            if (profile?.auth_providers) {
+              updateUser({ auth_providers: profile.auth_providers });
+            }
+          }
+        } catch {
+          // Silent fail — user can retry
+        }
+        // Clean up URL
+        window.history.replaceState({}, "", "/settings");
+      };
+      refreshUser();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -178,6 +324,202 @@ export default function SettingsPage() {
               </div>
             </div>
             <ActiveSessions />
+          </div>
+
+          <Separator />
+
+          {/* Linked Accounts Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3">
+              <Link2 className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+                  Linked Accounts
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Manage your sign-in methods
+                </p>
+              </div>
+            </div>
+
+            {/* Connected Providers */}
+            <div className="space-y-2 px-3">
+              {/* Google Provider */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <GoogleIcon className="h-5 w-5" />
+                  <div>
+                    <p className="text-sm font-medium">Google</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hasGoogle ? "Connected" : "Not connected"}
+                    </p>
+                  </div>
+                </div>
+                {hasGoogle ? (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                    Connected
+                  </Badge>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLinkGoogle}
+                    disabled={isLinkingGoogle}
+                  >
+                    {isLinkingGoogle ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <GoogleIcon className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Connect
+                  </Button>
+                )}
+              </div>
+
+              {/* Password Provider */}
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <KeyRound className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Password</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hasPassword ? "Password set" : "No password set"}
+                    </p>
+                  </div>
+                </div>
+                {hasPassword ? (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                    Set
+                  </Badge>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowPasswordForm(!showPasswordForm);
+                      setPasswordError("");
+                      setPasswordSuccess("");
+                    }}
+                  >
+                    <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                    Create Password
+                  </Button>
+                )}
+              </div>
+
+              {/* Google Link Error */}
+              {googleLinkError && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                  {googleLinkError}
+                </div>
+              )}
+
+              {/* Password Success */}
+              {passwordSuccess && (
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-500">
+                  {passwordSuccess}
+                </div>
+              )}
+
+              {/* Create Password Form */}
+              {showPasswordForm && !hasPassword && (
+                <form
+                  onSubmit={handleSubmit(handleSetPassword)}
+                  className="space-y-3 p-4 rounded-lg border border-border bg-muted/10"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    Create a password to sign in with your email ({user?.email}) and password.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPasswordField ? "text" : "password"}
+                        placeholder="Create a strong password"
+                        {...register("password")}
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordField(!showPasswordField)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPasswordField ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-xs text-destructive">{errors.password.message}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Min. 8 characters, one uppercase letter, one number
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPasswordField ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        {...register("confirmPassword")}
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPasswordField(!showConfirmPasswordField)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmPasswordField ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                    )}
+                  </div>
+
+                  {passwordError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-sm text-destructive">
+                      {passwordError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={isSettingPassword}
+                      className="flex-1"
+                    >
+                      {isSettingPassword && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                      Create Password
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowPasswordForm(false);
+                        setPasswordError("");
+                        reset();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
 
           <Separator />

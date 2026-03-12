@@ -183,19 +183,20 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                 <Shield className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Auth Provider</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm capitalize">{user.auth_provider}</p>
-                    <Badge variant="secondary" className="text-xs">
-                      {user.is_email_verified ? (
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-                          Verified
-                        </span>
-                      ) : (
-                        "Unverified"
-                      )}
-                    </Badge>
+                  <p className="text-xs text-muted-foreground">Auth Providers</p>
+                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                    {user.auth_providers?.map((provider) => (
+                      <Badge key={provider} variant="secondary" className="text-xs gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        {provider === "email" ? "Password" : provider.charAt(0).toUpperCase() + provider.slice(1)}
+                      </Badge>
+                    ))}
+                    {user.is_email_verified && (
+                      <Badge variant="outline" className="text-xs gap-1 text-emerald-500 border-emerald-500/30">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Verified
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
