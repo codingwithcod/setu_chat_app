@@ -26,29 +26,42 @@ export async function GET(request: Request) {
 
         const authProviders: string[] = profile?.auth_providers ?? [];
 
+        // --- LINKING FLOW: User came from Settings "Connect Google" ---
+        // Email mismatch check must run FIRST, before any provider checks,
+        // because the OAuth might have authenticated a completely different user.
+        if (isLinking) {
+          const expectedEmail = searchParams.get("expected_email");
+          if (expectedEmail && user.email !== expectedEmail) {
+            // Wrong Google account selected — sign out and redirect with error
+            await supabase.auth.signOut({ scope: "local" });
+            return NextResponse.redirect(
+              `${origin}/login?error=google_email_mismatch`
+            );
+          }
+
+          // Email matches — add 'google' to auth_providers if not already there
+          if (!authProviders.includes("google")) {
+            const updatedProviders = [...authProviders, "google"];
+            await serviceClient
+              .from("profiles")
+              .update({
+                auth_providers: updatedProviders,
+                is_email_verified: true,
+              })
+              .eq("id", user.id);
+          }
+
+          return NextResponse.redirect(`${origin}/settings?linked=google`);
+        }
+
         // --- GUARD: Block Google OAuth login if user hasn't linked Google ---
         // If this is NOT an explicit linking request and user doesn't have 'google' in auth_providers,
         // it means an email-only user tried to log in with Google directly — block it.
-        if (!isLinking && !authProviders.includes("google")) {
-          // Sign the user out since they shouldn't be logged in via Google
+        if (!authProviders.includes("google")) {
           await supabase.auth.signOut({ scope: "local" });
           return NextResponse.redirect(
             `${origin}/login?error=google_not_linked`
           );
-        }
-
-        // --- LINKING FLOW: User came from Settings "Connect Google" ---
-        if (isLinking && !authProviders.includes("google")) {
-          const updatedProviders = [...authProviders, "google"];
-          await serviceClient
-            .from("profiles")
-            .update({
-              auth_providers: updatedProviders,
-              is_email_verified: true, // Google verifies email
-            })
-            .eq("id", user.id);
-
-          return NextResponse.redirect(`${origin}/settings?linked=google`);
         }
 
         // Extract real name from Google OAuth metadata

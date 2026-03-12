@@ -158,11 +158,11 @@ export default function SettingsPage() {
       const supabase = createClient();
 
       // Use standard OAuth redirect with a "linking" flag
-      // The callback route will handle adding 'google' to auth_providers
+      // Pass the current user's email so the callback can verify the Google account matches
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?linking=google`,
+          redirectTo: `${window.location.origin}/auth/callback?linking=google&expected_email=${encodeURIComponent(user?.email || "")}`,
         },
       });
 
@@ -181,6 +181,7 @@ export default function SettingsPage() {
   // Handle the return from Google OAuth linking
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
     if (params.get("linked") === "google") {
       // The callback already updated auth_providers in the DB.
       // Just refresh the local user state from the DB.

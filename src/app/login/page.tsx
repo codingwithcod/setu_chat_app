@@ -20,14 +20,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [googleNotLinkedError, setGoogleNotLinkedError] = useState(false);
+  const [googleEmailMismatchError, setGoogleEmailMismatchError] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isWaitingForBrowser, setIsWaitingForBrowser] = useState(false);
 
-  // Check for google_not_linked error from callback redirect
+  // Check for error params from callback redirects
   useEffect(() => {
-    if (searchParams.get("error") === "google_not_linked") {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "google_not_linked") {
       setGoogleNotLinkedError(true);
-      // Clean up URL
+      window.history.replaceState({}, "", "/login");
+    } else if (errorParam === "google_email_mismatch") {
+      setGoogleEmailMismatchError(true);
       window.history.replaceState({}, "", "/login");
     }
   }, [searchParams]);
@@ -223,6 +227,20 @@ export default function LoginPage() {
                 Your account was created with email and password. To sign in with Google, 
                 first log in with your password, then connect Google from{" "}
                 <span className="font-medium">Settings → Linked Accounts</span>.
+              </p>
+            </div>
+          )}
+
+          {googleEmailMismatchError && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 space-y-1.5">
+              <p className="text-sm font-medium text-amber-500">
+                Wrong Google account selected
+              </p>
+              <p className="text-xs text-amber-500/80 leading-relaxed">
+                The Google account you selected doesn&apos;t match your account email. 
+                Please log in with your password and try again from{" "}
+                <span className="font-medium">Settings → Linked Accounts</span>, 
+                selecting the correct Google account.
               </p>
             </div>
           )}
