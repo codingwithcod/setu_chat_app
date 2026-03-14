@@ -37,8 +37,8 @@ export function ConversationList() {
   const getConversationInfo = (conversation: ConversationWithDetails) => {
     if (conversation.type === "self") {
       return {
-        name: "You",
-        subtitle: "Saved Messages",
+        name: "Saved Messages",
+        subtitle: null,
         avatar: user?.avatar_url || null,
         isOnline: false,
         initials: user ? getInitials(user.first_name, user.last_name) : "SM",
@@ -137,22 +137,19 @@ export function ConversationList() {
               className="absolute -bottom-0.5 -right-0.5"
             />
           )}
+          {conversation.type === "self" && (
+            <div className="absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center ring-2 ring-background">
+              <Bookmark className="h-3 w-3 text-primary-foreground fill-primary-foreground" />
+            </div>
+          )}
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-medium text-sm truncate">
                 {info.name}
               </span>
-              {info.subtitle && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Bookmark className="h-3 w-3" />
-                  {info.subtitle}
-                </span>
-              )}
-            </div>
             {lastMsg && (
               <span className="text-xs text-muted-foreground shrink-0 ml-2">
                 {formatDate(lastMsg.created_at)}
@@ -169,7 +166,7 @@ export function ConversationList() {
                 ? `${lastMsg.sender_id === user?.id && conversation.type !== "self" ? "You: " : ""}📷 Image`
                 : lastMsg?.message_type === "file"
                 ? `${lastMsg.sender_id === user?.id && conversation.type !== "self" ? "You: " : ""}📎 File`
-                : conversation.type === "self" ? "Save messages here" : "Start a conversation"}
+                : conversation.type === "self" ? "Your personal space" : "Start a conversation"}
             </p>
             {(conversation.unread_count || 0) > 0 && (
               <Badge className="ml-2 h-5 min-w-[20px] rounded-full text-xs px-1.5">
