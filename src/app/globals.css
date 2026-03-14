@@ -10,31 +10,31 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 243 75% 59%;
+    --primary: 340 75% 55%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 340 70% 95%;
+    --accent-foreground: 340 70% 25%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 243 75% 59%;
+    --ring: 340 75% 55%;
     --radius: 0.75rem;
     --sidebar: 240 20% 97%;
     --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-accent: 243 75% 95%;
+    --sidebar-accent: 340 70% 95%;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --info: 187 92% 53%;
-    --primary-light: 243 75% 70%;
-    --primary-gradient-end: 263 70% 58%;
-    --tertiary: 280 70% 60%;
+    --primary-light: 340 70% 70%;
+    --primary-gradient-end: 15 80% 55%;
+    --tertiary: 20 85% 58%;
   }
 
   .dark {
@@ -44,30 +44,30 @@
     --card-foreground: 0 0% 95%;
     --popover: 240 10% 5.5%;
     --popover-foreground: 0 0% 95%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 340 75% 55%;
+    --primary-foreground: 210 40% 98%;
     --secondary: 240 5% 15%;
     --secondary-foreground: 0 0% 95%;
     --muted: 240 5% 15%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 243 75% 15%;
-    --accent-foreground: 0 0% 95%;
+    --accent: 340 70% 15%;
+    --accent-foreground: 340 30% 90%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
     --border: 240 5% 17%;
     --input: 240 5% 17%;
-    --ring: 243 75% 59%;
+    --ring: 340 75% 55%;
     --sidebar: 240 10% 5%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-accent: 243 75% 12%;
+    --sidebar-accent: 340 70% 12%;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 45 93% 47%;
     --warning-foreground: 0 0% 100%;
     --info: 187 92% 53%;
-    --primary-light: 243 75% 70%;
-    --primary-gradient-end: 263 70% 58%;
-    --tertiary: 280 70% 60%;
+    --primary-light: 340 70% 70%;
+    --primary-gradient-end: 15 80% 55%;
+    --tertiary: 20 85% 58%;
   }
 }
 

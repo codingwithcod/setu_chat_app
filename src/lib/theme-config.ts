@@ -18,6 +18,23 @@ export interface ThemePreset {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
+    id: "rose-ember",
+    name: "Rose Ember",
+    description: "Bold & unique",
+    swatch: "#e84393",
+    variables: {
+      "--primary": "340 75% 55%",
+      "--primary-foreground": "210 40% 98%",
+      "--primary-light": "340 70% 70%",
+      "--primary-gradient-end": "15 80% 55%",
+      "--tertiary": "20 85% 58%",
+      "--ring": "340 75% 55%",
+      "--sidebar-accent": "340 70% 95%",
+      "--accent": "340 70% 95%",
+      "--accent-foreground": "340 70% 25%",
+    },
+  },
+  {
     id: "midnight-violet",
     name: "Midnight Violet",
     description: "Sleek & modern",
@@ -51,23 +68,6 @@ export const THEME_PRESETS: ThemePreset[] = [
       "--accent-foreground": "217 80% 25%",
     },
   },
-  {
-    id: "rose-ember",
-    name: "Rose Ember",
-    description: "Bold & unique",
-    swatch: "#e84393",
-    variables: {
-      "--primary": "340 75% 55%",
-      "--primary-foreground": "210 40% 98%",
-      "--primary-light": "340 70% 70%",
-      "--primary-gradient-end": "15 80% 55%",
-      "--tertiary": "20 85% 58%",
-      "--ring": "340 75% 55%",
-      "--sidebar-accent": "340 70% 95%",
-      "--accent": "340 70% 95%",
-      "--accent-foreground": "340 70% 25%",
-    },
-  },
 ];
 
 // Dark mode overrides — sidebar-accent needs darker values
@@ -90,7 +90,7 @@ const DARK_OVERRIDES: Record<ThemePresetId, Record<string, string>> = {
 };
 
 const STORAGE_KEY = "setu-theme-preset";
-const DEFAULT_THEME: ThemePresetId = "midnight-violet";
+const DEFAULT_THEME: ThemePresetId = "rose-ember";
 
 /** Read saved theme from localStorage */
 export function getStoredTheme(): ThemePresetId {

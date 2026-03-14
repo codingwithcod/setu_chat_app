@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ActiveSessions } from "@/components/settings/ActiveSessions";
 import {
   ArrowLeft,
@@ -344,33 +345,38 @@ export default function SettingsPage() {
                 {THEME_PRESETS.map((preset) => {
                   const isActive = activeTheme === preset.id;
                   return (
-                    <button
-                      key={preset.id}
-                      onClick={() => {
-                        setActiveTheme(preset.id);
-                        applyThemePreset(preset.id);
-                      }}
-                      className="group relative flex items-center justify-center"
-                      title={preset.name}
-                    >
-                      <div
-                        className={`w-7 h-7 rounded-full transition-all duration-200 ${
-                          isActive
-                            ? "ring-2 ring-offset-2 ring-offset-background scale-110"
-                            : "hover:scale-110"
-                        }`}
-                        style={{
-                          backgroundColor: preset.swatch,
-                          boxShadow: isActive
-                            ? `0 0 12px ${preset.swatch}60`
-                            : undefined,
-                          "--tw-ring-color": isActive ? preset.swatch : undefined,
-                        } as React.CSSProperties}
-                      />
-                      {isActive && (
-                        <Check className="absolute h-3.5 w-3.5 text-white drop-shadow-sm" />
-                      )}
-                    </button>
+                    <Tooltip key={preset.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setActiveTheme(preset.id);
+                            applyThemePreset(preset.id);
+                          }}
+                          className="group relative flex items-center justify-center"
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-full transition-all duration-200 ${
+                              isActive
+                                ? "ring-2 ring-offset-2 ring-offset-background scale-110"
+                                : "hover:scale-110"
+                            }`}
+                            style={{
+                              backgroundColor: preset.swatch,
+                              boxShadow: isActive
+                                ? `0 0 12px ${preset.swatch}60`
+                                : undefined,
+                              "--tw-ring-color": isActive ? preset.swatch : undefined,
+                            } as React.CSSProperties}
+                          />
+                          {isActive && (
+                            <Check className="absolute h-3.5 w-3.5 text-white drop-shadow-sm" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" sideOffset={8}>
+                        <p className="font-medium text-xs">{preset.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
