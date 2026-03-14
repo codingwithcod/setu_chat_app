@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastContainer } from "@/components/shared/ToastContainer";
@@ -7,7 +7,7 @@ import { ThemeColorProvider } from "@/components/shared/ThemeColorProvider";
 import TauriDeepLinkHandler from "@/components/auth/TauriDeepLinkHandler";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const fontSans = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Setu - Modern Chat Application",
@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={fontSans.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
