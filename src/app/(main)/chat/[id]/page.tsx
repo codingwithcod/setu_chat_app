@@ -368,8 +368,10 @@ export default function ConversationPage() {
       : undefined;
 
     // Optimistic update
+    const tempId = `temp-${Date.now()}`;
     const optimisticMessage: MessageWithSender = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
+      _clientId: tempId,
       conversation_id: conversationId,
       sender_id: user.id,
       content: content || null,
@@ -428,11 +430,12 @@ export default function ConversationPage() {
         // Replace temp ID with real ID from the server, mark as sent
         const { data: savedMessage } = await res.json();
         if (savedMessage?.id) {
+          // Update id to real UUID — since React key uses _clientId, this won't flicker
           useChatStore.getState().updateMessage(optimisticMessage.id, {
-            ...savedMessage,
+            id: savedMessage.id,
+            created_at: savedMessage.created_at,
+            updated_at: savedMessage.updated_at,
             status: "sent",
-            reply_message: optimisticMessage.reply_message,
-            receiptDetails: optimisticMessage.receiptDetails,
           });
           // In case this was a retry, remove from failed storage
           removeFailedMessage(conversationId, optimisticMessage.id);
@@ -484,10 +487,10 @@ export default function ConversationPage() {
         const { data: savedMessage } = await res.json();
         if (savedMessage?.id) {
           useChatStore.getState().updateMessage(failedMessage.id, {
-            ...savedMessage,
+            id: savedMessage.id,
+            created_at: savedMessage.created_at,
+            updated_at: savedMessage.updated_at,
             status: "sent",
-            reply_message: failedMessage.reply_message,
-            receiptDetails: failedMessage.receiptDetails,
           });
           // Remove from localStorage on success
           removeFailedMessage(conversationId, failedMessage.id);
@@ -551,7 +554,7 @@ export default function ConversationPage() {
           ) : (
             <div className="space-y-1 pb-6">
               {messages.map((message, index) => (
-                <div key={message.id}>
+                <div key={message._clientId || message.id}>
                   {/* Unread messages divider */}
                   {index === unreadDividerIndex && unreadDividerIndex > 0 && (
                     <div

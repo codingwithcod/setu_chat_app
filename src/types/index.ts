@@ -117,6 +117,7 @@ export interface MessageWithSender extends Message {
   files?: MessageFile[];
   status?: MessageStatus;
   receiptDetails?: MessageReceiptDetail[];
+  _clientId?: string; // Stable React key for optimistic UI updates
 }
 
 // Read receipt info for the other user(s) — returned by the messages API

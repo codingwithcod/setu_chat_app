@@ -145,10 +145,12 @@ export function useRealtimeMessages(conversationId: string | null) {
           const existing = useChatStore
             .getState()
             .messages.find((m) => m.id === payload.new.id);
-          updateMessage(payload.new.id, {
-            ...payload.new,
-            status: existing?.status, // keep existing status
-          });
+          if (existing) {
+            updateMessage(payload.new.id, {
+              ...payload.new,
+              status: existing?.status, // keep existing status
+            });
+          }
         }
       )
       .subscribe();
