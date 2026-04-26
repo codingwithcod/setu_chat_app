@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BookOpen,
   Key,
@@ -112,6 +112,38 @@ function ParamTable({ params }: { params: Array<{ name: string; type: string; re
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("getting-started");
 
+  // Scroll spy — observe all sections and highlight the one in view
+  useEffect(() => {
+    const sectionIds = SECTIONS.map((s) => s.id);
+    const elements = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[];
+
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the entry that's most visible
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+        if (visible.length > 0) {
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      {
+        // Use the scrollable content container as root
+        root: document.querySelector("[data-docs-scroll]"),
+        rootMargin: "-80px 0px -60% 0px",
+        threshold: [0, 0.1, 0.25, 0.5],
+      }
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   const scrollTo = (id: string) => {
     setActiveSection(id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -143,7 +175,7 @@ export default function DocsPage() {
       </aside>
 
       {/* Docs Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" data-docs-scroll>
         <div className="max-w-3xl mx-auto px-6 py-8 space-y-12">
           {/* Title */}
           <div>
