@@ -111,6 +111,7 @@ function ParamTable({ params }: { params: Array<{ name: string; type: string; re
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("getting-started");
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   // Scroll spy — observe all sections and highlight the one in view
   useEffect(() => {
@@ -188,7 +189,7 @@ export default function DocsPage() {
             </p>
             <div className="flex items-center gap-3 mt-3">
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">v1.0</span>
-              <span className="text-xs text-muted-foreground">Base URL: <code className="text-primary font-mono">https://your-domain.com/api/v1</code></span>
+              <span className="text-xs text-muted-foreground">Base URL: <code className="text-primary font-mono">{baseUrl}/api/v1</code></span>
             </div>
           </div>
 
@@ -254,7 +255,7 @@ export default function DocsPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               All API requests require a valid API key passed in the <code className="text-primary font-mono bg-muted px-1 rounded">Authorization</code> header as a Bearer token.
             </p>
-            <CodeBlock code={`curl -X GET https://your-domain.com/api/v1/conversations \\
+            <CodeBlock code={`curl -X GET ${baseUrl}/api/v1/conversations \\
   -H "Authorization: Bearer tap_setu_a3f8b1c9d4e7f2a0b5c8d1e4f7a0b3c6d9e2f5a8"`} />
 
             <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3">
@@ -315,7 +316,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
               { name: "message_type", type: "string", required: false, desc: "text (default), image, file" },
               { name: "reply_to", type: "string (UUID)", required: false, desc: "ID of message to reply to" },
             ]} />
-            <CodeBlock code={`curl -X POST https://your-domain.com/api/v1/messages/send \\
+            <CodeBlock code={`curl -X POST ${baseUrl}/api/v1/messages/send \\
   -H "Authorization: Bearer tap_setu_your_key_here" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -357,7 +358,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
             </h2>
 
             <Endpoint method="GET" path="/v1/conversations" desc="List all conversations" />
-            <CodeBlock code={`curl https://your-domain.com/api/v1/conversations \\
+            <CodeBlock code={`curl ${baseUrl}/api/v1/conversations \\
   -H "Authorization: Bearer tap_setu_your_key_here"`} />
 
             <Endpoint method="POST" path="/v1/conversations" desc="Create a conversation" />
@@ -397,7 +398,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
               { name: "q", type: "string", required: true, desc: "Search query (username or name)" },
               { name: "limit", type: "integer", required: false, desc: "Max results (default 20, max 50)" },
             ]} />
-            <CodeBlock code={`curl "https://your-domain.com/api/v1/users/search?q=john" \\
+            <CodeBlock code={`curl "${baseUrl}/api/v1/users/search?q=john" \\
   -H "Authorization: Bearer tap_setu_your_key_here"`} />
 
             <Endpoint method="GET" path="/v1/users/:id" desc="Get user profile" />
@@ -417,7 +418,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
               { name: "file", type: "File", required: true, desc: "The file to upload" },
               { name: "conversation_id", type: "string (UUID)", required: true, desc: "Target conversation" },
             ]} />
-            <CodeBlock code={`curl -X POST https://your-domain.com/api/v1/files/upload \\
+            <CodeBlock code={`curl -X POST ${baseUrl}/api/v1/files/upload \\
   -H "Authorization: Bearer tap_setu_your_key_here" \\
   -F "file=@photo.jpg" \\
   -F "conversation_id=550e8400-e29b-41d4-a716-446655440000"`} />
@@ -430,7 +431,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
             </h2>
 
             <Endpoint method="GET" path="/v1/account" desc="Get your account info" />
-            <CodeBlock code={`curl https://your-domain.com/api/v1/account \\
+            <CodeBlock code={`curl ${baseUrl}/api/v1/account \\
   -H "Authorization: Bearer tap_setu_your_key_here"`} />
             <CodeBlock language="json" code={`{
   "success": true,
