@@ -59,8 +59,13 @@ export default function VerifyTotpPage() {
       ) {
         inputRefs.current[index - 1]?.focus();
       }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleVerify();
+      }
     },
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [code, loading]
   );
 
   const handleVerify = async () => {
@@ -233,6 +238,12 @@ export default function VerifyTotpPage() {
                 <Input
                   value={backupCode}
                   onChange={(e) => setBackupCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && backupCode.trim()) {
+                      e.preventDefault();
+                      handleVerify();
+                    }
+                  }}
                   placeholder="XXXX-XXXX"
                   className="h-12 text-center text-lg font-mono tracking-wider uppercase"
                   autoFocus

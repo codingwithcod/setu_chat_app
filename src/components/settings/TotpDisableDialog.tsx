@@ -79,8 +79,13 @@ export function TotpDisableDialog({
       ) {
         inputRefs.current[index - 1]?.focus();
       }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleDisable();
+      }
     },
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [code, loading]
   );
 
   const handleDisable = async () => {

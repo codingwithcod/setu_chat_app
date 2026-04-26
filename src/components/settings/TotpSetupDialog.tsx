@@ -123,9 +123,13 @@ export function TotpSetupDialog({ open, onOpenChange }: TotpSetupDialogProps) {
   }, []);
 
   const handleKeyDown = useCallback(
-    (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    (index: number, e: React.KeyboardEvent<HTMLInputElement>, onSubmit?: () => void) => {
       if (e.key === "Backspace" && !inputRefs.current[index]?.value && index > 0) {
         inputRefs.current[index - 1]?.focus();
+      }
+      if (e.key === "Enter" && onSubmit) {
+        e.preventDefault();
+        onSubmit();
       }
     },
     []
@@ -232,7 +236,7 @@ export function TotpSetupDialog({ open, onOpenChange }: TotpSetupDialogProps) {
     URL.revokeObjectURL(url);
   };
 
-  const renderCodeInput = () => (
+  const renderCodeInput = (onSubmit?: () => void) => (
     <div className="flex justify-center gap-2">
       {Array.from({ length: 6 }).map((_, i) => (
         <Input
@@ -243,7 +247,7 @@ export function TotpSetupDialog({ open, onOpenChange }: TotpSetupDialogProps) {
           maxLength={6}
           className="h-12 w-11 text-center text-lg font-mono font-semibold tracking-widest"
           onChange={(e) => handleCodeChange(i, e.target.value)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
+          onKeyDown={(e) => handleKeyDown(i, e, onSubmit)}
           onFocus={(e) => e.target.select()}
           autoFocus={i === 0}
         />
@@ -359,7 +363,7 @@ export function TotpSetupDialog({ open, onOpenChange }: TotpSetupDialogProps) {
             </DialogHeader>
 
             <div className="space-y-4">
-              {renderCodeInput()}
+              {renderCodeInput(verifyFirstCode)}
 
               {error && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
@@ -421,7 +425,7 @@ export function TotpSetupDialog({ open, onOpenChange }: TotpSetupDialogProps) {
                 </p>
               </div>
 
-              {renderCodeInput()}
+              {renderCodeInput(verifySecondCode)}
 
               {error && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
