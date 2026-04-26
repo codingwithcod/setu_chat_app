@@ -140,7 +140,7 @@ export function Sidebar() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/developer")}>
                 <Code className="mr-2 h-4 w-4" />
-                Developer Portal
+                API Studio
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive">

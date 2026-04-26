@@ -143,7 +143,7 @@ export default function DeveloperOverviewPage() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
             <Zap className="h-4 w-4 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Developer Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">API Studio</h1>
         </div>
         <p className="text-sm text-muted-foreground ml-[42px]">
           Monitor your API usage, manage keys, and configure webhooks.

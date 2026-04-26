@@ -172,7 +172,7 @@ export default function DocsPage() {
               {[
                 { step: "1", title: "Create Account", desc: "Sign up at setu.app" },
                 { step: "2", title: "Enable 2FA", desc: "Required before generating API keys" },
-                { step: "3", title: "Generate API Key", desc: "Go to Developer Portal → API Keys → Create Key" },
+                { step: "3", title: "Generate API Key", desc: "Go to API Studio → API Keys → Create Key" },
                 { step: "4", title: "Make API Calls", desc: "Use your key in the Authorization header" },
               ].map((s) => (
                 <div key={s.step} className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card">
@@ -420,7 +420,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
               <Webhook className="h-5 w-5 text-primary" /> Webhooks
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Webhooks push real-time events to your endpoint via HTTP POST. Configure them in the Developer Portal.
+              Webhooks push real-time events to your endpoint via HTTP POST. Configure them in the API Studio.
             </p>
 
             <h3 className="text-sm font-semibold">Available Events</h3>

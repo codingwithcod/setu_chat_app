@@ -93,7 +93,7 @@ export default function DeveloperLayout({
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm">Loading Developer Portal...</p>
+          <p className="text-muted-foreground text-sm">Loading Setu API Studio...</p>
         </div>
       </div>
     );
@@ -117,7 +117,7 @@ export default function DeveloperLayout({
             <Zap className="h-4 w-4 text-primary-foreground" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm font-bold tracking-tight truncate">Developer Portal</h1>
+            <h1 className="text-sm font-bold tracking-tight truncate">API Studio</h1>
             <p className="text-[10px] text-muted-foreground truncate">Setu Public API</p>
           </div>
         </div>

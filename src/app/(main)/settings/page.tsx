@@ -909,7 +909,7 @@ export default function SettingsPage() {
             >
               <KeyRound className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">Developer Portal</p>
+                <p className="text-sm font-medium">API Studio</p>
                 <p className="text-xs text-muted-foreground">API keys, webhooks & documentation</p>
               </div>
             </button>
