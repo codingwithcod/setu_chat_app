@@ -703,6 +703,48 @@
   100% { transform: scale(1); }
 }
 
+/* "Say Hi" empty-state button */
+.say-hi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light, var(--primary))), hsl(var(--tertiary, var(--primary)))) border-box;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.25);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: sayHiFadeIn 0.5s ease-out 0.2s both;
+}
+
+.say-hi-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-width: 2px;
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.4), 0 0 40px hsl(var(--primary) / 0.15);
+}
+
+.say-hi-btn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.2);
+}
+
+@keyframes sayHiFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Scroll-to-bottom floating button */
 .scroll-to-bottom-btn {
   position: absolute;

@@ -545,10 +545,16 @@ export default function ConversationPage() {
             <MessageListSkeleton />
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
                   No messages yet. Start the conversation! 👋
                 </p>
+                <button
+                  onClick={() => handleSendMessage("👋")}
+                  className="say-hi-btn"
+                >
+                  Say Hi 👋
+                </button>
               </div>
             </div>
           ) : (
