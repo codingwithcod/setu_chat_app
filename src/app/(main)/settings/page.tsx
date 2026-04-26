@@ -35,6 +35,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ActiveSessions } from "@/components/settings/ActiveSessions";
+import { TotpSetupDialog } from "@/components/settings/TotpSetupDialog";
+import { TotpDisableDialog } from "@/components/settings/TotpDisableDialog";
 import {
   ArrowLeft,
   Moon,
@@ -43,6 +45,8 @@ import {
   Volume2,
   VolumeX,
   Shield,
+  ShieldCheck,
+  ShieldOff,
   HelpCircle,
   LogOut,
   Smartphone,
@@ -103,6 +107,10 @@ export default function SettingsPage() {
   const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
   const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
   const [googleLinkError, setGoogleLinkError] = useState("");
+
+  // 2FA state
+  const [showTotpSetup, setShowTotpSetup] = useState(false);
+  const [showTotpDisable, setShowTotpDisable] = useState(false);
 
   const {
     register,
@@ -796,6 +804,84 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+
+          <Separator />
+
+          {/* Two-Factor Authentication Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3">
+              <Shield className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
+                  Two-Factor Authentication
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Add an extra layer of security to your account
+                </p>
+              </div>
+            </div>
+
+            <div className="px-3">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                <div className="flex items-center gap-3">
+                  {user?.totp_enabled ? (
+                    <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                  ) : (
+                    <ShieldOff className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">Authenticator App</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user?.totp_enabled
+                        ? `Enabled${user?.totp_verified_at ? ` on ${new Date(user.totp_verified_at).toLocaleDateString()}` : ""}`
+                        : "Not configured"}
+                    </p>
+                  </div>
+                </div>
+                {user?.totp_enabled ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      Active
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setShowTotpDisable(true)}
+                    >
+                      Disable
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTotpSetup(true)}
+                  >
+                    <Shield className="mr-1.5 h-3.5 w-3.5" />
+                    Enable
+                  </Button>
+                )}
+              </div>
+
+              {user?.totp_enabled && (
+                <p className="text-xs text-muted-foreground mt-2 px-1">
+                  You&apos;ll be asked for a code from your authenticator app when signing in on new devices.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* TOTP Dialogs */}
+          <TotpSetupDialog
+            open={showTotpSetup}
+            onOpenChange={setShowTotpSetup}
+          />
+          <TotpDisableDialog
+            open={showTotpDisable}
+            onOpenChange={setShowTotpDisable}
+          />
 
           <Separator />
 

@@ -146,7 +146,7 @@ export default function MainLayout({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, email, username, first_name, last_name, full_name, avatar_url, auth_providers, is_email_verified, is_online, last_seen, totp_enabled, totp_verified_at, created_at, updated_at")
         .eq("id", authUser.id)
         .single();
 

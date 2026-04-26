@@ -108,6 +108,25 @@ export async function GET(request: Request) {
         if (!profile?.username) {
           return NextResponse.redirect(`${origin}/select-username`);
         }
+
+        // Check if TOTP 2FA is enabled — redirect to verify-totp
+        const { data: totpProfile } = await serviceClient
+          .from("profiles")
+          .select("totp_enabled")
+          .eq("id", user.id)
+          .single();
+
+        if (totpProfile?.totp_enabled) {
+          const totpRedirect = NextResponse.redirect(
+            `${origin}/login/verify-totp`
+          );
+          totpRedirect.cookies.set("totp_pending", "true", {
+            maxAge: 300, // 5 minutes
+            path: "/",
+            sameSite: "lax",
+          });
+          return totpRedirect;
+        }
       }
 
       return NextResponse.redirect(`${origin}${next}`);

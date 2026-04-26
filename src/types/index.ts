@@ -14,6 +14,8 @@ export interface Profile {
   is_email_verified: boolean;
   is_online: boolean;
   last_seen: string;
+  totp_enabled: boolean;
+  totp_verified_at: string | null;
   created_at: string;
   updated_at: string;
 }

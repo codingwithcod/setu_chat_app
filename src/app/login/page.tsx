@@ -79,7 +79,7 @@ function LoginContent() {
         console.log("[Login] User found:", user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("is_email_verified, auth_providers")
+          .select("is_email_verified, auth_providers, totp_enabled")
           .eq("id", user.id)
           .single();
 
@@ -90,6 +90,15 @@ function LoginContent() {
           setError(
             "Please verify your email before logging in. Check your inbox."
           );
+          return;
+        }
+
+        // Check if TOTP 2FA is enabled
+        if (profile?.totp_enabled) {
+          console.log("[Login] TOTP enabled, redirecting to verify-totp...");
+          // Set a cookie to indicate TOTP verification is pending
+          document.cookie = "totp_pending=true; path=/; max-age=300; SameSite=Lax";
+          router.push("/login/verify-totp");
           return;
         }
       }
