@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { fireWebhooks } from "@/lib/webhook-delivery";
 
 // Get messages for a conversation (paginated)
 export async function GET(
@@ -236,11 +237,31 @@ export async function POST(
     }
 
     // Attach files to the response
+    // Fire webhook for message.received
+    fireWebhooks(serviceClient, "message.received", params.id, user.id, {
+      conversation_id: params.id,
+      message_id: message.id,
+      sender_id: user.id,
+      content_preview: message.content?.slice(0, 100),
+      message_type: message.message_type,
+      created_at: message.created_at,
+    });
+
     return NextResponse.json(
       { data: { ...message, files: insertedFiles || [] } },
       { status: 201 }
     );
   }
+
+  // Fire webhook for message.received
+  fireWebhooks(serviceClient, "message.received", params.id, user.id, {
+    conversation_id: params.id,
+    message_id: message.id,
+    sender_id: user.id,
+    content_preview: message.content?.slice(0, 100),
+    message_type: message.message_type,
+    created_at: message.created_at,
+  });
 
   return NextResponse.json({ data: { ...message, files: [] } }, { status: 201 });
 }

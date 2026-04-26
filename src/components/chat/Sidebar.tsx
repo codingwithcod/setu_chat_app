@@ -25,6 +25,7 @@ import {
   LogOut,
   User,
   Settings,
+  Code,
 } from "lucide-react";
 import type { SearchResult } from "@/types";
 
@@ -136,6 +137,10 @@ export function Sidebar() {
               <DropdownMenuItem onClick={() => router.push("/settings")}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/developer")}>
+                <Code className="mr-2 h-4 w-4" />
+                Developer Portal
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive">

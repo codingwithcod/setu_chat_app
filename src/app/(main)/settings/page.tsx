@@ -903,6 +903,16 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Get help with Setu</p>
               </div>
             </button>
+            <button
+              onClick={() => router.push("/developer")}
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+            >
+              <KeyRound className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Developer Portal</p>
+                <p className="text-xs text-muted-foreground">API keys, webhooks & documentation</p>
+              </div>
+            </button>
           </div>
 
           <Separator />

@@ -196,3 +196,74 @@ export interface UserSession {
   last_active_at: string;
   created_at: string;
 }
+
+// ============================================
+// Public API & Developer Dashboard Types
+// ============================================
+
+export interface ApiKey {
+  id: string;
+  user_id: string;
+  name: string;
+  key_prefix: string;
+  key_hash: string;
+  permissions: Record<string, boolean>;
+  rate_limit_rpm: number;
+  allowed_ips: string[];
+  allowed_origins: string[];
+  expires_at: string | null;
+  last_used_at: string | null;
+  total_requests: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiKeyUsageLog {
+  id: string;
+  api_key_id: string;
+  user_id: string;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  ip_address: string | null;
+  user_agent: string | null;
+  response_time_ms: number | null;
+  created_at: string;
+}
+
+export interface Webhook {
+  id: string;
+  user_id: string;
+  name: string;
+  url: string;
+  secret: string;
+  events: string[];
+  is_active: boolean;
+  last_triggered_at: string | null;
+  failure_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDeliveryLog {
+  id: string;
+  webhook_id: string;
+  event: string;
+  payload: Record<string, unknown>;
+  status_code: number | null;
+  response_body: string | null;
+  response_time_ms: number | null;
+  success: boolean;
+  created_at: string;
+}
+
+export interface PlanLimits {
+  plan: string;
+  max_api_keys: number;
+  rate_limit_rpm: number;
+  daily_request_limit: number;
+  max_webhooks: number;
+  display_name: string;
+  is_active: boolean;
+}
