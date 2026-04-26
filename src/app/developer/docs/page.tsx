@@ -303,7 +303,7 @@ X-RateLimit-Reset: 60      # Seconds until window resets`} />
   }
 }`} />
 
-            <Endpoint method="GET" path="/v1/messages/:conversation_id" desc="List messages" />
+            <Endpoint method="GET" path="/v1/messages/list/:conversation_id" desc="List messages" />
             <ParamTable params={[
               { name: "conversation_id", type: "string (UUID)", required: true, desc: "Conversation ID (URL param)" },
               { name: "limit", type: "integer", required: false, desc: "Items per page (default 50, max 100)" },

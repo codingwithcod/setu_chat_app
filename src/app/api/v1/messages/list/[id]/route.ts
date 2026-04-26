@@ -8,10 +8,10 @@ import {
   logApiUsage,
 } from "@/lib/api-key-auth";
 
-// GET /api/v1/messages/[conversationId] — List messages in a conversation (paginated)
+// GET /api/v1/messages/list/[id] — List messages in a conversation (paginated)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { conversationId: string } }
+  { params }: { params: { id: string } }
 ) {
   const serviceClient = await createServiceClient();
   const startTime = Date.now();
@@ -28,7 +28,7 @@ export async function GET(
   const { data: membership } = await serviceClient
     .from("conversation_members")
     .select("user_id")
-    .eq("conversation_id", params.conversationId)
+    .eq("conversation_id", params.id)
     .eq("user_id", key.user_id)
     .single();
 
@@ -47,7 +47,7 @@ export async function GET(
       sender:profiles(id, username, first_name, last_name, avatar_url, is_online),
       files:message_files(id, file_url, file_name, file_size, file_type, mime_type, display_order)
     `)
-    .eq("conversation_id", params.conversationId)
+    .eq("conversation_id", params.id)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -57,7 +57,7 @@ export async function GET(
 
   const { data: messages, error } = await query;
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.conversationId}`, method: "GET", statusCode: error ? 500 : 200, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/list/${params.id}`, method: "GET", statusCode: error ? 500 : 200, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
 
   if (error) return apiError("INTERNAL_ERROR", error.message, 500, rateLimit);
 
