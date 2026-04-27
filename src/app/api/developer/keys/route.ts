@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   // Build permissions object
-  let resolvedPermissions: Record<string, boolean> = {};
+  const resolvedPermissions: Record<string, boolean> = {};
 
   if (preset && PERMISSION_PRESETS[preset]) {
     // Use preset template

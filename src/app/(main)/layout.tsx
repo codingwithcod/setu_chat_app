@@ -218,7 +218,8 @@ export default function MainLayout({
         setLoadFailed(true);
       }
     }
-  }, [router, setUser, setLoading, setConversations]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, setUser, setConversations]);
 
   // Initial load
   useEffect(() => {

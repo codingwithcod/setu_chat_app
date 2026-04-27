@@ -210,7 +210,7 @@ export function MessageInput({
   }, [stagedFiles]);
 
   const addStagedFiles = useCallback(
-    (files: FileList, category: "image" | "video" | "audio" | "file") => {
+    (files: FileList, _category: "image" | "video" | "audio" | "file") => {
       const fileArray = Array.from(files);
       const newStaged: StagedFile[] = [];
       const existingCategory = getStagedCategory();

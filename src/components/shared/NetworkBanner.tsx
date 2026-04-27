@@ -17,7 +17,7 @@ import { WifiOff, Wifi, X } from "lucide-react";
  * - Online  → hidden
  */
 export function NetworkBanner() {
-  const { status, isOffline, isReconnected } = useNetworkStatus();
+  const { status, isOffline, isReconnected: _isReconnected } = useNetworkStatus();
   const [dismissed, setDismissed] = useState(false);
 
   // Reset dismissed when going offline again

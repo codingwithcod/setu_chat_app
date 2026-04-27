@@ -29,7 +29,7 @@ export default function ConversationPage() {
     prependMessages,
     activeConversation,
     setActiveConversation,
-    replyingTo,
+
     resetUnreadCount,
   } = useChatStore();
 
@@ -190,7 +190,8 @@ export default function ConversationPage() {
       setMessages([]);
       setActiveConversation(null);
     };
-  }, [conversationId, setMessages, setActiveConversation, computeReceiptDetails, getAggregateStatus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, setMessages, setActiveConversation, computeReceiptDetails, getAggregateStatus, user?.id]);
 
   // Smart scroll: scroll to unread divider or bottom after messages load
   useEffect(() => {
@@ -215,6 +216,7 @@ export default function ConversationPage() {
         containerRef.current.scrollTop = containerRef.current.scrollHeight;
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, messages.length, unreadCount]);
 
   // Load more messages

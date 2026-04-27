@@ -12,7 +12,6 @@ import {
   AlertTriangle,
   Copy,
   Check,
-  ChevronRight,
   Search,
   User,
   FolderOpen,

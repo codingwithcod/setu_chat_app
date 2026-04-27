@@ -12,7 +12,7 @@ const TOTP_WINDOW = 1; // accept ±1 window (±30s) for clock drift
 
 const ENCRYPTION_ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
+const _AUTH_TAG_LENGTH = 16;
 
 // ============================================
 // Secret Encryption / Decryption

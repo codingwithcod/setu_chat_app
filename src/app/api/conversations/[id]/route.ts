@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { getMemberRole, hasPermission, sendSystemMessage, getUserDisplayName } from "@/lib/group-helpers";
+import { getMemberRole, hasPermission, sendSystemMessage } from "@/lib/group-helpers";
 
 // Get conversation details
 export async function GET(

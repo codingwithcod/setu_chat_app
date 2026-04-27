@@ -126,8 +126,9 @@ export function AudioPlayer({ file, isOwn }: AudioPlayerProps) {
   };
 
   useEffect(() => {
+    const audioEl = audioRef.current;
     return () => {
-      audioRef.current?.pause();
+      audioEl?.pause();
     };
   }, []);
 

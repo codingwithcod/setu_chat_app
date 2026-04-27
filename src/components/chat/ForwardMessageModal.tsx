@@ -26,7 +26,6 @@ import {
 import type {
   ConversationWithDetails,
   SearchResult,
-  Profile,
 } from "@/types";
 
 interface Recipient {

@@ -24,7 +24,7 @@ export async function POST() {
   if (selfConvs && selfConvs.length > 0) {
     // If there are duplicates, clean them up — keep only the first
     if (selfConvs.length > 1) {
-      const keepId = selfConvs[0].id;
+      const _keepId = selfConvs[0].id;
       const deleteIds = selfConvs.slice(1).map((c) => c.id);
 
       for (const id of deleteIds) {

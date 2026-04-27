@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
-  ArrowUpRight,
   Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
