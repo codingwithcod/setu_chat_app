@@ -1,0 +1,25 @@
+# ============================================
+# Base Compose — Shared service definitions
+# Usage: This file is NOT used directly.
+#   Dev:  docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up --build
+#   Prod: docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d --build
+# ============================================
+
+services:
+  setu-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_MAX_CHAT_FILE_SIZE_MB=${NEXT_PUBLIC_MAX_CHAT_FILE_SIZE_MB:-5}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

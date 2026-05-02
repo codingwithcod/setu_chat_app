@@ -37,3 +37,7 @@ next-env.d.ts
 # tauri
 src-tauri/target/
 src-tauri/gen/
+
+# docker
+letsencrypt/
+traefik-logs/

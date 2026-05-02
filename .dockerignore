@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output (rebuilt in Docker)
+.next
+out
+build
+
+# Version control
+.git
+.gitignore
+
+# IDE & OS
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment files (injected via compose)
+.env
+.env.local
+.env*.local
+
+# Tauri (not needed for web deploy)
+src-tauri
+
+# Docker files (don't copy into image)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Misc
+*.md
+!README.md
+.vercel
+.agent
+coverage
+*.tsbuildinfo
+next-env.d.ts
