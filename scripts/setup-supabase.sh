@@ -331,7 +331,52 @@ start_supabase() {
 }
 
 # ------------------------------------------
-# Step 9: Print summary
+# Step 9: Auto-configure app .env with self-hosted credentials
+# ------------------------------------------
+configure_app_env() {
+    local app_env_file="$PROJECT_ROOT/.env"
+
+    # Create .env from .env.example if it doesn't exist
+    if [ ! -f "$app_env_file" ]; then
+        if [ -f "$PROJECT_ROOT/.env.example" ]; then
+            cp "$PROJECT_ROOT/.env.example" "$app_env_file"
+            log_info "Created .env from .env.example"
+        else
+            touch "$app_env_file"
+            log_info "Created empty .env file"
+        fi
+    fi
+
+    # Read generated credentials from Supabase .env
+    local supabase_env="$SUPABASE_DIR/.env"
+    local anon_key
+    anon_key=$(grep '^ANON_KEY=' "$supabase_env" | cut -d'=' -f2-)
+    local service_role_key
+    service_role_key=$(grep '^SERVICE_ROLE_KEY=' "$supabase_env" | cut -d'=' -f2-)
+    local supabase_url="https://${SUPABASE_DOMAIN}"
+
+    log_info "Configuring app .env with self-hosted Supabase credentials..."
+
+    # Helper: update existing key or append
+    update_env_var() {
+        local key="$1" value="$2" file="$3"
+        if grep -q "^${key}=" "$file"; then
+            sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+        else
+            echo "${key}=${value}" >> "$file"
+        fi
+    }
+
+    update_env_var "NEXT_PUBLIC_SUPABASE_URL" "$supabase_url" "$app_env_file"
+    update_env_var "NEXT_PUBLIC_SUPABASE_ANON_KEY" "$anon_key" "$app_env_file"
+    update_env_var "SUPABASE_SERVICE_ROLE_KEY" "$service_role_key" "$app_env_file"
+    update_env_var "NEXT_PUBLIC_APP_URL" "https://${APP_DOMAIN}" "$app_env_file"
+
+    log_ok "App .env updated → connected to self-hosted Supabase."
+}
+
+# ------------------------------------------
+# Step 10: Print summary
 # ------------------------------------------
 print_summary() {
     local credentials_file="$SUPABASE_DIR/.credentials"
@@ -346,9 +391,7 @@ print_summary() {
     echo ""
     echo -e "  🌐 Supabase URL:       ${BLUE}https://$SUPABASE_DOMAIN${NC}"
     echo -e "  📊 Dashboard:          ${BLUE}https://$SUPABASE_DOMAIN${NC}  (user: supabase)"
-    echo ""
-    echo -e "  ${YELLOW}⚠  Update your app's .env file with the Supabase credentials${NC}"
-    echo -e "  ${YELLOW}   from: $credentials_file${NC}"
+    echo -e "  🔗 App .env:           ${BLUE}Auto-configured ✅${NC}"
     echo ""
 }
 
@@ -371,6 +414,7 @@ main() {
     repair_compose_if_needed
     create_override_file
     start_supabase
+    configure_app_env
     print_summary
 }
 
