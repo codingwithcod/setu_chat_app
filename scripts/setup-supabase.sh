@@ -230,57 +230,60 @@ create_shared_network() {
 }
 
 # ------------------------------------------
-# Step 6: Add external network to Supabase compose
+# Step 6: Create override file to join shared network
+# Uses docker-compose.override.yml (auto-loaded by docker compose)
+# instead of modifying the original compose file.
 # ------------------------------------------
-patch_supabase_compose() {
-    local compose_file="$SUPABASE_DIR/docker-compose.yml"
+create_override_file() {
+    local override_file="$SUPABASE_DIR/docker-compose.override.yml"
 
-    # Check if already patched
-    if grep -q "setu-network" "$compose_file"; then
-        log_ok "Supabase compose already patched with shared network."
+    if [ -f "$override_file" ]; then
+        log_ok "Supabase override file already exists."
         return 0
     fi
 
-    log_info "Patching Supabase compose to join shared network..."
+    log_info "Creating Supabase compose override for shared network..."
 
-    # Add the external network definition at the bottom of the file
-    cat >> "$compose_file" <<EOF
+    cat > "$override_file" <<'OVERRIDE'
+# ============================================
+# Override: Connect Kong to shared setu-network
+# This file is auto-loaded by docker compose.
+# DO NOT modify the original docker-compose.yml.
+# ============================================
 
-# ------------------------------------------
-# Shared network with Setu Chat App
-# ------------------------------------------
+services:
+  kong:
+    networks:
+      default:
+        aliases:
+          - api-gw
+      setu-network: {}
+
 networks:
-  default:
-    name: supabase_default
   setu-network:
     external: true
-EOF
+OVERRIDE
 
-    # Add the setu-network to the Kong service (API gateway) so Traefik can reach it
-    sed -i '/container_name: supabase-kong/a\    networks:\n      - default\n      - setu-network' "$compose_file"
-
-    log_ok "Supabase compose patched."
+    log_ok "Override file created at $override_file"
 }
 
 # ------------------------------------------
-# Step 7: Disable Kong port binding (Traefik handles ports 80/443)
+# Step 7: Repair corrupted compose (if needed)
 # ------------------------------------------
-disable_kong_ports() {
+repair_compose_if_needed() {
     local compose_file="$SUPABASE_DIR/docker-compose.yml"
 
-    # Check if already disabled
-    if grep -q "#.*KONG_HTTP_PORT.*8000" "$compose_file"; then
-        log_ok "Kong ports already disabled (Traefik will proxy)."
+    # Test if the compose file is valid
+    if cd "$SUPABASE_DIR" && docker compose config --quiet 2>/dev/null; then
+        log_ok "Supabase compose file is valid."
         return 0
     fi
 
-    log_info "Disabling Kong port bindings (Traefik will handle external access)..."
+    log_warn "Supabase compose file is corrupted. Restoring from repo..."
 
-    # Comment out the port bindings — Traefik will proxy to Kong internally
-    sed -i 's|^\(\s*- ${KONG_HTTP_PORT}:8000/tcp\)|#\1  # Disabled: Traefik proxies to Kong|' "$compose_file"
-    sed -i 's|^\(\s*- ${KONG_HTTPS_PORT}:8443/tcp\)|#\1  # Disabled: Traefik proxies to Kong|' "$compose_file"
-
-    log_ok "Kong ports disabled."
+    # Re-copy the original compose file
+    cp -f "$SUPABASE_REPO_DIR/docker/docker-compose.yml" "$compose_file"
+    log_ok "Compose file restored."
 }
 
 # ------------------------------------------
@@ -357,8 +360,8 @@ main() {
     generate_secrets
     configure_urls
     create_shared_network
-    patch_supabase_compose
-    disable_kong_ports
+    repair_compose_if_needed
+    create_override_file
     start_supabase
     print_summary
 }
