@@ -42,3 +42,7 @@ src-tauri/gen/
 # docker
 letsencrypt/
 traefik-logs/
+
+# supabase self-hosted (auto-generated on server)
+supabase-project/
+supabase-repo/

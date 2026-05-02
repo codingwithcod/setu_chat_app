@@ -1,0 +1,366 @@
+#!/usr/bin/env bash
+# ============================================
+# Idempotent Supabase Self-Hosting Setup Script
+# ============================================
+# This script:
+#   1. Clones the official Supabase repo (if not already done)
+#   2. Copies Docker files into a supabase-project directory
+#   3. Generates secure secrets (passwords, JWT keys, etc.)
+#   4. Configures URLs for your domain
+#   5. Creates the shared Docker network
+#   6. Starts all Supabase services
+#
+# It is safe to run multiple times — it skips steps already completed.
+# ============================================
+
+set -euo pipefail
+
+# ------------------------------------------
+# Configuration
+# ------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+SUPABASE_DIR="${PROJECT_ROOT}/../supabase-project"
+SUPABASE_REPO_DIR="${PROJECT_ROOT}/../supabase-repo"
+SHARED_NETWORK="setu-network"
+
+# Domain configuration
+SUPABASE_DOMAIN="${SUPABASE_DOMAIN:-supabase.chat.theabhipatel.com}"
+APP_DOMAIN="${APP_DOMAIN:-chat.theabhipatel.com}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log_info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
+log_ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
+log_warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
+
+# ------------------------------------------
+# Step 0: Check prerequisites
+# ------------------------------------------
+check_prerequisites() {
+    log_info "Checking prerequisites..."
+
+    if ! command -v docker &>/dev/null; then
+        log_error "Docker is not installed. Please install Docker first."
+        exit 1
+    fi
+
+    if ! docker compose version &>/dev/null; then
+        log_error "Docker Compose V2 is not available. Please install it."
+        exit 1
+    fi
+
+    if ! command -v git &>/dev/null; then
+        log_error "Git is not installed. Please install Git first."
+        exit 1
+    fi
+
+    if ! command -v openssl &>/dev/null; then
+        log_error "OpenSSL is not installed. Please install OpenSSL first."
+        exit 1
+    fi
+
+    log_ok "All prerequisites met."
+}
+
+# ------------------------------------------
+# Step 1: Clone Supabase repository
+# ------------------------------------------
+clone_supabase_repo() {
+    if [ -d "$SUPABASE_REPO_DIR" ]; then
+        log_ok "Supabase repo already cloned at $SUPABASE_REPO_DIR"
+        return 0
+    fi
+
+    log_info "Cloning Supabase repository..."
+    git clone --depth 1 https://github.com/supabase/supabase "$SUPABASE_REPO_DIR"
+    log_ok "Supabase repo cloned."
+}
+
+# ------------------------------------------
+# Step 2: Copy Docker files to project
+# ------------------------------------------
+setup_supabase_project() {
+    if [ -f "$SUPABASE_DIR/docker-compose.yml" ]; then
+        log_ok "Supabase project already exists at $SUPABASE_DIR"
+        return 0
+    fi
+
+    log_info "Setting up Supabase project directory..."
+    mkdir -p "$SUPABASE_DIR"
+    cp -rf "$SUPABASE_REPO_DIR/docker/"* "$SUPABASE_DIR/"
+    cp "$SUPABASE_REPO_DIR/docker/.env.example" "$SUPABASE_DIR/.env"
+    log_ok "Supabase project created at $SUPABASE_DIR"
+}
+
+# ------------------------------------------
+# Step 3: Generate secure secrets
+# ------------------------------------------
+generate_secrets() {
+    local env_file="$SUPABASE_DIR/.env"
+
+    # Check if secrets were already generated (we use POSTGRES_PASSWORD as indicator)
+    local current_pg_pass
+    current_pg_pass=$(grep -E '^POSTGRES_PASSWORD=' "$env_file" | cut -d'=' -f2-)
+    if [ "$current_pg_pass" != "your-super-secret-and-long-postgres-password" ]; then
+        log_ok "Secrets already generated (POSTGRES_PASSWORD is not default)."
+        return 0
+    fi
+
+    log_info "Generating secure secrets..."
+
+    # Generate random values
+    local pg_password
+    pg_password=$(openssl rand -hex 32)
+    local jwt_secret
+    jwt_secret=$(openssl rand -base64 48 | tr -d '\n' | head -c 64)
+    local secret_key_base
+    secret_key_base=$(openssl rand -base64 48 | tr -d '\n')
+    local vault_enc_key
+    vault_enc_key=$(openssl rand -hex 16)
+    local pg_meta_crypto_key
+    pg_meta_crypto_key=$(openssl rand -base64 24 | tr -d '\n')
+    local logflare_public_token
+    logflare_public_token=$(openssl rand -base64 24 | tr -d '\n')
+    local logflare_private_token
+    logflare_private_token=$(openssl rand -base64 24 | tr -d '\n')
+    local s3_access_key_id
+    s3_access_key_id=$(openssl rand -hex 16)
+    local s3_access_key_secret
+    s3_access_key_secret=$(openssl rand -hex 32)
+    local dashboard_password
+    dashboard_password=$(openssl rand -base64 16 | tr -d '\n' | tr -dc 'a-zA-Z0-9' | head -c 20)
+
+    # Generate JWT tokens using Node.js (ANON_KEY and SERVICE_ROLE_KEY)
+    local anon_key
+    anon_key=$(node -e "
+const crypto = require('crypto');
+const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+const now = Math.floor(Date.now()/1000);
+const payload = Buffer.from(JSON.stringify({role:'anon',iss:'supabase',iat:now,exp:now+157680000})).toString('base64url');
+const sig = crypto.createHmac('sha256','${jwt_secret}').update(header+'.'+payload).digest('base64url');
+console.log(header+'.'+payload+'.'+sig);
+")
+
+    local service_role_key
+    service_role_key=$(node -e "
+const crypto = require('crypto');
+const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+const now = Math.floor(Date.now()/1000);
+const payload = Buffer.from(JSON.stringify({role:'service_role',iss:'supabase',iat:now,exp:now+157680000})).toString('base64url');
+const sig = crypto.createHmac('sha256','${jwt_secret}').update(header+'.'+payload).digest('base64url');
+console.log(header+'.'+payload+'.'+sig);
+")
+
+    # Replace values in .env file
+    sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${pg_password}|" "$env_file"
+    sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${jwt_secret}|" "$env_file"
+    sed -i "s|^ANON_KEY=.*|ANON_KEY=${anon_key}|" "$env_file"
+    sed -i "s|^SERVICE_ROLE_KEY=.*|SERVICE_ROLE_KEY=${service_role_key}|" "$env_file"
+    sed -i "s|^SECRET_KEY_BASE=.*|SECRET_KEY_BASE=${secret_key_base}|" "$env_file"
+    sed -i "s|^VAULT_ENC_KEY=.*|VAULT_ENC_KEY=${vault_enc_key}|" "$env_file"
+    sed -i "s|^PG_META_CRYPTO_KEY=.*|PG_META_CRYPTO_KEY=${pg_meta_crypto_key}|" "$env_file"
+    sed -i "s|^LOGFLARE_PUBLIC_ACCESS_TOKEN=.*|LOGFLARE_PUBLIC_ACCESS_TOKEN=${logflare_public_token}|" "$env_file"
+    sed -i "s|^LOGFLARE_PRIVATE_ACCESS_TOKEN=.*|LOGFLARE_PRIVATE_ACCESS_TOKEN=${logflare_private_token}|" "$env_file"
+    sed -i "s|^S3_PROTOCOL_ACCESS_KEY_ID=.*|S3_PROTOCOL_ACCESS_KEY_ID=${s3_access_key_id}|" "$env_file"
+    sed -i "s|^S3_PROTOCOL_ACCESS_KEY_SECRET=.*|S3_PROTOCOL_ACCESS_KEY_SECRET=${s3_access_key_secret}|" "$env_file"
+    sed -i "s|^DASHBOARD_PASSWORD=.*|DASHBOARD_PASSWORD=${dashboard_password}|" "$env_file"
+
+    # Save credentials to a file for reference
+    cat > "$SUPABASE_DIR/.credentials" <<EOF
+# ============================================
+# Supabase Credentials (AUTO-GENERATED)
+# Keep this file safe! Do NOT commit to git.
+# Generated on: $(date)
+# ============================================
+
+SUPABASE_URL=https://${SUPABASE_DOMAIN}
+ANON_KEY=${anon_key}
+SERVICE_ROLE_KEY=${service_role_key}
+POSTGRES_PASSWORD=${pg_password}
+DASHBOARD_USERNAME=supabase
+DASHBOARD_PASSWORD=${dashboard_password}
+
+# Use these in your app's .env file:
+# NEXT_PUBLIC_SUPABASE_URL=https://${SUPABASE_DOMAIN}
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon_key}
+# SUPABASE_SERVICE_ROLE_KEY=${service_role_key}
+EOF
+    chmod 600 "$SUPABASE_DIR/.credentials"
+
+    log_ok "Secrets generated and saved to $SUPABASE_DIR/.credentials"
+}
+
+# ------------------------------------------
+# Step 4: Configure URLs
+# ------------------------------------------
+configure_urls() {
+    local env_file="$SUPABASE_DIR/.env"
+
+    log_info "Configuring Supabase URLs for domain: $SUPABASE_DOMAIN"
+
+    sed -i "s|^SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=https://${SUPABASE_DOMAIN}|" "$env_file"
+    sed -i "s|^API_EXTERNAL_URL=.*|API_EXTERNAL_URL=https://${SUPABASE_DOMAIN}|" "$env_file"
+    sed -i "s|^SITE_URL=.*|SITE_URL=https://${APP_DOMAIN}|" "$env_file"
+
+    # Set the Pooler tenant ID
+    sed -i "s|^POOLER_TENANT_ID=.*|POOLER_TENANT_ID=setu-chat|" "$env_file"
+
+    log_ok "URLs configured."
+}
+
+# ------------------------------------------
+# Step 5: Create shared Docker network
+# ------------------------------------------
+create_shared_network() {
+    if docker network inspect "$SHARED_NETWORK" &>/dev/null; then
+        log_ok "Docker network '$SHARED_NETWORK' already exists."
+        return 0
+    fi
+
+    log_info "Creating shared Docker network: $SHARED_NETWORK"
+    docker network create "$SHARED_NETWORK"
+    log_ok "Network '$SHARED_NETWORK' created."
+}
+
+# ------------------------------------------
+# Step 6: Add external network to Supabase compose
+# ------------------------------------------
+patch_supabase_compose() {
+    local compose_file="$SUPABASE_DIR/docker-compose.yml"
+
+    # Check if already patched
+    if grep -q "setu-network" "$compose_file"; then
+        log_ok "Supabase compose already patched with shared network."
+        return 0
+    fi
+
+    log_info "Patching Supabase compose to join shared network..."
+
+    # Add the external network definition at the bottom of the file
+    cat >> "$compose_file" <<EOF
+
+# ------------------------------------------
+# Shared network with Setu Chat App
+# ------------------------------------------
+networks:
+  default:
+    name: supabase_default
+  setu-network:
+    external: true
+EOF
+
+    # Add the setu-network to the Kong service (API gateway) so Traefik can reach it
+    sed -i '/container_name: supabase-kong/a\    networks:\n      - default\n      - setu-network' "$compose_file"
+
+    log_ok "Supabase compose patched."
+}
+
+# ------------------------------------------
+# Step 7: Disable Kong port binding (Traefik handles ports 80/443)
+# ------------------------------------------
+disable_kong_ports() {
+    local compose_file="$SUPABASE_DIR/docker-compose.yml"
+
+    # Check if already disabled
+    if grep -q "#.*KONG_HTTP_PORT.*8000" "$compose_file"; then
+        log_ok "Kong ports already disabled (Traefik will proxy)."
+        return 0
+    fi
+
+    log_info "Disabling Kong port bindings (Traefik will handle external access)..."
+
+    # Comment out the port bindings — Traefik will proxy to Kong internally
+    sed -i 's|^\(\s*- ${KONG_HTTP_PORT}:8000/tcp\)|#\1  # Disabled: Traefik proxies to Kong|' "$compose_file"
+    sed -i 's|^\(\s*- ${KONG_HTTPS_PORT}:8443/tcp\)|#\1  # Disabled: Traefik proxies to Kong|' "$compose_file"
+
+    log_ok "Kong ports disabled."
+}
+
+# ------------------------------------------
+# Step 8: Pull and start Supabase
+# ------------------------------------------
+start_supabase() {
+    log_info "Pulling Supabase images (this may take a few minutes on first run)..."
+    cd "$SUPABASE_DIR"
+    docker compose pull
+
+    log_info "Starting Supabase services..."
+    docker compose up -d
+
+    log_ok "Supabase services started!"
+    log_info "Waiting for services to become healthy..."
+
+    # Wait up to 120 seconds for services to be healthy
+    local max_wait=120
+    local elapsed=0
+    while [ $elapsed -lt $max_wait ]; do
+        local unhealthy
+        unhealthy=$(docker compose ps --format json 2>/dev/null | grep -c '"unhealthy"\|"starting"' || true)
+        if [ "$unhealthy" -eq 0 ]; then
+            local running
+            running=$(docker compose ps --format json 2>/dev/null | grep -c '"running"' || true)
+            if [ "$running" -gt 0 ]; then
+                log_ok "All Supabase services are healthy! ($running services running)"
+                return 0
+            fi
+        fi
+        sleep 5
+        elapsed=$((elapsed + 5))
+        echo -ne "  ⏳ Waiting... ${elapsed}s / ${max_wait}s\r"
+    done
+
+    log_warn "Some services may still be starting. Check with: docker compose -f $SUPABASE_DIR/docker-compose.yml ps"
+}
+
+# ------------------------------------------
+# Step 9: Print summary
+# ------------------------------------------
+print_summary() {
+    local credentials_file="$SUPABASE_DIR/.credentials"
+
+    echo ""
+    echo -e "${GREEN}============================================${NC}"
+    echo -e "${GREEN}  ✅  Supabase Self-Hosted Setup Complete!  ${NC}"
+    echo -e "${GREEN}============================================${NC}"
+    echo ""
+    echo -e "  📂 Project directory:  ${BLUE}$SUPABASE_DIR${NC}"
+    echo -e "  🔑 Credentials file:   ${BLUE}$credentials_file${NC}"
+    echo ""
+    echo -e "  🌐 Supabase URL:       ${BLUE}https://$SUPABASE_DOMAIN${NC}"
+    echo -e "  📊 Dashboard:          ${BLUE}https://$SUPABASE_DOMAIN${NC}  (user: supabase)"
+    echo ""
+    echo -e "  ${YELLOW}⚠  Update your app's .env file with the Supabase credentials${NC}"
+    echo -e "  ${YELLOW}   from: $credentials_file${NC}"
+    echo ""
+}
+
+# ------------------------------------------
+# Main execution
+# ------------------------------------------
+main() {
+    echo ""
+    echo -e "${BLUE}============================================${NC}"
+    echo -e "${BLUE}  🚀  Supabase Self-Hosted Setup           ${NC}"
+    echo -e "${BLUE}============================================${NC}"
+    echo ""
+
+    check_prerequisites
+    clone_supabase_repo
+    setup_supabase_project
+    generate_secrets
+    configure_urls
+    create_shared_network
+    patch_supabase_compose
+    disable_kong_ports
+    start_supabase
+    print_summary
+}
+
+main "$@"

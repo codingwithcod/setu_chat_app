@@ -1,6 +1,6 @@
 # ============================================
 # Prod Compose — Production with Traefik + SSL
-# Usage: docker compose -f docker-compose.base.yml -f docker-compose.prod.yml up -d --build
+# Usage: make deploy  (or manually via docker compose)
 # ============================================
 
 services:
@@ -24,9 +24,10 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.email=theabhipatel.co@gmail.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      # --- Docker provider ---
+      # --- Docker provider (discovers services from ALL compose projects) ---
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=setu-network"
       # --- Logs ---
       - "--log.level=WARN"
       - "--accesslog=true"
@@ -92,8 +93,10 @@ volumes:
     driver: local
 
 # ------------------------------------------
-# Network
+# Shared external network (created by setup script)
+# Both Setu App and Supabase join this network
+# so Traefik can discover and proxy to both.
 # ------------------------------------------
 networks:
   setu-network:
-    driver: bridge
+    external: true
