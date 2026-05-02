@@ -244,9 +244,10 @@ create_override_file() {
 
     log_info "Creating Supabase compose override for shared network..."
 
-    cat > "$override_file" <<'OVERRIDE'
+    cat > "$override_file" <<OVERRIDE
 # ============================================
 # Override: Connect Kong to shared setu-network
+# + Add Traefik labels for reverse proxy routing
 # This file is auto-loaded by docker compose.
 # DO NOT modify the original docker-compose.yml.
 # ============================================
@@ -258,6 +259,13 @@ services:
         aliases:
           - api-gw
       setu-network: {}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.supabase.rule=Host(\`${SUPABASE_DOMAIN}\`)"
+      - "traefik.http.routers.supabase.entrypoints=websecure"
+      - "traefik.http.routers.supabase.tls.certresolver=letsencrypt"
+      - "traefik.http.services.supabase.loadbalancer.server.port=8000"
+      - "traefik.docker.network=setu-network"
 
 networks:
   setu-network:
