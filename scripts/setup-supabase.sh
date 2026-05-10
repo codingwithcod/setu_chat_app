@@ -137,9 +137,9 @@ generate_secrets() {
     local dashboard_password
     dashboard_password=$(openssl rand -base64 16 | tr -d '\n' | tr -dc 'a-zA-Z0-9' | head -c 20)
 
-    # Generate JWT tokens using Node.js (ANON_KEY and SERVICE_ROLE_KEY)
+    # Generate JWT tokens using Dockerized Node.js (ANON_KEY and SERVICE_ROLE_KEY)
     local anon_key
-    anon_key=$(node -e "
+    anon_key=$(docker run --rm node:20-alpine node -e "
 const crypto = require('crypto');
 const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
 const now = Math.floor(Date.now()/1000);
@@ -149,7 +149,7 @@ console.log(header+'.'+payload+'.'+sig);
 ")
 
     local service_role_key
-    service_role_key=$(node -e "
+    service_role_key=$(docker run --rm node:20-alpine node -e "
 const crypto = require('crypto');
 const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
 const now = Math.floor(Date.now()/1000);
