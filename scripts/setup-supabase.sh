@@ -216,7 +216,54 @@ configure_urls() {
 }
 
 # ------------------------------------------
-# Step 5: Create shared Docker network
+# Step 5: Configure Auth Providers (Google OAuth)
+# ------------------------------------------
+configure_auth_providers() {
+    local supabase_env="$SUPABASE_DIR/.env"
+    local app_env_prod="$PROJECT_ROOT/.env.prod"
+    local app_env="$PROJECT_ROOT/.env"
+
+    log_info "Configuring Auth Providers (Google OAuth)..."
+
+    # Try to find CLIENT_ID and CLIENT_SECRET from app envs
+    local google_client_id=""
+    local google_secret=""
+
+    # Check .env.prod first
+    if [ -f "$app_env_prod" ]; then
+        google_client_id=$(grep -E '^(CLIENT_ID|GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID)=' "$app_env_prod" | cut -d'=' -f2- | tail -n 1 | tr -d '\r')
+        google_secret=$(grep -E '^(CLIENT_SECRET|GOTRUE_EXTERNAL_GOOGLE_SECRET)=' "$app_env_prod" | cut -d'=' -f2- | tail -n 1 | tr -d '\r')
+    fi
+
+    # Fallback to .env if not found
+    if [ -z "$google_client_id" ] && [ -f "$app_env" ]; then
+        google_client_id=$(grep -E '^(CLIENT_ID|GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID)=' "$app_env" | cut -d'=' -f2- | tail -n 1 | tr -d '\r')
+        google_secret=$(grep -E '^(CLIENT_SECRET|GOTRUE_EXTERNAL_GOOGLE_SECRET)=' "$app_env" | cut -d'=' -f2- | tail -n 1 | tr -d '\r')
+    fi
+
+    if [ -n "$google_client_id" ] && [ -n "$google_secret" ]; then
+        log_info "Found Google OAuth credentials in app env. Enabling Google Auth in Supabase..."
+        
+        # We need to make sure these exist in the Supabase .env
+        for key in "GOTRUE_EXTERNAL_GOOGLE_ENABLED" "GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID" "GOTRUE_EXTERNAL_GOOGLE_SECRET" "GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI"; do
+            if ! grep -q "^${key}=" "$supabase_env"; then
+                echo "${key}=" >> "$supabase_env"
+            fi
+        done
+
+        sed -i "s|^GOTRUE_EXTERNAL_GOOGLE_ENABLED=.*|GOTRUE_EXTERNAL_GOOGLE_ENABLED=true|" "$supabase_env"
+        sed -i "s|^GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=.*|GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=${google_client_id}|" "$supabase_env"
+        sed -i "s|^GOTRUE_EXTERNAL_GOOGLE_SECRET=.*|GOTRUE_EXTERNAL_GOOGLE_SECRET=${google_secret}|" "$supabase_env"
+        sed -i "s|^GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=.*|GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=https://${SUPABASE_DOMAIN}/auth/v1/callback|" "$supabase_env"
+
+        log_ok "Google Auth configured successfully."
+    else
+        log_warn "No Google OAuth credentials found in app .env (CLIENT_ID/CLIENT_SECRET). Skipping."
+    fi
+}
+
+# ------------------------------------------
+# Step 6: Create shared Docker network
 # ------------------------------------------
 create_shared_network() {
     if docker network inspect "$SHARED_NETWORK" &>/dev/null; then
@@ -410,6 +457,7 @@ main() {
     setup_supabase_project
     generate_secrets
     configure_urls
+    configure_auth_providers
     create_shared_network
     repair_compose_if_needed
     create_override_file
