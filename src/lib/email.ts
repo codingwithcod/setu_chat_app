@@ -169,7 +169,7 @@ export async function sendVerificationEmail(
           </table>
         </body>
       </html>
-    \`,
+    `,
   });
 }
 
