@@ -61,7 +61,9 @@ export async function updateSession(request: NextRequest) {
     const isAuthPage =
       request.nextUrl.pathname.startsWith("/login") ||
       request.nextUrl.pathname.startsWith("/register") ||
-      request.nextUrl.pathname.startsWith("/verify-email");
+      request.nextUrl.pathname.startsWith("/verify-email") ||
+      request.nextUrl.pathname.startsWith("/forgot-password") ||
+      request.nextUrl.pathname.startsWith("/reset-password");
 
     const isTotpVerifyPage = request.nextUrl.pathname === "/login/verify-totp";
     const isPublicPage = request.nextUrl.pathname === "/";
