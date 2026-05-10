@@ -365,6 +365,33 @@ start_supabase() {
 }
 
 # ------------------------------------------
+# Step 8a: Stop unused Supabase services
+# Saves ~30% CPU and ~727MB RAM
+# ------------------------------------------
+stop_unused_services() {
+    cd "$SUPABASE_DIR"
+
+    log_info "Stopping unused Supabase services to save resources..."
+
+    # These services are NOT needed by the app:
+    # analytics (Logflare) - 27% CPU, 568MB RAM
+    # vector              - log shipping for analytics
+    # imgproxy            - image transformations (not used)
+    # edge-functions      - Deno Edge Functions (not used)
+    # meta                - pg-meta for Studio (only admin dashboard)
+    local unused_services="analytics vector imgproxy edge-functions meta"
+
+    for svc in $unused_services; do
+        if docker compose ps -q "$svc" 2>/dev/null | grep -q .; then
+            docker compose stop "$svc" 2>/dev/null
+            log_ok "  Stopped: $svc"
+        fi
+    done
+
+    log_ok "Unused services stopped. Saved ~30% CPU + ~727MB RAM."
+}
+
+# ------------------------------------------
 # Step 8b: Run database migrations
 # Executes all SQL files from supabase/migrations/
 # Only runs if tables don't exist yet (idempotent).
@@ -530,6 +557,7 @@ main() {
     repair_compose_if_needed
     create_override_file
     start_supabase
+    stop_unused_services
     run_migrations
     configure_app_env
     print_summary
