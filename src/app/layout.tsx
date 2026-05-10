@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   description:
     "Setu is a modern, real-time chat application with private and group messaging, built for seamless communication.",
   keywords: ["chat", "messaging", "real-time", "communication"],
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
