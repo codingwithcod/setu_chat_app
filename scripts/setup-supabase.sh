@@ -365,6 +365,88 @@ start_supabase() {
 }
 
 # ------------------------------------------
+# Step 8b: Run database migrations
+# Executes all SQL files from supabase/migrations/
+# Only runs if tables don't exist yet (idempotent).
+# ------------------------------------------
+run_migrations() {
+    local migrations_dir="$PROJECT_ROOT/supabase/migrations"
+
+    if [ ! -d "$migrations_dir" ]; then
+        log_warn "No migrations directory found at $migrations_dir. Skipping."
+        return 0
+    fi
+
+    # Read postgres password from Supabase .env
+    local pg_password
+    pg_password=$(grep '^POSTGRES_PASSWORD=' "$SUPABASE_DIR/.env" | cut -d'=' -f2- | tr -d '\r')
+
+    if [ -z "$pg_password" ]; then
+        log_warn "Cannot read POSTGRES_PASSWORD from Supabase .env. Skipping migrations."
+        return 0
+    fi
+
+    # Get the Supabase DB container name
+    cd "$SUPABASE_DIR"
+    local db_container
+    db_container=$(docker compose ps -q db 2>/dev/null)
+
+    if [ -z "$db_container" ]; then
+        log_warn "Supabase DB container not found. Skipping migrations."
+        return 0
+    fi
+
+    # Check if tables already exist (idempotent check)
+    local table_exists
+    table_exists=$(docker exec "$db_container" psql -U postgres -d postgres -tAc \
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'profiles');" 2>/dev/null || echo "f")
+
+    if [ "$table_exists" = "t" ]; then
+        log_ok "Database tables already exist. Skipping migrations."
+        return 0
+    fi
+
+    log_info "Running database migrations..."
+
+    # Run each migration file in order
+    local migration_count=0
+    for sql_file in $(ls "$migrations_dir"/*.sql 2>/dev/null | sort); do
+        local filename
+        filename=$(basename "$sql_file")
+        log_info "  Running: $filename"
+
+        # Copy SQL file into container and execute
+        docker cp "$sql_file" "$db_container:/tmp/migration.sql"
+        local result
+        result=$(docker exec "$db_container" psql -U postgres -d postgres -f /tmp/migration.sql 2>&1) || {
+            log_warn "  ⚠ Migration $filename had errors (may be safe to ignore if re-running):"
+            echo "    ${result}" | head -5
+        }
+        docker exec "$db_container" rm -f /tmp/migration.sql
+        migration_count=$((migration_count + 1))
+    done
+
+    # Create storage buckets (these are commented out in migration files)
+    log_info "Creating storage buckets..."
+    docker exec "$db_container" psql -U postgres -d postgres -c "
+        INSERT INTO storage.buckets (id, name, public) VALUES ('profile-avatars', 'profile-avatars', true) ON CONFLICT (id) DO NOTHING;
+        INSERT INTO storage.buckets (id, name, public) VALUES ('chat-images', 'chat-images', false) ON CONFLICT (id) DO NOTHING;
+        INSERT INTO storage.buckets (id, name, public) VALUES ('chat-files', 'chat-files', false) ON CONFLICT (id) DO NOTHING;
+    " 2>/dev/null || log_warn "Storage buckets may already exist."
+
+    # Create storage policies
+    log_info "Setting up storage policies..."
+    docker exec "$db_container" psql -U postgres -d postgres -c "
+        CREATE POLICY \"Avatar public read\" ON storage.objects FOR SELECT USING (bucket_id = 'profile-avatars');
+        CREATE POLICY \"Avatar auth upload\" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'profile-avatars' AND auth.uid() IS NOT NULL);
+        CREATE POLICY \"Avatar owner update\" ON storage.objects FOR UPDATE USING (bucket_id = 'profile-avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+        CREATE POLICY \"Avatar owner delete\" ON storage.objects FOR DELETE USING (bucket_id = 'profile-avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+    " 2>/dev/null || log_warn "Storage policies may already exist."
+
+    log_ok "Database migrations complete! ($migration_count files executed)"
+}
+
+# ------------------------------------------
 # Step 9: Auto-configure app .env with self-hosted credentials
 # ------------------------------------------
 configure_app_env() {
@@ -448,6 +530,7 @@ main() {
     repair_compose_if_needed
     create_override_file
     start_supabase
+    run_migrations
     configure_app_env
     print_summary
 }
