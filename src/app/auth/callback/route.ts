@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/chat";
   const isLinking = searchParams.get("linking") === "google";
+
+  // Use NEXT_PUBLIC_APP_URL for redirects (request.url gives 0.0.0.0 inside Docker)
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
 
   if (code) {
     const supabase = await createClient();
@@ -54,10 +58,45 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/settings?linked=google`);
         }
 
+        // --- FIRST-TIME GOOGLE SIGNUP ---
+        // If this user has no profile yet OR has no auth_providers set,
+        // auto-register them with google as their provider.
+        if (!profile || authProviders.length === 0) {
+          const meta = user.user_metadata || {};
+          const fullName = meta.full_name || meta.name || "";
+          const nameParts = fullName.trim().split(/\s+/);
+          const firstName = meta.given_name || nameParts[0] || "";
+          const lastName =
+            meta.family_name || nameParts.slice(1).join(" ") || "";
+
+          if (profile) {
+            // Profile exists but no providers set — update it
+            await serviceClient
+              .from("profiles")
+              .update({
+                auth_providers: ["google"],
+                is_email_verified: true,
+                first_name: firstName || profile.first_name,
+                last_name: lastName || profile.last_name,
+                avatar_url: meta.picture || meta.avatar_url || undefined,
+              })
+              .eq("id", user.id);
+          }
+
+          // Redirect to username selection for new users
+          if (!profile?.username) {
+            return NextResponse.redirect(`${origin}/select-username`);
+          }
+        }
+
         // --- GUARD: Block Google OAuth login if user hasn't linked Google ---
         // If this is NOT an explicit linking request and user doesn't have 'google' in auth_providers,
         // it means an email-only user tried to log in with Google directly — block it.
-        if (!authProviders.includes("google")) {
+        if (
+          profile &&
+          authProviders.length > 0 &&
+          !authProviders.includes("google")
+        ) {
           await supabase.auth.signOut({ scope: "local" });
           return NextResponse.redirect(
             `${origin}/login?error=google_not_linked`
@@ -69,7 +108,8 @@ export async function GET(request: Request) {
         const fullName = meta.full_name || meta.name || "";
         const nameParts = fullName.trim().split(/\s+/);
         const firstName = meta.given_name || nameParts[0] || "";
-        const lastName = meta.family_name || nameParts.slice(1).join(" ") || "";
+        const lastName =
+          meta.family_name || nameParts.slice(1).join(" ") || "";
 
         // Update first_name/last_name if they look like email prefix or are missing
         const currentFirst = profile?.first_name || "";
@@ -135,4 +175,3 @@ export async function GET(request: Request) {
 
   return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
 }
-
