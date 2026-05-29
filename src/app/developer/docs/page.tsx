@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   BookOpen,
+  Plug,
   Key,
   MessageSquare,
   Users,
@@ -190,6 +192,17 @@ export default function DocsPage() {
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">v1.0</span>
               <span className="text-xs text-muted-foreground">Base URL: <code className="text-primary font-mono">{baseUrl}/api/v1</code></span>
             </div>
+            <Link
+              href="/developer/mcp"
+              className="mt-4 flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 hover:bg-primary/10 transition-colors group"
+            >
+              <Plug className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="text-xs text-foreground">
+                <strong className="font-semibold">Using an AI agent?</strong>{" "}
+                <span className="text-muted-foreground">Connect via the Model Context Protocol — same capabilities as tools.</span>
+              </span>
+              <span className="ml-auto text-xs text-primary font-medium group-hover:underline whitespace-nowrap">MCP docs →</span>
+            </Link>
           </div>
 
           {/* Getting Started */}

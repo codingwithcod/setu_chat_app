@@ -39,6 +39,7 @@ export default function Navbar() {
     { label: "Security", href: "#security" },
     { label: "Download", href: "#download" },
     { label: "API", href: "#api" },
+    { label: "MCP", href: "#mcp" },
     { label: "Groups", href: "#groups" },
   ];
 

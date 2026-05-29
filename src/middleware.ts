@@ -4,8 +4,14 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public API routes — skip session auth, add CORS headers
-  if (pathname.startsWith("/api/v1/")) {
+  // Public API + MCP server — skip cookie session auth (these authenticate via
+  // Bearer API key in the route handler) and add CORS headers for cross-origin clients.
+  const isPublicApi =
+    pathname.startsWith("/api/v1/") ||
+    pathname === "/api/mcp" ||
+    pathname === "/api/sse";
+
+  if (isPublicApi) {
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new NextResponse(null, {

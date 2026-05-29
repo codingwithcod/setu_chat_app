@@ -10,6 +10,7 @@ import SecuritySection from "@/components/landing/SecuritySection";
 import DownloadSection from "@/components/landing/DownloadSection";
 import GroupsSection from "@/components/landing/GroupsSection";
 import APISection from "@/components/landing/APISection";
+import McpSection from "@/components/landing/McpSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
@@ -30,6 +31,7 @@ export default function Home() {
       <DownloadSection />
       <GroupsSection />
       <APISection />
+      <McpSection />
       <TestimonialsSection />
       <CTASection />
       <Footer />

@@ -10,6 +10,7 @@ import {
   Webhook,
   BarChart3,
   BookOpen,
+  Plug,
   ArrowLeft,
   Settings,
   Zap,
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { href: "/developer/webhooks", label: "Webhooks", icon: Webhook },
   { href: "/developer/usage", label: "Usage & Analytics", icon: BarChart3 },
   { href: "/developer/docs", label: "Documentation", icon: BookOpen },
+  { href: "/developer/mcp", label: "MCP Server", icon: Plug },
 ];
 
 export default function DeveloperLayout({

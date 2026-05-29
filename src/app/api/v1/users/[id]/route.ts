@@ -7,6 +7,7 @@ import {
   apiError,
   logApiUsage,
 } from "@/lib/api-key-auth";
+import { getUserProfile } from "@/lib/services";
 
 // GET /api/v1/users/[id] — Get a user's public profile
 export async function GET(
@@ -24,14 +25,11 @@ export async function GET(
     return apiError("PERMISSION_DENIED", "This key lacks the 'users:profile' permission", 403, rateLimit);
   }
 
-  const { data: profile, error } = await serviceClient
-    .from("profiles")
-    .select("id, username, first_name, last_name, full_name, avatar_url, is_online, last_seen, created_at")
-    .eq("id", params.id)
-    .single();
+  const result = await getUserProfile({ serviceClient, userId: key.user_id }, params.id);
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/users/${params.id}`, method: "GET", statusCode: error ? 404 : 200, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/users/${params.id}`, method: "GET", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
 
-  if (error || !profile) return apiError("NOT_FOUND", "User not found", 404, rateLimit);
-  return apiSuccess(profile, rateLimit);
+  return result.ok
+    ? apiSuccess(result.data, rateLimit, result.status)
+    : apiError(result.code, result.message, result.status, rateLimit);
 }

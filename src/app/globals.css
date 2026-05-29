@@ -1229,6 +1229,34 @@ html {
   animation: pulseRing 2s ease-out infinite;
 }
 
+/* ===== MCP connection animation ===== */
+/* Flowing dashes along connection spokes (data traveling toward the hub) */
+@keyframes mcpFlow {
+  to { stroke-dashoffset: -24; }
+}
+.mcp-flow {
+  stroke-dasharray: 4 8;
+  animation: mcpFlow 1.2s linear infinite;
+}
+
+/* Node heartbeat for client/hub nodes */
+@keyframes mcpNodePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.mcp-node-pulse {
+  animation: mcpNodePulse 3.2s ease-in-out infinite;
+}
+
+/* Tool chips lighting up in sequence */
+@keyframes mcpChipGlow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); border-color: hsl(var(--border) / 0.5); }
+  50% { box-shadow: 0 0 18px 0 hsl(var(--primary) / 0.3); border-color: hsl(var(--primary) / 0.45); }
+}
+.mcp-chip-glow {
+  animation: mcpChipGlow 3s ease-in-out infinite;
+}
+
 /* Gradient border glow for cards */
 .gradient-border-glow {
   position: relative;

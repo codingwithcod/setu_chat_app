@@ -257,15 +257,95 @@ export function apiError(
 }
 
 /**
+ * Result of verifying a raw API key — a discriminated union usable by any
+ * entry point (REST routes, the MCP server, etc.) without coupling to NextResponse.
+ */
+export type ApiKeyVerification =
+  | { ok: true; key: ApiKeyRecord; rateLimit: RateLimitResult }
+  | { ok: false; code: string; message: string; status: number; rateLimit?: RateLimitResult };
+
+/**
+ * Verify a raw API key string. Runs all security checks (prefix, hash lookup,
+ * is_active, expiry, IP allowlist, rate limit) and bumps usage counters.
+ *
+ * This is the single source of truth for key authentication — both
+ * `authenticateApiKey` (REST) and the MCP server's token verifier call it.
+ */
+export async function verifyApiKey(
+  rawKey: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseServiceClient: any,
+  clientIp?: string
+): Promise<ApiKeyVerification> {
+  if (!rawKey || !rawKey.startsWith(KEY_PREFIX)) {
+    return { ok: false, code: "INVALID_API_KEY", message: "API key must start with tap_setu_", status: 401 };
+  }
+
+  // Hash and lookup
+  const keyHash = hashKey(rawKey);
+  const { data: keyRecord, error } = await supabaseServiceClient
+    .from("api_keys")
+    .select("*")
+    .eq("key_hash", keyHash)
+    .single();
+
+  if (error || !keyRecord) {
+    return { ok: false, code: "INVALID_API_KEY", message: "The provided API key is invalid", status: 401 };
+  }
+
+  const key = keyRecord as ApiKeyRecord;
+
+  if (!key.is_active) {
+    return { ok: false, code: "KEY_DISABLED", message: "This API key has been deactivated", status: 403 };
+  }
+
+  if (key.expires_at && new Date(key.expires_at) < new Date()) {
+    return { ok: false, code: "KEY_EXPIRED", message: "This API key has expired", status: 403 };
+  }
+
+  if (key.allowed_ips && key.allowed_ips.length > 0) {
+    const ip = clientIp || "unknown";
+    if (!key.allowed_ips.includes(ip)) {
+      return { ok: false, code: "IP_NOT_ALLOWED", message: "Your IP address is not in the allowlist for this key", status: 403 };
+    }
+  }
+
+  const rateLimitResult = checkRateLimit(key.id, key.rate_limit_rpm);
+  if (!rateLimitResult.allowed) {
+    return {
+      ok: false,
+      code: "RATE_LIMIT_EXCEEDED",
+      message: `Rate limit of ${key.rate_limit_rpm} requests per minute exceeded. Try again in ${rateLimitResult.reset} seconds.`,
+      status: 429,
+      rateLimit: rateLimitResult,
+    };
+  }
+
+  // Update last_used_at and total_requests (fire-and-forget)
+  supabaseServiceClient
+    .from("api_keys")
+    .update({
+      last_used_at: new Date().toISOString(),
+      total_requests: key.total_requests + 1,
+    })
+    .eq("id", key.id)
+    .then(() => {});
+
+  return { ok: true, key, rateLimit: rateLimitResult };
+}
+
+/**
  * Authenticate an API request using the Bearer token.
  * Returns the API key record if valid, or a NextResponse error.
+ *
+ * Thin wrapper over `verifyApiKey` — extracts the Bearer header and maps the
+ * verification union onto NextResponse errors. REST behavior is unchanged.
  */
 export async function authenticateApiKey(
   request: NextRequest,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabaseServiceClient: any
 ): Promise<{ key: ApiKeyRecord; rateLimit: RateLimitResult } | NextResponse> {
-  // 1. Extract Bearer token
   const authHeader = request.headers.get("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return apiError(
@@ -276,75 +356,17 @@ export async function authenticateApiKey(
   }
 
   const rawKey = authHeader.slice(7).trim();
-  if (!rawKey.startsWith(KEY_PREFIX)) {
-    return apiError(
-      "INVALID_API_KEY",
-      "API key must start with tap_setu_",
-      401
-    );
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+
+  const result = await verifyApiKey(rawKey, supabaseServiceClient, clientIp);
+  if (!result.ok) {
+    return apiError(result.code, result.message, result.status, result.rateLimit);
   }
 
-  // 2. Hash and lookup
-  const keyHash = hashKey(rawKey);
-  const { data: keyRecord, error } = await supabaseServiceClient
-    .from("api_keys")
-    .select("*")
-    .eq("key_hash", keyHash)
-    .single();
-
-  if (error || !keyRecord) {
-    return apiError("INVALID_API_KEY", "The provided API key is invalid", 401);
-  }
-
-  const key = keyRecord as ApiKeyRecord;
-
-  // 3. Check is_active
-  if (!key.is_active) {
-    return apiError("KEY_DISABLED", "This API key has been deactivated", 403);
-  }
-
-  // 4. Check expiry
-  if (key.expires_at && new Date(key.expires_at) < new Date()) {
-    return apiError("KEY_EXPIRED", "This API key has expired", 403);
-  }
-
-  // 5. IP whitelist check
-  if (key.allowed_ips && key.allowed_ips.length > 0) {
-    const clientIp =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-    if (!key.allowed_ips.includes(clientIp)) {
-      return apiError(
-        "IP_NOT_ALLOWED",
-        "Your IP address is not in the allowlist for this key",
-        403
-      );
-    }
-  }
-
-  // 6. Rate limit
-  const rateLimitResult = checkRateLimit(key.id, key.rate_limit_rpm);
-  if (!rateLimitResult.allowed) {
-    return apiError(
-      "RATE_LIMIT_EXCEEDED",
-      `Rate limit of ${key.rate_limit_rpm} requests per minute exceeded. Try again in ${rateLimitResult.reset} seconds.`,
-      429,
-      rateLimitResult
-    );
-  }
-
-  // 7. Update last_used_at and total_requests (fire-and-forget)
-  supabaseServiceClient
-    .from("api_keys")
-    .update({
-      last_used_at: new Date().toISOString(),
-      total_requests: key.total_requests + 1,
-    })
-    .eq("id", key.id)
-    .then(() => {});
-
-  return { key, rateLimit: rateLimitResult };
+  return { key: result.key, rateLimit: result.rateLimit };
 }
 
 /**

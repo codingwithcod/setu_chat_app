@@ -7,6 +7,7 @@ import {
   apiError,
   logApiUsage,
 } from "@/lib/api-key-auth";
+import { editMessage, deleteMessage } from "@/lib/services";
 
 // PATCH /api/v1/messages/[id]/edit — Edit a message
 export async function PATCH(
@@ -25,36 +26,16 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { content } = body;
+  const result = await editMessage(
+    { serviceClient, userId: key.user_id },
+    { message_id: params.id, content: body.content }
+  );
 
-  if (!content || typeof content !== "string" || content.trim().length === 0) {
-    return apiError("INVALID_REQUEST", "content is required", 400, rateLimit);
-  }
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}/edit`, method: "PATCH", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
 
-  // Verify ownership
-  const { data: existing } = await serviceClient
-    .from("messages")
-    .select("id, sender_id")
-    .eq("id", params.id)
-    .eq("sender_id", key.user_id)
-    .single();
-
-  if (!existing) {
-    logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}/edit`, method: "PATCH", statusCode: 404, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
-    return apiError("NOT_FOUND", "Message not found or you are not the sender", 404, rateLimit);
-  }
-
-  const { data: updated, error } = await serviceClient
-    .from("messages")
-    .update({ content: content.trim(), is_edited: true })
-    .eq("id", params.id)
-    .select(`*, sender:profiles(id, username, first_name, last_name, avatar_url)`)
-    .single();
-
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}/edit`, method: "PATCH", statusCode: error ? 500 : 200, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
-
-  if (error) return apiError("INTERNAL_ERROR", error.message, 500, rateLimit);
-  return apiSuccess(updated, rateLimit);
+  return result.ok
+    ? apiSuccess(result.data, rateLimit, result.status)
+    : apiError(result.code, result.message, result.status, rateLimit);
 }
 
 // DELETE /api/v1/messages/[id]/edit — Soft-delete a message
@@ -73,26 +54,11 @@ export async function DELETE(
     return apiError("PERMISSION_DENIED", "This key lacks the 'messages:delete' permission", 403, rateLimit);
   }
 
-  // Verify ownership
-  const { data: existing } = await serviceClient
-    .from("messages")
-    .select("id, sender_id")
-    .eq("id", params.id)
-    .eq("sender_id", key.user_id)
-    .single();
+  const result = await deleteMessage({ serviceClient, userId: key.user_id }, params.id);
 
-  if (!existing) {
-    logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}`, method: "DELETE", statusCode: 404, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
-    return apiError("NOT_FOUND", "Message not found or you are not the sender", 404, rateLimit);
-  }
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}`, method: "DELETE", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
 
-  const { error } = await serviceClient
-    .from("messages")
-    .update({ is_deleted: true, content: "" })
-    .eq("id", params.id);
-
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}`, method: "DELETE", statusCode: error ? 500 : 200, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
-
-  if (error) return apiError("INTERNAL_ERROR", error.message, 500, rateLimit);
-  return apiSuccess({ id: params.id, deleted: true }, rateLimit);
+  return result.ok
+    ? apiSuccess(result.data, rateLimit, result.status)
+    : apiError(result.code, result.message, result.status, rateLimit);
 }
