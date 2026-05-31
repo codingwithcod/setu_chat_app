@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, LogIn, Loader2, MessageSquare } from "lucide-react";
+import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
+import Image from "next/image";
+import setuLogo from "@/app/setu-white-tr.png";
 
 function LoginContent() {
   const router = useRouter();
@@ -186,8 +188,8 @@ function LoginContent() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(var(--primary)/0.1),transparent_40%)]" />
         <div className="relative z-10 max-w-md space-y-8">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary p-3">
-              <MessageSquare className="h-8 w-8 text-primary-foreground" />
+            <div className="rounded-xl bg-primary p-2.5 overflow-hidden">
+              <Image src={setuLogo} alt="Setu logo" width={36} height={36} className="object-contain" />
             </div>
             <span className="text-4xl font-extrabold gradient-text">Setu</span>
           </div>
@@ -215,8 +217,8 @@ function LoginContent() {
       <div className="flex w-full lg:w-1/2 items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-            <div className="rounded-xl bg-primary p-2.5">
-              <MessageSquare className="h-6 w-6 text-primary-foreground" />
+            <div className="rounded-xl bg-primary p-2 overflow-hidden">
+              <Image src={setuLogo} alt="Setu logo" width={28} height={28} className="object-contain" />
             </div>
             <span className="text-3xl font-extrabold gradient-text">Setu</span>
           </div>

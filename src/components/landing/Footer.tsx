@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, Github, Twitter } from "lucide-react";
+import Image from "next/image";
+import { Github, Twitter } from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
 
 const footerLinks = {
   Product: [
@@ -31,8 +33,8 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="rounded-lg bg-primary p-2">
-                <MessageSquare className="h-5 w-5 text-primary-foreground" />
+              <div className="rounded-xl bg-primary p-1.5 overflow-hidden">
+                <Image src={setuLogo} alt="Setu logo" width={24} height={24} className="object-contain" />
               </div>
               <span className="text-xl font-extrabold gradient-text">Setu</span>
             </Link>

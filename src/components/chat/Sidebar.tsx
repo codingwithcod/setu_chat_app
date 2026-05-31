@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -20,13 +21,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getInitials } from "@/lib/utils";
 import {
-  MessageSquare,
   Users,
   LogOut,
   User,
   Settings,
   Code,
 } from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
 import type { SearchResult } from "@/types";
 
 export function Sidebar() {
@@ -105,7 +106,9 @@ export function Sidebar() {
           onClick={() => router.push("/chat")}
           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
         >
-          <MessageSquare className="h-6 w-6 text-primary" />
+          <div className="rounded-lg bg-primary p-1 overflow-hidden">
+            <Image src={setuLogo} alt="Setu logo" width={22} height={22} className="object-contain" />
+          </div>
           <h1 className="text-xl font-bold gradient-text">Setu</h1>
         </button>
         <div className="flex items-center gap-1">

@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare,
   Menu,
   X,
   Sun,
   Moon,
 } from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -55,8 +56,8 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="rounded-lg bg-primary p-2 transition-transform group-hover:scale-110">
-              <MessageSquare className="h-5 w-5 text-primary-foreground" />
+            <div className="rounded-xl bg-primary p-1.5 transition-transform group-hover:scale-110 overflow-hidden">
+              <Image src={setuLogo} alt="Setu logo" width={24} height={24} className="object-contain" />
             </div>
             <span className="text-xl font-extrabold gradient-text">Setu</span>
           </Link>

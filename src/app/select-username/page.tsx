@@ -9,7 +9,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, MessageSquare, AtSign } from "lucide-react";
+import Image from "next/image";
+import { Loader2, AtSign } from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
 
 const selectUsernameSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(50),
@@ -151,8 +153,8 @@ export default function SelectUsernamePage() {
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-8">
         <div className="flex items-center gap-3 justify-center">
-          <div className="rounded-xl bg-primary p-2.5">
-            <MessageSquare className="h-6 w-6 text-primary-foreground" />
+          <div className="rounded-xl bg-primary p-2 overflow-hidden">
+            <Image src={setuLogo} alt="Setu logo" width={28} height={28} className="object-contain" />
           </div>
           <span className="text-3xl font-extrabold gradient-text">Setu</span>
         </div>

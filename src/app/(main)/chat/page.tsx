@@ -1,4 +1,5 @@
-import { MessageSquare } from "lucide-react";
+import Image from "next/image";
+import setuLogo from "@/app/setu-white-tr.png";
 
 export default function ChatPage() {
   return (
@@ -6,7 +7,7 @@ export default function ChatPage() {
       <div className="text-center space-y-4 p-8">
         <div className="flex justify-center">
           <div className="rounded-2xl bg-primary/10 p-6">
-            <MessageSquare className="h-16 w-16 text-primary/60" />
+            <Image src={setuLogo} alt="Setu logo" width={64} height={64} className="object-contain" />
           </div>
         </div>
         <h2 className="text-2xl font-semibold text-foreground">

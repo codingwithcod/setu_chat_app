@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +11,9 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  MessageSquare,
   Mail,
 } from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -77,8 +78,8 @@ function VerifyEmailContent() {
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="flex items-center gap-3 justify-center mb-8">
-          <div className="rounded-xl bg-primary p-2.5">
-            <MessageSquare className="h-6 w-6 text-primary-foreground" />
+          <div className="rounded-xl bg-primary p-2 overflow-hidden">
+            <Image src={setuLogo} alt="Setu logo" width={28} height={28} className="object-contain" />
           </div>
           <span className="text-3xl font-extrabold gradient-text">Setu</span>
         </div>
