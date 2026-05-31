@@ -352,14 +352,14 @@ export default function ApiKeysPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="relative">
-                <div className="p-3 rounded-lg bg-muted font-mono text-xs break-all border border-border">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted border border-border">
+                <div className="flex-1 font-mono text-xs break-all min-w-0">
                   {createdKey}
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
-                  className="absolute top-1 right-1 h-7 gap-1"
+                  className="h-7 gap-1 flex-shrink-0"
                   onClick={copyKey}
                 >
                   {copied ? (
