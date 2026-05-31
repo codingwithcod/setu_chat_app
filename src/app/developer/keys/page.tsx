@@ -533,7 +533,7 @@ export default function ApiKeysPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently deactivate the API key. Any applications or services using this key will immediately lose access. This action cannot be undone.
+              This will permanently delete the API key. Any applications or services using this key will immediately lose access. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

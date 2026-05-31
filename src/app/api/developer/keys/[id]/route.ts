@@ -119,7 +119,7 @@ export async function PATCH(
   return NextResponse.json({ data: updated });
 }
 
-// DELETE /api/developer/keys/[id] — Soft-delete (deactivate) an API key
+// DELETE /api/developer/keys/[id] — Permanently delete an API key
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
@@ -133,21 +133,30 @@ export async function DELETE(
 
   const serviceClient = await createServiceClient();
 
-  // Soft-delete: set is_active = false
-  const { data, error } = await serviceClient
+  // Verify ownership before deleting
+  const { data: existingKey, error: fetchError } = await serviceClient
     .from("api_keys")
-    .update({ is_active: false })
+    .select("id")
     .eq("id", params.id)
     .eq("user_id", user.id)
-    .select("id, name, is_active")
     .single();
 
-  if (error || !data) {
+  if (fetchError || !existingKey) {
     return NextResponse.json({ error: "API key not found" }, { status: 404 });
   }
 
+  // Permanently delete the key
+  const { error } = await serviceClient
+    .from("api_keys")
+    .delete()
+    .eq("id", params.id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to delete API key" }, { status: 500 });
+  }
+
   return NextResponse.json({
-    data,
-    message: "API key has been deactivated",
+    message: "API key has been permanently deleted",
   });
 }
