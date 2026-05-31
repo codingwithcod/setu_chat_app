@@ -279,10 +279,18 @@ export default function UsagePage() {
     fetchUsage();
   }, [days]);
 
-  const chartDays = data?.daily_stats
-    ? Object.entries(data.daily_stats)
-        .sort(([a], [b]) => a.localeCompare(b))
-    : [];
+  // Fill all days in the selected period (including days with zero requests)
+  const chartDays = (() => {
+    const result: Array<[string, { requests: number; errors: number }]> = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      result.push([key, data?.daily_stats?.[key] || { requests: 0, errors: 0 }]);
+    }
+    return result;
+  })();
   const maxReq = Math.max(1, ...chartDays.map(([, v]) => v.requests));
 
   const sortedEndpoints = data?.endpoint_stats
@@ -390,32 +398,89 @@ export default function UsagePage() {
             </div>
           )}
 
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid gap-6">
             {/* Chart */}
             <div className="rounded-xl border border-border bg-card p-5">
-              <h3 className="font-semibold text-sm mb-4">Daily Requests</h3>
-              {chartDays.length > 0 ? (
-                <div className="flex items-end gap-1.5 h-44">
-                  {chartDays.map(([day, stats]) => (
-                    <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[9px] text-muted-foreground">{stats.requests}</span>
-                      <div className="w-full flex flex-col gap-0.5">
-                        {stats.errors > 0 && (
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-sm">Daily Requests <span className="text-muted-foreground font-normal">({days} days)</span></h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+                    <span className="text-[10px] text-muted-foreground">Success</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-red-500" />
+                    <span className="text-[10px] text-muted-foreground">Errors</span>
+                  </div>
+                </div>
+              </div>
+              {data ? (
+                <div className="flex items-end gap-[2px] h-44">
+                  {chartDays.map(([day, stats], dayIndex) => {
+                    const successCount = stats.requests - stats.errors;
+                    const successHeight = maxReq > 0 ? Math.max(successCount > 0 ? 4 : 2, (successCount / maxReq) * 130) : 2;
+                    const errorHeight = stats.errors > 0 ? Math.max(4, (stats.errors / maxReq) * 130) : 0;
+                    const isToday = day === new Date().toISOString().slice(0, 10);
+                    const isFirst = dayIndex === 0;
+                    const isLast = dayIndex === chartDays.length - 1;
+                    // Label logic: 7d/14d = every day, 30d = every 7th day + first + last
+                    const showLabel = days <= 14
+                      || isFirst
+                      || isLast
+                      || dayIndex % 7 === 0;
+                    // Tooltip position: push right for first few bars, left for last few
+                    const tooltipAlign = dayIndex < 3 ? "left-0" : isLast || dayIndex > chartDays.length - 4 ? "right-0" : "left-1/2 -translate-x-1/2";
+                    return (
+                      <div key={day} className="flex-1 flex flex-col items-center gap-1 group relative cursor-crosshair">
+                        {/* Hover tooltip */}
+                        <div className={`absolute bottom-full mb-2 ${tooltipAlign} hidden group-hover:block z-10`}>
+                          <div className="bg-popover border border-border rounded-lg shadow-xl px-3 py-2 whitespace-nowrap">
+                            <p className="text-[10px] font-medium text-foreground mb-1">
+                              {new Date(day).toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" })}
+                            </p>
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <span className="text-emerald-400">Success: {successCount}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                              <span className="text-red-400">Errors: {stats.errors}</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 border-t border-border pt-1">Total: {stats.requests}</p>
+                          </div>
+                        </div>
+                        {/* Count label on hover */}
+                        <span className="text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">{stats.requests}</span>
+                        {/* Bars */}
+                        <div className="w-full flex flex-col gap-0.5 group-hover:opacity-80 transition-opacity">
+                          {stats.errors > 0 && (
+                            <div
+                              className="w-full bg-red-500 rounded-sm transition-all"
+                              style={{ height: `${errorHeight}px` }}
+                            />
+                          )}
                           <div
-                            className="w-full bg-red-500/40 rounded-sm"
-                            style={{ height: `${Math.max(2, (stats.errors / maxReq) * 140)}px` }}
+                            className={`w-full rounded-sm transition-all ${
+                              stats.requests === 0
+                                ? "bg-muted/40"
+                                : "bg-emerald-500"
+                            }`}
+                            style={{ height: `${successHeight}px` }}
                           />
-                        )}
-                        <div
-                          className="w-full bg-primary/60 rounded-sm"
-                          style={{ height: `${Math.max(3, ((stats.requests - stats.errors) / maxReq) * 140)}px` }}
-                        />
+                        </div>
+                        {/* Date label — fixed height so all bars align */}
+                        <div className="h-6 flex items-start justify-center">
+                          <span className={`text-[7px] leading-tight text-center text-muted-foreground transition-opacity ${
+                            showLabel
+                              ? (isToday ? "font-bold text-foreground" : "")
+                              : "opacity-0 group-hover:opacity-100"
+                          }`}>
+                            {new Date(day).toLocaleDateString("en", { month: "short", day: "numeric" })}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[8px] text-muted-foreground">
-                        {new Date(day).toLocaleDateString("en", { month: "short", day: "numeric" })}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-44 text-sm text-muted-foreground">
