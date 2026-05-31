@@ -10,23 +10,22 @@ import {
   Webhook,
   BarChart3,
   BookOpen,
-  Plug,
   ArrowLeft,
   Settings,
   Zap,
   ChevronRight,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/developer", label: "Overview", icon: LayoutDashboard },
-  { href: "/developer/keys", label: "API Keys", icon: Key },
-  { href: "/developer/webhooks", label: "Webhooks", icon: Webhook },
-  { href: "/developer/usage", label: "Usage & Analytics", icon: BarChart3 },
-  { href: "/developer/docs", label: "Documentation", icon: BookOpen },
-  { href: "/developer/mcp", label: "MCP Server", icon: Plug },
+  { href: "/developer", label: "Overview", icon: LayoutDashboard, external: false },
+  { href: "/developer/keys", label: "API Keys", icon: Key, external: false },
+  { href: "/developer/webhooks", label: "Webhooks", icon: Webhook, external: false },
+  { href: "/developer/usage", label: "Usage & Analytics", icon: BarChart3, external: false },
+  { href: "/docs/public-api", label: "Documentation", icon: BookOpen, external: true },
 ];
 
 export default function DeveloperLayout({
@@ -127,7 +126,22 @@ export default function DeveloperLayout({
         {/* Navigation */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = !item.external && pathname === item.href;
+            if (item.external) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                >
+                  <item.icon className="h-4.5 w-4.5 flex-shrink-0 transition-colors text-muted-foreground group-hover:text-foreground" />
+                  <span className="truncate">{item.label}</span>
+                  <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground/60" />
+                </a>
+              );
+            }
             return (
               <button
                 key={item.href}

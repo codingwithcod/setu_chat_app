@@ -66,7 +66,7 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith("/reset-password");
 
     const isTotpVerifyPage = request.nextUrl.pathname === "/login/verify-totp";
-    const isPublicPage = request.nextUrl.pathname === "/";
+    const isPublicPage = request.nextUrl.pathname === "/" || request.nextUrl.pathname.startsWith("/docs");
 
     // Handle TOTP pending state
     const totpPending = request.cookies.get("totp_pending")?.value === "true";

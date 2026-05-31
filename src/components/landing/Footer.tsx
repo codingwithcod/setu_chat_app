@@ -13,6 +13,11 @@ const footerLinks = {
     { label: "Download", href: "#download" },
     { label: "Groups", href: "#groups" },
   ],
+  Developers: [
+    { label: "Public API Docs", href: "/docs/public-api" },
+    { label: "MCP Server Docs", href: "/docs/mcp-server" },
+    { label: "API Studio", href: "/developer" },
+  ],
   Company: [
     { label: "About", href: "#" },
     { label: "Blog", href: "#" },
@@ -30,7 +35,7 @@ export default function Footer() {
   return (
     <footer className="relative border-t border-border/50 bg-card/30 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-4">
             <Link href="/" className="flex items-center gap-2.5">

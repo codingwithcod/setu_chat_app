@@ -235,7 +235,7 @@ export default function McpPage() {
               <p className="text-xs text-muted-foreground flex items-start gap-2">
                 <Sparkles className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-primary" />
                 Looking for raw HTTP endpoints instead? See the{" "}
-                <Link href="/developer/docs" className="text-primary hover:underline font-medium">REST API documentation</Link>.
+                <Link href="/docs/public-api" className="text-primary hover:underline font-medium">REST API documentation</Link>.
               </p>
             </div>
           </section>
@@ -382,7 +382,7 @@ export default function McpPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               MCP tool calls share the exact same rate limit and usage tracking as the REST API — each tool call counts as a single
               request against your key&apos;s per-minute limit. See the{" "}
-              <Link href="/developer/docs" className="text-primary hover:underline font-medium">REST docs</Link> for per-plan limits, and{" "}
+              <Link href="/docs/public-api" className="text-primary hover:underline font-medium">REST docs</Link> for per-plan limits, and{" "}
               <Link href="/developer/usage" className="text-primary hover:underline font-medium">Usage &amp; Analytics</Link> to monitor consumption.
             </p>
           </section>

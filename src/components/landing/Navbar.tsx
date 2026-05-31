@@ -41,7 +41,7 @@ export default function Navbar() {
     { label: "Download", href: "#download" },
     { label: "API", href: "#api" },
     { label: "MCP", href: "#mcp" },
-    { label: "Groups", href: "#groups" },
+    { label: "Docs", href: "/docs/public-api" },
   ];
 
   return (

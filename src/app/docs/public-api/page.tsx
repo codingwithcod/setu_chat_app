@@ -193,7 +193,7 @@ export default function DocsPage() {
               <span className="text-xs text-muted-foreground">Base URL: <code className="text-primary font-mono">{baseUrl}/api/v1</code></span>
             </div>
             <Link
-              href="/developer/mcp"
+              href="/docs/mcp-server"
               className="mt-4 flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 hover:bg-primary/10 transition-colors group"
             >
               <Plug className="h-4 w-4 text-primary flex-shrink-0" />

@@ -196,7 +196,7 @@ export default function McpSection() {
             </div>
 
             <div className="pt-2">
-              <Link href="/developer/mcp">
+              <Link href="/docs/mcp-server">
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-primary to-violet-500 text-white border-0 font-semibold gap-2 shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 px-8"

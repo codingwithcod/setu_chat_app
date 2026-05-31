@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Key, MessageSquare, Users, Hash, Send, ShieldCheck } from "lucide-react";
+import { ArrowRight, Key, MessageSquare, Users, Hash, Send, ShieldCheck, BookOpen } from "lucide-react";
 
 /* ---- Thunder bolt SVG ---- */
 const ThunderSvg = ({ className }: { className?: string }) => (
@@ -197,12 +197,18 @@ export default function APISection() {
               ))}
             </div>
 
-            <div className="flex justify-center mt-8 relative z-10">
+            <div className="flex justify-center gap-4 mt-8 relative z-10 flex-wrap">
               <Link href="/register">
                 <Button size="lg" className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 font-semibold gap-2 shadow-xl shadow-amber-500/20 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 px-8">
                   <Key className="h-4 w-4" />
                   Get Your API Key
                   <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/docs/public-api">
+                <Button size="lg" variant="outline" className="font-semibold gap-2 border-border/60 hover:bg-muted/60 hover:scale-[1.02] transition-all duration-300 px-8">
+                  <BookOpen className="h-4 w-4" />
+                  View API Docs
                 </Button>
               </Link>
             </div>
