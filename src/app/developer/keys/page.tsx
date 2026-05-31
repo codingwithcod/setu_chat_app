@@ -27,6 +27,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { ApiKey } from "@/types";
 
 const PERMISSION_PRESETS = [
@@ -66,6 +76,8 @@ export default function ApiKeysPage() {
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Create form state
   const [keyName, setKeyName] = useState("");
@@ -150,13 +162,17 @@ export default function ApiKeysPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to deactivate this API key? This cannot be undone.")) return;
+  const handleDelete = async () => {
+    if (!revokeKeyId) return;
+    setDeleting(true);
     try {
-      await fetch(`/api/developer/keys/${id}`, { method: "DELETE" });
+      await fetch(`/api/developer/keys/${revokeKeyId}`, { method: "DELETE" });
       fetchKeys();
     } catch (err) {
       console.error("Failed to delete key:", err);
+    } finally {
+      setDeleting(false);
+      setRevokeKeyId(null);
     }
   };
 
@@ -324,7 +340,7 @@ export default function ApiKeysPage() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(key.id)}
+                    onClick={() => setRevokeKeyId(key.id)}
                     title="Revoke key"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -510,6 +526,29 @@ export default function ApiKeysPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Revoke Key Confirmation Dialog */}
+      <AlertDialog open={!!revokeKeyId} onOpenChange={() => setRevokeKeyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently deactivate the API key. Any applications or services using this key will immediately lose access. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Revoke Key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
