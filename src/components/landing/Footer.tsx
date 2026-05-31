@@ -28,7 +28,7 @@ const footerLinks = {
 export default function Footer() {
   return (
     <footer className="relative border-t border-border/50 bg-card/30 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 pb-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 space-y-4">
@@ -72,15 +72,28 @@ export default function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="mt-12 pt-8 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Setu. All rights reserved.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Built with ❤️ using Next.js & Supabase
-          </p>
+          <DevelopedBy />
         </div>
       </div>
     </footer>
+  );
+}
+
+function DevelopedBy() {
+  return (
+    <div className="flex flex-col">
+      <span className="text-gray-300/50 text-xs leading-none">
+        Developed by
+      </span>
+      <Link href="https://www.theabhipatel.com/" target="_theabhipatel">
+        <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-yellow-500 bg-clip-text text-lg leading-none font-semibold tracking-wide text-transparent">
+          TheAbhiPatel
+        </span>
+      </Link>
+    </div>
   );
 }
