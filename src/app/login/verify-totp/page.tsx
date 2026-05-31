@@ -12,6 +12,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import setuLogo from "@/app/setu-white-tr.png";
+import { DevelopedBy } from "@/components/shared/DevelopedBy";
 
 export default function VerifyTotpPage() {
   const router = useRouter();
@@ -128,9 +129,10 @@ export default function VerifyTotpPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left side — branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/20 via-background to-primary/5 items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/20 via-background to-primary/5 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(var(--primary)/0.15),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(var(--primary)/0.1),transparent_40%)]" />
+        <div />
         <div className="relative z-10 max-w-md space-y-8">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-primary p-2.5 overflow-hidden">
@@ -155,6 +157,9 @@ export default function VerifyTotpPage() {
               Secure login
             </div>
           </div>
+        </div>
+        <div className="relative z-10">
+          <DevelopedBy />
         </div>
       </div>
 
