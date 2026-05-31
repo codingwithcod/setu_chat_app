@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
@@ -17,6 +18,7 @@ import {
   FolderOpen,
   Zap,
 } from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
 
 /* ---- Client nodes around the hub (percentage positions matching the SVG viewBox) ---- */
 const NODES = [
@@ -42,20 +44,20 @@ export default function McpSection() {
   return (
     <section id="mcp" className="relative py-28 overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.03] to-info/[0.03]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.03] to-primary/[0.03]" />
       <div className="absolute inset-0 tech-grid opacity-30" />
 
       {/* Floating accents */}
       <div className="absolute top-16 right-[8%] animate-float text-primary/15">
         <Plug className="w-14 h-14 rotate-12" />
       </div>
-      <div className="absolute bottom-24 left-[6%] animate-float-slow text-info/15">
+      <div className="absolute bottom-24 left-[6%] animate-float-slow text-primary/15">
         <Boxes className="w-12 h-12 -rotate-6" />
       </div>
 
       {/* Orbs */}
       <div className="orb w-[500px] h-[500px] bg-primary/8 -top-40 left-0" />
-      <div className="orb w-[400px] h-[400px] bg-info/8 bottom-0 -right-40" />
+      <div className="orb w-[400px] h-[400px] bg-violet-500/8 bottom-0 -right-40" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -81,7 +83,7 @@ export default function McpSection() {
               <div className="absolute inset-0 bg-primary/5 rounded-3xl blur-3xl scale-90" />
               <div className="relative rounded-2xl border border-border/40 bg-card/50 backdrop-blur-xl p-6 sm:p-8 overflow-hidden">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-info flex items-center justify-center text-white">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white">
                     <Plug className="w-4 h-4" />
                   </div>
                   <span className="text-sm font-bold">Setu MCP Server</span>
@@ -133,8 +135,8 @@ export default function McpSection() {
                   >
                     <div className="relative">
                       <span className="absolute inset-0 rounded-2xl bg-primary/30 pulse-ring" />
-                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-info flex items-center justify-center text-white shadow-xl shadow-primary/30">
-                        <Zap className="w-6 h-6" />
+                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center shadow-xl shadow-primary/30 overflow-hidden p-2">
+                        <Image src={setuLogo} alt="Setu logo" width={32} height={32} className="object-contain" />
                       </div>
                     </div>
                   </div>
@@ -154,7 +156,7 @@ export default function McpSection() {
                   ))}
                 </div>
 
-                <div className="scan-line" />
+
               </div>
             </div>
           </div>
@@ -168,7 +170,7 @@ export default function McpSection() {
                 { icon: Zap, title: "Your key, your scopes", desc: "Reuses your API key — same permissions and rate limits as the REST API." },
               ].map((f) => (
                 <div key={f.title} className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-info/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center flex-shrink-0">
                     <f.icon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
@@ -197,7 +199,7 @@ export default function McpSection() {
               <Link href="/developer/mcp">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-primary to-info text-white border-0 font-semibold gap-2 shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 px-8"
+                  className="bg-gradient-to-r from-primary to-violet-500 text-white border-0 font-semibold gap-2 shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 px-8"
                 >
                   <Plug className="h-4 w-4" />
                   Connect via MCP
