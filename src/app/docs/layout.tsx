@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import Image from "next/image";
-import { Sun, Moon, ArrowLeft, BookOpen, Plug } from "lucide-react";
+import { Sun, Moon, Home, BookOpen, Plug } from "lucide-react";
 import setuLogo from "@/app/setu-white-tr.png";
 
 const TABS = [
@@ -99,9 +99,9 @@ export default function DocsLayout({
               )}
               <Link
                 href="/"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground bg-muted/60 border border-border/50 hover:text-foreground hover:bg-muted hover:border-border transition-all duration-200"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
+                <Home className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Home</span>
               </Link>
             </div>
