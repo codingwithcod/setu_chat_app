@@ -25,10 +25,18 @@ export async function PATCH(
     return apiError("PERMISSION_DENIED", "This key lacks the 'webhooks:manage' permission", 403, rateLimit);
   }
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    const msg = "Invalid JSON in request body";
+    logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/webhooks/${params.id}`, method: "PATCH", statusCode: 400, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: msg });
+    return apiError("INVALID_JSON", msg, 400, rateLimit);
+  }
+
   const result = await updateWebhook({ serviceClient, userId: key.user_id }, params.id, body);
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/webhooks/${params.id}`, method: "PATCH", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/webhooks/${params.id}`, method: "PATCH", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: result.ok ? undefined : `${result.code}: ${result.message}` });
 
   return result.ok
     ? apiSuccess(result.data, rateLimit, result.status)
@@ -53,7 +61,7 @@ export async function DELETE(
 
   const result = await deleteWebhook({ serviceClient, userId: key.user_id }, params.id);
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/webhooks/${params.id}`, method: "DELETE", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/webhooks/${params.id}`, method: "DELETE", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: result.ok ? undefined : `${result.code}: ${result.message}` });
 
   return result.ok
     ? apiSuccess(result.data, rateLimit, result.status)

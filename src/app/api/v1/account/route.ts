@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
     userAgent: request.headers.get("user-agent") || undefined,
     responseTimeMs: Date.now() - startTime,
+    errorMessage: result.ok ? undefined : `${result.code}: ${result.message}`,
   });
 
   return result.ok

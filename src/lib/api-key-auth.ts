@@ -384,6 +384,7 @@ export function logApiUsage(
     ipAddress?: string;
     userAgent?: string;
     responseTimeMs?: number;
+    errorMessage?: string;
   }
 ) {
   supabaseServiceClient
@@ -397,6 +398,7 @@ export function logApiUsage(
       ip_address: params.ipAddress || null,
       user_agent: params.userAgent || null,
       response_time_ms: params.responseTimeMs || null,
+      error_message: params.errorMessage || null,
     })
     .then(() => {});
 }

@@ -75,6 +75,8 @@ export async function GET(request: NextRequest) {
     status_code: l.status_code,
     response_time_ms: l.response_time_ms,
     ip_address: l.ip_address,
+    user_agent: l.user_agent,
+    error_message: l.error_message,
     created_at: l.created_at,
   }));
 

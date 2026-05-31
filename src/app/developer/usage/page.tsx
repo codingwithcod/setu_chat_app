@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   BarChart3,
   Activity,
@@ -9,9 +10,25 @@ import {
   XCircle,
   TrendingUp,
   Filter,
+  AlertTriangle,
+  X,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
+interface RecentActivity {
+  id: string;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  response_time_ms: number | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  error_message: string | null;
+  created_at: string;
+}
 
 interface UsageData {
   summary: {
@@ -34,15 +51,7 @@ interface UsageData {
   };
   daily_stats: Record<string, { requests: number; errors: number }>;
   endpoint_stats: Record<string, number>;
-  recent_activity: Array<{
-    id: string;
-    endpoint: string;
-    method: string;
-    status_code: number;
-    response_time_ms: number | null;
-    ip_address: string | null;
-    created_at: string;
-  }>;
+  recent_activity: RecentActivity[];
 }
 
 const methodColors: Record<string, string> = {
@@ -53,10 +62,206 @@ const methodColors: Record<string, string> = {
   DELETE: "text-red-500 bg-red-500/10",
 };
 
+const statusLabels: Record<string, string> = {
+  "400": "Bad Request",
+  "401": "Unauthorized",
+  "403": "Forbidden",
+  "404": "Not Found",
+  "429": "Rate Limit Exceeded",
+  "500": "Internal Server Error",
+};
+
+// ── Error Detail Modal ─────────────────────────────────────
+function ErrorDetailModal({
+  item,
+  onClose,
+}: {
+  item: RecentActivity;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(item.error_message || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [item.error_message]);
+
+  // Close on ESC
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const [errorCode, ...errorMsgParts] = (item.error_message || "Unknown error").split(": ");
+  const errorMsg = errorMsgParts.join(": ") || errorCode;
+  const displayCode = errorMsgParts.length > 0 ? errorCode : "";
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* Modal */}
+      <div
+        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-red-500/20 bg-card shadow-2xl shadow-red-500/5 animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 pb-3 border-b border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm">Request Error</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {new Date(item.created_at).toLocaleString("en", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 space-y-4">
+          {/* Status + Method + Endpoint */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Method</p>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded ${methodColors[item.method] || ""}`}>
+                {item.method}
+              </span>
+            </div>
+            <div className="rounded-lg bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Status</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-red-500">{item.status_code}</span>
+                <span className="text-xs text-muted-foreground">
+                  {statusLabels[String(item.status_code)] || "Error"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-muted/30 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Endpoint</p>
+            <code className="text-xs font-mono text-foreground break-all">{item.endpoint}</code>
+          </div>
+
+          {/* Error Code */}
+          {displayCode && (
+            <div className="rounded-lg bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Error Code</p>
+              <code className="text-xs font-mono text-red-400">{displayCode}</code>
+            </div>
+          )}
+
+          {/* Error Message */}
+          <div className="rounded-lg border border-red-500/15 bg-red-500/5 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] uppercase tracking-wider text-red-400">Error Message</p>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {copied ? (
+                  <Check className="h-3 w-3 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="text-xs text-red-300 leading-relaxed font-mono whitespace-pre-wrap break-all">
+              {errorMsg || "No error details available"}
+            </p>
+          </div>
+
+          {/* Additional Info */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Response Time</p>
+              <p className="text-xs text-foreground">
+                {item.response_time_ms ? `${item.response_time_ms}ms` : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">IP Address</p>
+              <p className="text-xs text-foreground font-mono">
+                {item.ip_address || "—"}
+              </p>
+            </div>
+          </div>
+
+          {item.user_agent && (
+            <div className="rounded-lg bg-muted/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">User Agent</p>
+              <p className="text-[10px] text-muted-foreground font-mono leading-relaxed break-all">
+                {item.user_agent}
+              </p>
+            </div>
+          )}
+
+          {/* How to fix hint */}
+          <div className="rounded-lg border border-amber-500/15 bg-amber-500/5 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-1.5">💡 How to fix</p>
+            <p className="text-xs text-amber-300/80 leading-relaxed">
+              {item.status_code === 400 &&
+                "Check your request body format. Ensure all required fields are provided and the JSON is valid."}
+              {item.status_code === 401 &&
+                "Your API key is invalid or missing. Verify the Bearer token in the Authorization header."}
+              {item.status_code === 403 &&
+                "Your API key doesn't have the required permission scope. Update the key's permissions in the API Keys page."}
+              {item.status_code === 404 &&
+                "The requested resource was not found. Check the endpoint URL and resource IDs."}
+              {item.status_code === 429 &&
+                "You've exceeded the rate limit. Wait for the reset window or upgrade your plan for higher limits."}
+              {item.status_code >= 500 &&
+                "This is a server-side error. If it persists, please contact support or check your request payload for issues."}
+              {![400, 401, 403, 404, 429].includes(item.status_code) &&
+                item.status_code < 500 &&
+                "Review the error message above and adjust your request accordingly."}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end p-4 pt-0">
+          <Button variant="outline" size="sm" onClick={onClose} className="text-xs">
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────
 export default function UsagePage() {
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
+  const [selectedItem, setSelectedItem] = useState<RecentActivity | null>(null);
 
   useEffect(() => {
     const fetchUsage = async () => {
@@ -267,35 +472,63 @@ export default function UsagePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.recent_activity.map((item) => (
-                      <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-2">
-                          <span className={`font-bold px-1.5 py-0.5 rounded ${methodColors[item.method] || ""}`}>
-                            {item.method}
-                          </span>
-                        </td>
-                        <td className="py-2 font-mono text-muted-foreground truncate max-w-[200px]">
-                          {item.endpoint}
-                        </td>
-                        <td className="py-2">
-                          <span className={item.status_code < 400 ? "text-emerald-500" : "text-red-500"}>
-                            {item.status_code}
-                          </span>
-                        </td>
-                        <td className="py-2 text-muted-foreground">
-                          {item.response_time_ms ? `${item.response_time_ms}ms` : "—"}
-                        </td>
-                        <td className="py-2 text-muted-foreground font-mono">
-                          {item.ip_address || "—"}
-                        </td>
-                        <td className="py-2 text-muted-foreground text-right">
-                          {new Date(item.created_at).toLocaleString("en", {
-                            month: "short", day: "numeric",
-                            hour: "2-digit", minute: "2-digit",
-                          })}
-                        </td>
-                      </tr>
-                    ))}
+                    {data.recent_activity.map((item) => {
+                      const isError = item.status_code >= 400;
+                      const hasErrorMessage = !!item.error_message;
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`border-b border-border/50 transition-colors ${
+                            isError && hasErrorMessage
+                              ? "hover:bg-red-500/5 cursor-pointer group"
+                              : "hover:bg-muted/30"
+                          }`}
+                          onClick={() => {
+                            if (isError && hasErrorMessage) setSelectedItem(item);
+                          }}
+                        >
+                          <td className="py-2">
+                            <span className={`font-bold px-1.5 py-0.5 rounded ${methodColors[item.method] || ""}`}>
+                              {item.method}
+                            </span>
+                          </td>
+                          <td className="py-2 font-mono text-muted-foreground truncate max-w-[200px]">
+                            {item.endpoint}
+                          </td>
+                          <td className="py-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className={isError ? "text-red-500" : "text-emerald-500"}>
+                                {item.status_code}
+                              </span>
+                              {isError && hasErrorMessage && (
+                                <AlertTriangle className="h-3 w-3 text-red-500/70 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2 text-muted-foreground">
+                            {item.response_time_ms ? `${item.response_time_ms}ms` : "—"}
+                          </td>
+                          <td className="py-2 text-muted-foreground font-mono">
+                            {item.ip_address || "—"}
+                          </td>
+                          <td className="py-2 text-muted-foreground text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <span>
+                                {new Date(item.created_at).toLocaleString("en", {
+                                  month: "short", day: "numeric",
+                                  hour: "2-digit", minute: "2-digit",
+                                })}
+                              </span>
+                              {isError && hasErrorMessage && (
+                                <span className="text-[9px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                  View Error
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -311,6 +544,14 @@ export default function UsagePage() {
         <div className="text-center py-20 text-sm text-muted-foreground">
           Failed to load usage data.
         </div>
+      )}
+
+      {/* Error Detail Modal */}
+      {selectedItem && (
+        <ErrorDetailModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+        />
       )}
     </div>
   );

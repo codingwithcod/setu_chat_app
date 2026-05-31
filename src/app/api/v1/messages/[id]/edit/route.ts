@@ -25,13 +25,21 @@ export async function PATCH(
     return apiError("PERMISSION_DENIED", "This key lacks the 'messages:edit' permission", 403, rateLimit);
   }
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    const msg = "Invalid JSON in request body";
+    logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}/edit`, method: "PATCH", statusCode: 400, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: msg });
+    return apiError("INVALID_JSON", msg, 400, rateLimit);
+  }
+
   const result = await editMessage(
     { serviceClient, userId: key.user_id },
     { message_id: params.id, content: body.content }
   );
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}/edit`, method: "PATCH", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}/edit`, method: "PATCH", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: result.ok ? undefined : `${result.code}: ${result.message}` });
 
   return result.ok
     ? apiSuccess(result.data, rateLimit, result.status)
@@ -56,7 +64,7 @@ export async function DELETE(
 
   const result = await deleteMessage({ serviceClient, userId: key.user_id }, params.id);
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}`, method: "DELETE", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: `/api/v1/messages/${params.id}`, method: "DELETE", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: result.ok ? undefined : `${result.code}: ${result.message}` });
 
   return result.ok
     ? apiSuccess(result.data, rateLimit, result.status)

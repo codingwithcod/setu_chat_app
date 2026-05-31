@@ -43,12 +43,15 @@ async function handle(
   const serviceClient = await createServiceClient();
   const result = await run({ serviceClient, userId: key.user_id });
 
+  const errorMsg = result.ok ? undefined : `${result.code}: ${result.message}`;
+
   logApiUsage(serviceClient, {
     apiKeyId: key.id,
     userId: key.user_id,
     endpoint,
     method,
     statusCode: result.status,
+    errorMessage: errorMsg,
   });
 
   return result.ok ? mcpJson(result.data) : mcpError(`${result.code}: ${result.message}`);

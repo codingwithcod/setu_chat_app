@@ -26,14 +26,18 @@ export async function POST(request: NextRequest) {
   try {
     formData = await request.formData();
   } catch {
-    return apiError("INVALID_REQUEST", "Request must be multipart/form-data", 400, rateLimit);
+    const msg = "Request must be multipart/form-data";
+    logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: "/api/v1/files/upload", method: "POST", statusCode: 400, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: msg });
+    return apiError("INVALID_REQUEST", msg, 400, rateLimit);
   }
 
   const file = formData.get("file") as File | null;
   const conversationId = formData.get("conversation_id") as string | null;
 
   if (!file) {
-    return apiError("INVALID_REQUEST", "file field is required", 400, rateLimit);
+    const msg = "file field is required";
+    logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: "/api/v1/files/upload", method: "POST", statusCode: 400, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: msg });
+    return apiError("INVALID_REQUEST", msg, 400, rateLimit);
   }
 
   const result = await uploadFile(
@@ -47,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
   );
 
-  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: "/api/v1/files/upload", method: "POST", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime });
+  logApiUsage(serviceClient, { apiKeyId: key.id, userId: key.user_id, endpoint: "/api/v1/files/upload", method: "POST", statusCode: result.status, ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(), userAgent: request.headers.get("user-agent") || undefined, responseTimeMs: Date.now() - startTime, errorMessage: result.ok ? undefined : `${result.code}: ${result.message}` });
 
   return result.ok
     ? apiSuccess(result.data, rateLimit, result.status)
