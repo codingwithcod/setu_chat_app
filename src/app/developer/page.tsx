@@ -127,12 +127,18 @@ export default function DeveloperOverviewPage() {
     { label: "Read Docs", icon: BookOpen, href: "/developer/docs", color: "from-emerald-500 to-teal-500" },
   ];
 
-  // Simple bar chart from daily_stats
-  const chartDays = data?.daily_stats
-    ? Object.entries(data.daily_stats)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .slice(-7)
-    : [];
+  // Fill all 7 days (including days with zero requests)
+  const chartDays = (() => {
+    const result: Array<[string, { requests: number; errors: number }]> = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      result.push([key, data?.daily_stats?.[key] || { requests: 0, errors: 0 }]);
+    }
+    return result;
+  })();
   const maxRequests = Math.max(1, ...chartDays.map(([, v]) => v.requests));
 
   return (
@@ -185,50 +191,85 @@ export default function DeveloperOverviewPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Usage Chart */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5">
+        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 flex flex-col">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-semibold text-sm">API Requests</h3>
               <p className="text-xs text-muted-foreground">Last 7 days</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs gap-1"
-              onClick={() => router.push("/developer/usage")}
-            >
-              View all <ArrowUpRight className="h-3 w-3" />
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-sm bg-emerald-500" />
+                  <span className="text-[10px] text-muted-foreground">Success</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-sm bg-red-500" />
+                  <span className="text-[10px] text-muted-foreground">Errors</span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs gap-1"
+                onClick={() => router.push("/developer/usage")}
+              >
+                View all <ArrowUpRight className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
 
-          {chartDays.length > 0 ? (
-            <div className="flex items-end gap-2 h-40">
-              {chartDays.map(([day, stats]) => (
-                <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground">
-                    {stats.requests}
-                  </span>
-                  <div className="w-full flex flex-col gap-0.5">
-                    {stats.errors > 0 && (
+          {data ? (
+            <div className="flex items-end gap-2 flex-1 min-h-[160px]">
+              {chartDays.map(([day, stats], idx) => {
+                const successCount = stats.requests - stats.errors;
+                const successHeight = maxRequests > 0 ? Math.max(successCount > 0 ? 6 : 3, (successCount / maxRequests) * 100) : 3;
+                const errorHeight = stats.errors > 0 ? Math.max(6, (stats.errors / maxRequests) * 100) : 0;
+                const isToday = day === new Date().toISOString().slice(0, 10);
+                const tooltipAlign = idx < 2 ? "left-0" : idx > 4 ? "right-0" : "left-1/2 -translate-x-1/2";
+                return (
+                  <div key={day} className="flex-1 flex flex-col items-center gap-1 group relative cursor-crosshair">
+                    {/* Hover tooltip */}
+                    <div className={`absolute bottom-full mb-2 ${tooltipAlign} hidden group-hover:block z-10`}>
+                      <div className="bg-popover border border-border rounded-lg shadow-xl px-3 py-2 whitespace-nowrap">
+                        <p className="text-[10px] font-medium text-foreground mb-1">
+                          {new Date(day).toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" })}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-emerald-400">Success: {successCount}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span className="text-red-400">Errors: {stats.errors}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 border-t border-border pt-1">Total: {stats.requests}</p>
+                      </div>
+                    </div>
+                    {/* Count on hover */}
+                    <span className="text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      {stats.requests}
+                    </span>
+                    {/* Bars */}
+                    <div className="w-full flex flex-col gap-0.5 group-hover:opacity-80 transition-opacity">
+                      {stats.errors > 0 && (
+                        <div
+                          className="w-full bg-red-500 rounded-sm"
+                          style={{ height: `${errorHeight}px` }}
+                        />
+                      )}
                       <div
-                        className="w-full bg-red-500/30 rounded-t"
-                        style={{
-                          height: `${Math.max(2, (stats.errors / maxRequests) * 130)}px`,
-                        }}
+                        className={`w-full rounded-sm ${stats.requests === 0 ? "bg-muted/40" : "bg-emerald-500"}`}
+                        style={{ height: `${successHeight}px` }}
                       />
-                    )}
-                    <div
-                      className="w-full bg-primary/60 rounded-t"
-                      style={{
-                        height: `${Math.max(4, ((stats.requests - stats.errors) / maxRequests) * 130)}px`,
-                      }}
-                    />
+                    </div>
+                    {/* Day label */}
+                    <span className={`text-[9px] text-muted-foreground ${isToday ? "font-bold text-foreground" : ""}`}>
+                      {new Date(day).toLocaleDateString("en", { weekday: "short" })}
+                    </span>
                   </div>
-                  <span className="text-[9px] text-muted-foreground">
-                    {new Date(day).toLocaleDateString("en", { weekday: "short" })}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
