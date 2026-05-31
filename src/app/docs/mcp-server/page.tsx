@@ -165,9 +165,9 @@ export default function McpPage() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
       {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 border-r border-border px-3 py-6 overflow-y-auto flex-shrink-0 sticky top-0 h-screen">
+      <aside className="hidden lg:flex flex-col w-56 border-r border-border px-3 py-6 overflow-y-auto flex-shrink-0">
         <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-2 mb-3">
           MCP Server
         </h3>

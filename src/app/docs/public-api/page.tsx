@@ -152,9 +152,9 @@ export default function DocsPage() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
       {/* Docs Sidebar — sticky navigation */}
-      <aside className="hidden lg:flex flex-col w-56 border-r border-border px-3 py-6 overflow-y-auto flex-shrink-0 sticky top-0 h-screen">
+      <aside className="hidden lg:flex flex-col w-56 border-r border-border px-3 py-6 overflow-y-auto flex-shrink-0">
         <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-2 mb-3">
           API Reference
         </h3>
@@ -564,10 +564,7 @@ function verifyWebhookSignature(body, signature, secret) {
             </div>
           </section>
 
-          {/* Footer */}
-          <div className="border-t border-border pt-6 text-center text-xs text-muted-foreground">
-            <p>Setu Public API v1.0 — Questions? Contact support@setu.app</p>
-          </div>
+
         </div>
       </div>
     </div>

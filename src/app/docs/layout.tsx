@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Sun, Moon, Home, BookOpen, Plug } from "lucide-react";
 import setuLogo from "@/app/setu-white-tr.png";
+import { DevelopedBy } from "@/components/shared/DevelopedBy";
 
 const TABS = [
   { href: "/docs/public-api", label: "Public API", icon: BookOpen },
@@ -109,8 +110,28 @@ export default function DocsLayout({
         </div>
       </header>
 
-      {/* Page content */}
-      <main className="flex-1 overflow-hidden">{children}</main>
+      {/* Page content + footer */}
+      <main className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden">
+          {children}
+        </div>
+
+        {/* Docs footer */}
+        <footer className="flex-shrink-0 border-t border-border/50 bg-card/30">
+          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-between py-3">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="rounded-lg bg-primary p-1 overflow-hidden transition-transform group-hover:scale-110">
+                <Image src={setuLogo} alt="Setu logo" width={18} height={18} className="object-contain" />
+              </div>
+              <span className="text-sm font-extrabold gradient-text">Setu</span>
+            </Link>
+            <p className="text-[11px] text-muted-foreground hidden sm:block">
+              © {new Date().getFullYear()} Setu. All rights reserved.
+            </p>
+            <DevelopedBy />
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
