@@ -171,17 +171,46 @@ function AuthorizeContent() {
   // ── Loading state ─────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+        {/* Background effects */}
+        <div className="fixed inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,hsl(var(--primary)/0.08),transparent_60%)]" />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center gap-6 animate-fade-in">
+          {/* Logo with glow */}
           <div className="relative">
-            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
-              <Shield className="h-8 w-8 text-primary" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-              <Loader2 className="h-3 w-3 text-primary-foreground animate-spin" />
+            <div className="absolute -inset-4 rounded-3xl bg-primary/10 blur-xl animate-pulse" />
+            <div className="relative rounded-2xl bg-primary p-4 overflow-hidden shadow-xl shadow-primary/25">
+              <Image src={setuLogo} alt="Setu logo" width={40} height={40} className="object-contain" />
             </div>
           </div>
-          <p className="text-sm text-muted-foreground animate-pulse">Verifying authorization request…</p>
+
+          {/* Brand name */}
+          <span className="text-2xl font-extrabold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+            Setu
+          </span>
+
+          {/* Loading indicator */}
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm text-muted-foreground">Verifying authorization request…</p>
+            {/* Indeterminate loading bar */}
+            <div className="w-48 h-1.5 rounded-full bg-muted overflow-hidden relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-primary/80 oauth-loader" />
+            </div>
+            <style>{`
+              .oauth-loader {
+                animation: oauth-slide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+                transform-origin: left;
+              }
+              @keyframes oauth-slide {
+                0% { left: -40%; right: 100%; }
+                40% { left: 0%; right: 20%; }
+                80% { left: 80%; right: 0%; }
+                100% { left: 100%; right: -10%; }
+              }
+            `}</style>
+          </div>
         </div>
       </div>
     );
@@ -375,8 +404,19 @@ export default function AuthorizePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-5 animate-fade-in">
+            <div className="relative">
+              <div className="absolute -inset-4 rounded-3xl bg-primary/10 blur-xl animate-pulse" />
+              <div className="relative rounded-2xl bg-primary p-4 overflow-hidden shadow-xl shadow-primary/25">
+                <Image src={setuLogo} alt="Setu logo" width={40} height={40} className="object-contain" />
+              </div>
+            </div>
+            <span className="text-2xl font-extrabold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+              Setu
+            </span>
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          </div>
         </div>
       }
     >

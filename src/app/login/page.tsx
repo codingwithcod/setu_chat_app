@@ -106,8 +106,9 @@ function LoginContent() {
         }
       }
 
-      console.log("[Login] Redirecting to /chat...");
-      router.push("/chat");
+      console.log("[Login] Redirecting after login...");
+      const redirectTo = searchParams.get("redirect") || "/chat";
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       console.error("[Login] Unexpected error:", err);
@@ -167,10 +168,18 @@ function LoginContent() {
       setIsGoogleLoading(false);
     } else {
       // --- Web: Standard OAuth redirect ---
+      // If we have a redirect param (e.g. from OAuth consent flow), pass it as
+      // "next" so the auth callback redirects there instead of /chat.
+      const oauthRedirect = searchParams.get("redirect");
+      const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+      if (oauthRedirect) {
+        callbackUrl.searchParams.set("next", oauthRedirect);
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl.toString(),
         },
       });
 
