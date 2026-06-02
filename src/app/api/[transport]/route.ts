@@ -283,23 +283,64 @@ const baseHandler = createMcpHandler(
   { basePath: "/api", maxDuration: 60, disableSse: true }
 );
 
-// Authenticate every request with the existing Bearer API key. Runs once per
-// request (= once per tool call in stateless Streamable HTTP), so rate limiting
-// and usage counters match the REST API exactly — no double counting.
+// Authenticate every request — supports both static API keys (tap_setu_) and
+// OAuth 2.1 access tokens (setu_oat_). Runs once per request (= once per tool
+// call in stateless Streamable HTTP), so rate limiting and usage counters match
+// the REST API exactly — no double counting.
 const verifyToken = async (req: Request, bearer?: string): Promise<AuthInfo | undefined> => {
   if (!bearer) return undefined;
   const serviceClient = await createServiceClient();
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
-  const result = await verifyApiKey(bearer, serviceClient, ip);
-  if (!result.ok) return undefined;
 
-  const { key } = result;
-  return {
-    token: bearer,
-    clientId: key.id,
-    scopes: Object.keys(key.permissions).filter((s) => key.permissions[s]),
-    extra: { key },
-  };
+  // ── Path 1: Static API key (existing flow) ──────────────
+  if (bearer.startsWith("tap_setu_")) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+    const result = await verifyApiKey(bearer, serviceClient, ip);
+    if (!result.ok) return undefined;
+
+    const { key } = result;
+    return {
+      token: bearer,
+      clientId: key.id,
+      scopes: Object.keys(key.permissions).filter((s) => key.permissions[s]),
+      extra: { key },
+    };
+  }
+
+  // ── Path 2: OAuth 2.1 access token ─────────────────────
+  if (bearer.startsWith("setu_oat_")) {
+    const { verifyOAuthAccessToken } = await import("@/lib/oauth/oauth-server");
+    const oauthInfo = await verifyOAuthAccessToken(serviceClient, bearer);
+    if (!oauthInfo) return undefined;
+
+    // Build a key-like object so the downstream `handle()` function works
+    // identically for both auth methods.
+    const syntheticKey: ApiKeyRecord = {
+      id: `oauth:${oauthInfo.clientId}`,
+      user_id: oauthInfo.userId,
+      name: "OAuth Token",
+      key_prefix: "setu_oat_",
+      key_hash: "",
+      permissions: oauthInfo.permissions,
+      rate_limit_rpm: 60,
+      allowed_ips: [],
+      allowed_origins: [],
+      expires_at: null,
+      last_used_at: new Date().toISOString(),
+      total_requests: 0,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    return {
+      token: bearer,
+      clientId: oauthInfo.clientId,
+      scopes: oauthInfo.scopes,
+      extra: { key: syntheticKey },
+    };
+  }
+
+  return undefined;
 };
 
 const handler = withMcpAuth(baseHandler, verifyToken, { required: true });
