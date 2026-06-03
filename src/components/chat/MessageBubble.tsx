@@ -326,8 +326,8 @@ export function MessageBubble({
                   ? "px-1 py-1"
                   : `px-4 py-2 ${
                       isOwn
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted text-foreground rounded-bl-md"
+                        ? "msg-bubble-sent rounded-br-md"
+                        : "msg-bubble-received rounded-bl-md"
                     }`
               }`}
               style={{ overflowWrap: "anywhere", wordBreak: "break-word", minWidth: hasMedia ? 280 : 100 }}
@@ -476,7 +476,7 @@ export function MessageBubble({
                 </div>
               ) : (
                 message.content && (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-base leading-relaxed whitespace-pre-wrap">
                     {message.content}
                   </p>
                 )

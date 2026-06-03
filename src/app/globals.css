@@ -149,6 +149,32 @@
   margin-right: auto;
 }
 
+/* === Chat message bubbles ===========================================
+   Theme-aware bubbles driven entirely by --primary so contrast stays
+   correct across every theme preset (Rose / Violet / Ocean).
+   The sent bubble darkens the raw primary (which sits at 55% lightness
+   and only reaches ~4.2:1 with white) so white text clears WCAG AA. */
+.msg-bubble-sent {
+  /* Subtle top→bottom darkening for a premium, slightly glossy feel,
+     while guaranteeing the lightest point is still dark enough. */
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, hsl(var(--primary)) 94%, #000 6%),
+    color-mix(in srgb, hsl(var(--primary)) 80%, #000 20%)
+  );
+  color: #ffffff;
+  box-shadow:
+    0 1px 2px hsl(var(--primary) / 0.16),
+    0 4px 14px hsl(var(--primary) / 0.18);
+}
+
+.msg-bubble-received {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border) / 0.6);
+  box-shadow: 0 1px 2px hsl(0 0% 0% / 0.05);
+}
+
 .msg-input-wrapper {
   padding: 12px 16px 14px;
   background: hsl(var(--background));
