@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { setuLogoAttachment, SETU_LOGO_CID } from "./email-assets";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -21,6 +22,7 @@ export async function sendVerificationEmail(
     from: process.env.SMTP_FROM,
     to: email,
     subject: "Verify your Setu account ✨",
+    attachments: [setuLogoAttachment],
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -49,8 +51,8 @@ export async function sendVerificationEmail(
                     <div style="display: inline-block; background: #ffffff; padding: 4px; border-radius: 100px; box-shadow: 0 8px 30px rgba(232, 41, 98, 0.2);">
                        <table cellpadding="0" cellspacing="0" role="presentation">
                          <tr>
-                           <td style="background: linear-gradient(135deg, #e82962, #f46b32); width: 40px; height: 40px; border-radius: 100px; text-align: center;">
-                             <span style="font-size: 20px; line-height: 40px; color: #fff;">💬</span>
+                           <td style="background: linear-gradient(135deg, #e82962, #f46b32); width: 40px; height: 40px; border-radius: 100px; text-align: center; vertical-align: middle;">
+                             <img src="cid:${SETU_LOGO_CID}" alt="Setu logo" width="24" height="24" style="display: inline-block; width: 24px; height: 24px; vertical-align: middle;" />
                            </td>
                            <td style="padding: 0 20px 0 12px;">
                              <span style="font-size: 20px; font-weight: 800; color: #09090b; letter-spacing: -0.5px;">Setu</span>
@@ -154,6 +156,7 @@ export async function sendPasswordResetEmail(
     from: process.env.SMTP_FROM,
     to: email,
     subject: "Reset your Setu password 🔐",
+    attachments: [setuLogoAttachment],
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -181,8 +184,8 @@ export async function sendPasswordResetEmail(
                     <div style="display: inline-block; background: #ffffff; padding: 4px; border-radius: 100px; box-shadow: 0 8px 30px rgba(232, 41, 98, 0.2);">
                        <table cellpadding="0" cellspacing="0" role="presentation">
                          <tr>
-                           <td style="background: linear-gradient(135deg, #e82962, #f46b32); width: 40px; height: 40px; border-radius: 100px; text-align: center;">
-                             <span style="font-size: 20px; line-height: 40px; color: #fff;">💬</span>
+                           <td style="background: linear-gradient(135deg, #e82962, #f46b32); width: 40px; height: 40px; border-radius: 100px; text-align: center; vertical-align: middle;">
+                             <img src="cid:${SETU_LOGO_CID}" alt="Setu logo" width="24" height="24" style="display: inline-block; width: 24px; height: 24px; vertical-align: middle;" />
                            </td>
                            <td style="padding: 0 20px 0 12px;">
                              <span style="font-size: 20px; font-weight: 800; color: #09090b; letter-spacing: -0.5px;">Setu</span>
