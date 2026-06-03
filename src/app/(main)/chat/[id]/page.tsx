@@ -534,6 +534,7 @@ export default function ConversationPage() {
           ref={containerRef}
           className="absolute inset-0 overflow-y-auto px-4 py-2"
         >
+         <div className="chat-content-col min-h-full">
           {loadingMore && (
             <div className="flex justify-center py-2">
               <Loader2
@@ -546,7 +547,7 @@ export default function ConversationPage() {
           {isLoading ? (
             <MessageListSkeleton />
           ) : messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex min-h-full items-center justify-center">
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
                   No messages yet. Start the conversation! 👋
@@ -599,6 +600,7 @@ export default function ConversationPage() {
               <TypingIndicator users={typingUsers} />
             </div>
           )}
+         </div>
         </div>
 
         {/* Scroll to bottom FAB */}

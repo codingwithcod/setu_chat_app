@@ -403,6 +403,7 @@ export function MessageInput({
 
   return (
     <div className="msg-input-wrapper">
+     <div className="chat-content-col">
       {/* Reply preview */}
       {replyingTo && (
         <div className="msg-input-reply-preview">
@@ -532,6 +533,7 @@ export function MessageInput({
           </Tooltip>
         </div>
       </div>
+     </div>
     </div>
   );
 }

@@ -250,7 +250,7 @@ export function MessageBubble({
         className={`flex ${isOwn ? "justify-end" : "justify-start"} py-0.5`}
       >
         <div
-          className={`flex items-start gap-2 max-w-[70%] ${
+          className={`flex items-start gap-2 max-w-[90%] ${
             isOwn ? "flex-row-reverse" : "flex-row"
           }`}
         >
@@ -270,7 +270,7 @@ export function MessageBubble({
       className={`flex ${isOwn ? "justify-end" : "justify-start"} py-0.5 group message-enter`}
     >
       <div
-        className={`flex items-start gap-2 ${hasMedia ? "max-w-[85%]" : "max-w-[70%]"} ${
+        className={`flex items-start gap-2 max-w-[90%] ${
           isOwn ? "flex-row-reverse" : "flex-row"
         }`}
       >
