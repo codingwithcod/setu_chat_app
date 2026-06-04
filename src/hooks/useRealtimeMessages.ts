@@ -52,52 +52,47 @@ export function useRealtimeMessages(conversationId: string | null) {
         async (payload: { new: MessageWithSender }) => {
           const newMessage = payload.new;
           if (newMessage.sender_id !== userIdRef.current) {
-            // Fetch sender info
-            const { data: sender } = await supabase
-              .from("profiles")
-              .select(
-                "id, username, first_name, last_name, avatar_url, is_online"
-              )
-              .eq("id", newMessage.sender_id)
-              .single();
-
-            // Fetch reply message info if this is a reply
-            let replyMessage = undefined;
-            if (newMessage.reply_to) {
-              const { data: replyData } = await supabase
-                .from("messages")
+            // Fetch sender + (optional) reply/forward info in parallel instead
+            // of three sequential round-trips, so the incoming message renders
+            // faster. These three lookups are independent.
+            const [senderRes, replyRes, fwdRes] = await Promise.all([
+              supabase
+                .from("profiles")
                 .select(
-                  `
-                  id, content, message_type, sender_id,
-                  sender:profiles(id, username, first_name, last_name, avatar_url)
-                `
+                  "id, username, first_name, last_name, avatar_url, is_online"
                 )
-                .eq("id", newMessage.reply_to)
-                .single();
+                .eq("id", newMessage.sender_id)
+                .single(),
+              newMessage.reply_to
+                ? supabase
+                    .from("messages")
+                    .select(
+                      `
+                      id, content, message_type, sender_id,
+                      sender:profiles(id, username, first_name, last_name, avatar_url)
+                    `
+                    )
+                    .eq("id", newMessage.reply_to)
+                    .single()
+                : Promise.resolve({ data: null }),
+              newMessage.forwarded_from
+                ? supabase
+                    .from("messages")
+                    .select(
+                      `
+                      id, content, message_type, sender_id, created_at,
+                      sender:profiles(id, username, first_name, last_name, avatar_url)
+                    `
+                    )
+                    .eq("id", newMessage.forwarded_from)
+                    .single()
+                : Promise.resolve({ data: null }),
+            ]);
 
-              if (replyData) {
-                replyMessage = replyData;
-              }
-            }
-
-            // Fetch forwarded message info if this is a forward
-            let forwardedMessage = undefined;
-            if (newMessage.forwarded_from) {
-              const { data: fwdData } = await supabase
-                .from("messages")
-                .select(
-                  `
-                  id, content, message_type, sender_id, created_at,
-                  sender:profiles(id, username, first_name, last_name, avatar_url)
-                `
-                )
-                .eq("id", newMessage.forwarded_from)
-                .single();
-
-              if (fwdData) {
-                forwardedMessage = fwdData;
-              }
-            }
+            const sender = senderRes.data;
+            // Preserve original semantics: undefined when absent or not found.
+            const replyMessage = replyRes.data ?? undefined;
+            const forwardedMessage = fwdRes.data ?? undefined;
 
             if (sender) {
               addMessage({

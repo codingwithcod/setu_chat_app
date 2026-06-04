@@ -47,65 +47,94 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Get last message for each conversation
-  const conversationsWithLastMessage = await Promise.all(
-    (conversations || []).map(async (conv) => {
-      const { data: messages } = await serviceClient
-        .from("messages")
-        .select(
-          `
-          *,
-          sender:profiles(id, username, first_name, last_name, avatar_url)
-        `
-        )
-        .eq("conversation_id", conv.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
+  // Get last message + unread count for every conversation in ONE call.
+  // Previously this ran 3 queries PER conversation (an N+1). The RPC batches
+  // them; if it isn't present yet we fall back to the original per-conversation
+  // logic so behavior is identical either way.
+  const { data: previews, error: previewError } = await serviceClient.rpc(
+    "get_conversation_previews",
+    { p_user_id: user.id, p_conversation_ids: conversationIds }
+  );
 
-      // Get unread count
-      const { data: readReceipt } = await serviceClient
-        .from("read_receipts")
-        .select("last_read_at")
-        .eq("conversation_id", conv.id)
-        .eq("user_id", user.id)
-        .single();
-
-      let unreadCount = 0;
-      if (readReceipt) {
-        const { count } = await serviceClient
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("conversation_id", conv.id)
-          .gt("created_at", readReceipt.last_read_at)
-          .neq("sender_id", user.id);
-
-        unreadCount = count || 0;
-      } else {
-        // No read receipt = user has never opened this conversation
-        // Count ALL messages from other users as unread
-        const { count } = await serviceClient
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("conversation_id", conv.id)
-          .neq("sender_id", user.id);
-
-        unreadCount = count || 0;
-      }
-
+  let conversationsWithLastMessage;
+  if (!previewError && previews) {
+    const previewMap = new Map(
+      (
+        previews as Array<{
+          conversation_id: string;
+          last_message: unknown;
+          unread_count: number;
+        }>
+      ).map((p) => [p.conversation_id, p])
+    );
+    conversationsWithLastMessage = (conversations || []).map((conv) => {
+      const pv = previewMap.get(conv.id);
       return {
         ...conv,
-        last_message: messages?.[0] || null,
-        unread_count: unreadCount,
+        last_message: pv?.last_message ?? null,
+        unread_count: Number(pv?.unread_count ?? 0),
       };
-    })
-  );
+    });
+  } else {
+    // Fallback: original per-conversation queries (unchanged behavior).
+    conversationsWithLastMessage = await Promise.all(
+      (conversations || []).map(async (conv) => {
+        const { data: messages } = await serviceClient
+          .from("messages")
+          .select(
+            `
+            *,
+            sender:profiles(id, username, first_name, last_name, avatar_url)
+          `
+          )
+          .eq("conversation_id", conv.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        // Get unread count
+        const { data: readReceipt } = await serviceClient
+          .from("read_receipts")
+          .select("last_read_at")
+          .eq("conversation_id", conv.id)
+          .eq("user_id", user.id)
+          .single();
+
+        let unreadCount = 0;
+        if (readReceipt) {
+          const { count } = await serviceClient
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .eq("conversation_id", conv.id)
+            .gt("created_at", readReceipt.last_read_at)
+            .neq("sender_id", user.id);
+
+          unreadCount = count || 0;
+        } else {
+          // No read receipt = user has never opened this conversation
+          // Count ALL messages from other users as unread
+          const { count } = await serviceClient
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .eq("conversation_id", conv.id)
+            .neq("sender_id", user.id);
+
+          unreadCount = count || 0;
+        }
+
+        return {
+          ...conv,
+          last_message: messages?.[0] || null,
+          unread_count: unreadCount,
+        };
+      })
+    );
+  }
 
   return NextResponse.json({ data: conversationsWithLastMessage });
 }
 
 // Create a new conversation (private or group)
 export async function POST(request: Request) {
-  console.log("[API POST /api/conversations] Request received");
   const supabase = await createClient();
   const serviceClient = await createServiceClient();
 
@@ -114,19 +143,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("[API POST /api/conversations] Unauthorized - no user");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  console.log("[API POST /api/conversations] Authenticated user:", user.id);
-
   const body = await request.json();
   const { type, name, description, memberIds } = body;
-  console.log("[API POST /api/conversations] Request body:", { type, name, description, memberIds });
 
   if (type === "private") {
     if (!memberIds || memberIds.length !== 1) {
-      console.log("[API POST /api/conversations] Invalid memberIds for private chat:", memberIds);
       return NextResponse.json(
         { error: "Private chat requires exactly one other member" },
         { status: 400 }
@@ -134,16 +158,13 @@ export async function POST(request: Request) {
     }
 
     const otherUserId = memberIds[0];
-    console.log("[API POST /api/conversations] Looking for existing private conversation with:", otherUserId);
 
     // Check if private conversation already exists
     // Use service client to bypass RLS recursive policy on conversation_members
-    const { data: existingMembers, error: existingMembersError } = await serviceClient
+    const { data: existingMembers } = await serviceClient
       .from("conversation_members")
       .select("conversation_id")
       .eq("user_id", user.id);
-
-    console.log("[API POST /api/conversations] User's conversations:", existingMembers?.length, "error:", existingMembersError?.message);
 
     if (existingMembers) {
       for (const member of existingMembers) {
@@ -163,9 +184,8 @@ export async function POST(request: Request) {
             .single();
 
           if (otherMember) {
-            console.log("[API POST /api/conversations] Found existing conversation:", conv.id);
             // Return existing conversation
-            const { data: fullConv, error: fullConvError } = await serviceClient
+            const { data: fullConv } = await serviceClient
               .from("conversations")
               .select(
                 `
@@ -179,13 +199,11 @@ export async function POST(request: Request) {
               .eq("id", conv.id)
               .single();
 
-            console.log("[API POST /api/conversations] Returning existing conv:", fullConv?.id, "error:", fullConvError?.message);
             return NextResponse.json({ data: fullConv, existing: true });
           }
         }
       }
     }
-    console.log("[API POST /api/conversations] No existing private conversation found, creating new one");
   }
 
   // Create conversation
@@ -205,8 +223,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: convError.message }, { status: 500 });
   }
 
-  console.log("[API POST /api/conversations] Created conversation:", conversation.id);
-
   // Add members
   const members = [
     {
@@ -221,8 +237,6 @@ export async function POST(request: Request) {
     })),
   ];
 
-  console.log("[API POST /api/conversations] Inserting members:", members);
-
   const { error: membersError } = await serviceClient
     .from("conversation_members")
     .insert(members);
@@ -233,7 +247,7 @@ export async function POST(request: Request) {
   }
 
   // Return full conversation
-  const { data: fullConv, error: fullConvError } = await serviceClient
+  const { data: fullConv } = await serviceClient
     .from("conversations")
     .select(
       `
@@ -247,6 +261,5 @@ export async function POST(request: Request) {
     .eq("id", conversation.id)
     .single();
 
-  console.log("[API POST /api/conversations] Returning new conv:", fullConv?.id, "error:", fullConvError?.message);
   return NextResponse.json({ data: fullConv }, { status: 201 });
 }
