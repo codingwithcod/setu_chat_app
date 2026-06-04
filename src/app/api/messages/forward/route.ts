@@ -55,39 +55,51 @@ export async function POST(request: Request) {
   // Collect all target conversation IDs
   const targetConversationIds = [...conversationIds];
 
-  // For each userId, find or create a private conversation
-  for (const targetUserId of userIds) {
-    let foundConvId: string | null = null;
-
+  // Resolve each target user to a private conversation. Previously this ran
+  // O(users × memberships) queries (re-fetching memberships per user and
+  // probing each one). Instead, look up existing private conversations in a
+  // few batched queries and build a userId -> conversationId map up front.
+  const existingConvByUser = new Map<string, string>();
+  if (userIds.length > 0) {
     const { data: myMemberships } = await serviceClient
       .from("conversation_members")
       .select("conversation_id")
       .eq("user_id", user.id);
 
-    if (myMemberships) {
-      for (const membership of myMemberships) {
-        const { data: conv } = await serviceClient
-          .from("conversations")
-          .select("id, type")
-          .eq("id", membership.conversation_id)
-          .eq("type", "private")
-          .single();
+    const myConvIds = (myMemberships || []).map((m) => m.conversation_id);
 
-        if (conv) {
-          const { data: otherMember } = await serviceClient
-            .from("conversation_members")
-            .select("user_id")
-            .eq("conversation_id", conv.id)
-            .eq("user_id", targetUserId)
-            .single();
+    if (myConvIds.length > 0) {
+      // Which of my conversations are private?
+      const { data: privateConvs } = await serviceClient
+        .from("conversations")
+        .select("id")
+        .in("id", myConvIds)
+        .eq("type", "private");
 
-          if (otherMember) {
-            foundConvId = conv.id;
-            break;
+      const myPrivateConvIds = (privateConvs || []).map((c) => c.id);
+
+      if (myPrivateConvIds.length > 0) {
+        // Of those, which contain each target user? First match wins (mirrors
+        // the original break-on-first-found behavior).
+        const { data: targetMemberships } = await serviceClient
+          .from("conversation_members")
+          .select("conversation_id, user_id")
+          .in("conversation_id", myPrivateConvIds)
+          .in("user_id", userIds);
+
+        for (const m of targetMemberships || []) {
+          if (!existingConvByUser.has(m.user_id)) {
+            existingConvByUser.set(m.user_id, m.conversation_id);
           }
         }
       }
     }
+  }
+
+  // For each userId, use the existing private conversation or create one.
+  for (const targetUserId of userIds) {
+    let foundConvId: string | null =
+      existingConvByUser.get(targetUserId) ?? null;
 
     if (!foundConvId) {
       const { data: newConv, error: convError } = await serviceClient
@@ -120,32 +132,38 @@ export async function POST(request: Request) {
     }
   }
 
-  // Send forwarded message to each conversation
-  const results = [];
-  const errors = [];
-  for (const convId of targetConversationIds) {
-    const insertData: Record<string, unknown> = {
-      conversation_id: convId,
-      sender_id: user.id,
-      content: originalMessage.content,
-      message_type: originalMessage.message_type || "text",
-      forwarded_from: originalMessage.id,
-    };
+  // Send the forwarded message to each conversation in parallel. Each
+  // conversation's insert -> files -> last_message_at stays ordered within
+  // itself, but conversations no longer block one another.
+  const settled = await Promise.all(
+    targetConversationIds.map(async (convId) => {
+      const insertData: Record<string, unknown> = {
+        conversation_id: convId,
+        sender_id: user.id,
+        content: originalMessage.content,
+        message_type: originalMessage.message_type || "text",
+        forwarded_from: originalMessage.id,
+      };
 
-    const { data: forwardedMsg, error: insertError } = await serviceClient
-      .from("messages")
-      .insert(insertData)
-      .select(
+      const { data: forwardedMsg, error: insertError } = await serviceClient
+        .from("messages")
+        .insert(insertData)
+        .select(
+          `
+          *,
+          sender:profiles(id, username, first_name, last_name, avatar_url, is_online)
         `
-        *,
-        sender:profiles(id, username, first_name, last_name, avatar_url, is_online)
-      `
-      )
-      .single();
+        )
+        .single();
 
-    if (insertError) {
-      errors.push({ convId, error: insertError.message });
-    } else if (forwardedMsg) {
+      if (insertError) {
+        return { type: "error" as const, convId, error: insertError.message };
+      }
+      if (!forwardedMsg) {
+        // No error but no row — skip silently, matching the original behavior.
+        return { type: "skip" as const };
+      }
+
       // Copy files from original message to forwarded message
       const originalFiles = originalMessage.files || [];
       if (originalFiles.length > 0) {
@@ -168,9 +186,14 @@ export async function POST(request: Request) {
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", convId);
 
-      results.push(forwardedMsg);
-    }
-  }
+      return { type: "ok" as const, msg: forwardedMsg };
+    })
+  );
+
+  const results = settled.flatMap((s) => (s.type === "ok" ? [s.msg] : []));
+  const errors = settled.flatMap((s) =>
+    s.type === "error" ? [{ convId: s.convId, error: s.error }] : []
+  );
 
   if (results.length === 0 && errors.length > 0) {
     return NextResponse.json(

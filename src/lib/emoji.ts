@@ -2,6 +2,14 @@
  * Emoji detection and Google Noto Animated Emoji utilities
  */
 
+// Construct the grapheme segmenter ONCE at module load — it's stateless and
+// reusable, and getEmojiInfo runs for every message, so building a new one on
+// each call was needless work. Null when the runtime lacks Intl.Segmenter.
+const graphemeSegmenter =
+  typeof Intl !== "undefined" && "Segmenter" in Intl
+    ? new Intl.Segmenter("en", { granularity: "grapheme" })
+    : null;
+
 /**
  * Detects if a message contains only emoji characters (1-3 emojis).
  * Uses Intl.Segmenter for accurate grapheme cluster segmentation.
@@ -17,7 +25,10 @@ export function getEmojiInfo(text: string): {
   try {
     // Intl.Segmenter accurately splits text into grapheme clusters
     // so compound emojis (ZWJ sequences, skin tones, flags) are treated as single units
-    const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
+    // Reuse the module-level segmenter; only construct a fresh one if the
+    // singleton is null (unsupported runtime → throws → regex fallback runs).
+    const segmenter =
+      graphemeSegmenter ?? new Intl.Segmenter("en", { granularity: "grapheme" });
     const segments = Array.from(segmenter.segment(trimmed));
     const emojis: string[] = [];
 
