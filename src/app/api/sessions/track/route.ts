@@ -35,25 +35,6 @@ export async function POST(request: Request) {
     const realIp = request.headers.get("x-real-ip");
     const ip = forwardedFor?.split(",")[0]?.trim() || realIp || null;
 
-    // Get geolocation from IP
-    let location: string | null = null;
-    if (ip && ip !== "127.0.0.1" && ip !== "::1") {
-      try {
-        const geoRes = await fetch(
-          `http://ip-api.com/json/${ip}?fields=status,city,country`,
-          { signal: AbortSignal.timeout(3000) }
-        );
-        if (geoRes.ok) {
-          const geoData = await geoRes.json();
-          if (geoData.status === "success" && geoData.city && geoData.country) {
-            location = `${geoData.city}, ${geoData.country}`;
-          }
-        }
-      } catch {
-        // Geolocation is best-effort — silently ignore failures
-      }
-    }
-
     // Check if session token already exists
     const { data: existingSession } = await serviceClient
       .from("user_sessions")
@@ -63,13 +44,15 @@ export async function POST(request: Request) {
       .single();
 
     if (existingSession) {
-      // Update existing session
+      // Update existing session. We intentionally DO NOT geolocate here:
+      // geolocation is a slow external call (up to 3s) and is only meaningful
+      // once, when the device first signs in. Skipping it on every app load
+      // keeps startup fast; the location captured at creation is preserved.
       const { data: updatedSession, error: updateError } = await serviceClient
         .from("user_sessions")
         .update({
           last_active_at: new Date().toISOString(),
           ip_address: ip,
-          ...(location ? { location } : {}),
           device_name: deviceName,
           device_type: deviceType,
           browser_name: browserName,
@@ -93,7 +76,28 @@ export async function POST(request: Request) {
       });
     }
 
-    // New session — enforce max session limit
+    // New session — geolocate the IP once (best-effort, up to 3s) so we can
+    // show where this device signed in from. Only runs on creation, never on
+    // subsequent app loads for the same session.
+    let location: string | null = null;
+    if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+      try {
+        const geoRes = await fetch(
+          `http://ip-api.com/json/${ip}?fields=status,city,country`,
+          { signal: AbortSignal.timeout(3000) }
+        );
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData.status === "success" && geoData.city && geoData.country) {
+            location = `${geoData.city}, ${geoData.country}`;
+          }
+        }
+      } catch {
+        // Geolocation is best-effort — silently ignore failures
+      }
+    }
+
+    // Enforce max session limit
     const { data: userSessions } = await serviceClient
       .from("user_sessions")
       .select("id, last_active_at")
