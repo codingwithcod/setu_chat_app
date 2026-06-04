@@ -9,14 +9,32 @@ import { getInitials } from "@/lib/utils";
 import { Sparkles, Loader2 } from "lucide-react";
 import type { SearchResult, ConversationWithDetails } from "@/types";
 
+// Module-level guard so overlapping mounts (StrictMode double-invoke, branch
+// flips while the request is in flight) don't fire duplicate requests.
+let suggestionsFetchInFlight = false;
+
 export function SuggestedUsers() {
   const router = useRouter();
-  const { addConversation } = useChatStore();
-  const [suggestedUsers, setSuggestedUsers] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    addConversation,
+    suggestedUsers,
+    suggestedUsersLoaded,
+    setSuggestedUsers,
+    removeSuggestedUser,
+  } = useChatStore();
+  const [isLoading, setIsLoading] = useState(!suggestedUsersLoaded);
   const [startingChatWith, setStartingChatWith] = useState<string | null>(null);
 
   useEffect(() => {
+    // Already fetched this session (cached in the store) — reuse, don't refetch.
+    if (suggestedUsersLoaded) {
+      setIsLoading(false);
+      return;
+    }
+    // Another mount is already fetching; this one will re-render off the store.
+    if (suggestionsFetchInFlight) return;
+    suggestionsFetchInFlight = true;
+
     const fetchSuggestions = async () => {
       try {
         const res = await fetch("/api/users/suggested");
@@ -24,12 +42,14 @@ export function SuggestedUsers() {
         setSuggestedUsers(data.data || []);
       } catch {
         setSuggestedUsers([]);
+      } finally {
+        suggestionsFetchInFlight = false;
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchSuggestions();
-  }, []);
+  }, [suggestedUsersLoaded, setSuggestedUsers]);
 
   const handleStartChat = async (user: SearchResult) => {
     if (startingChatWith) return;
@@ -50,7 +70,7 @@ export function SuggestedUsers() {
         if (!data.existing) {
           addConversation(data.data as ConversationWithDetails);
         }
-        setSuggestedUsers((prev) => prev.filter((u) => u.id !== user.id));
+        removeSuggestedUser(user.id);
         router.push(`/chat/${data.data.id}`);
       }
     } catch (error) {

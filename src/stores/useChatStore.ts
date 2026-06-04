@@ -3,6 +3,7 @@ import type {
   ConversationWithDetails,
   MessageWithSender,
   TypingUser,
+  SearchResult,
 } from "@/types";
 
 // Helper to sort conversations by last_message_at descending
@@ -22,6 +23,8 @@ interface ChatState {
   replyingTo: MessageWithSender | null;
   forwardingMessage: MessageWithSender | null;
   isSidebarOpen: boolean;
+  suggestedUsers: SearchResult[];
+  suggestedUsersLoaded: boolean;
 
   setConversations: (conversations: ConversationWithDetails[]) => void;
   addConversation: (conversation: ConversationWithDetails) => void;
@@ -45,6 +48,8 @@ interface ChatState {
   setSidebarOpen: (open: boolean) => void;
   incrementUnreadCount: (conversationId: string) => void;
   resetUnreadCount: (conversationId: string) => void;
+  setSuggestedUsers: (users: SearchResult[]) => void;
+  removeSuggestedUser: (userId: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -56,6 +61,8 @@ export const useChatStore = create<ChatState>((set) => ({
   replyingTo: null,
   forwardingMessage: null,
   isSidebarOpen: true,
+  suggestedUsers: [],
+  suggestedUsersLoaded: false,
 
   setConversations: (conversations) =>
     set({ conversations: sortByLatest(conversations), conversationsLoaded: true }),
@@ -135,5 +142,11 @@ export const useChatStore = create<ChatState>((set) => ({
       conversations: state.conversations.map((c) =>
         c.id === conversationId ? { ...c, unread_count: 0 } : c
       ),
+    })),
+  setSuggestedUsers: (suggestedUsers) =>
+    set({ suggestedUsers, suggestedUsersLoaded: true }),
+  removeSuggestedUser: (userId) =>
+    set((state) => ({
+      suggestedUsers: state.suggestedUsers.filter((u) => u.id !== userId),
     })),
 }));
