@@ -24,9 +24,17 @@ Sentry.init({
     }),
   ],
 
-  // 100% of transactions in dev so you see everything.
-  // Lower this (e.g. 0.2) in production to control cost.
-  tracesSampleRate: 1.0,
+  // Controlled via env so you can change it in prod without touching code.
+  // Server-side: read at runtime → just change the env var + restart, no rebuild.
+  // Defaults to 1.0 (capture everything) when unset, e.g. in local dev.
+  tracesSampleRate: process.env.SENTRY_SERVER_TRACES_SAMPLE_RATE
+    ? Number(process.env.SENTRY_SERVER_TRACES_SAMPLE_RATE)
+    : 1.0,
+
+  // Drop Sentry's own tunnel traffic so it doesn't eat your quota.
+  // /monitoring is the tunnelRoute (set in next.config.mjs); the server
+  // would otherwise trace each event upload as its own transaction.
+  ignoreTransactions: ["POST /monitoring", "/monitoring"],
 
   environment: process.env.NODE_ENV,
 });

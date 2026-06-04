@@ -20,7 +20,12 @@ Sentry.init({
     }),
   ],
 
-  tracesSampleRate: 1.0,
+  // Browser value must use NEXT_PUBLIC_ so it's available in the bundle.
+  // Note: this one is inlined at BUILD time, so changing it in prod needs a
+  // rebuild (no code change). The server rate above updates with just a restart.
+  tracesSampleRate: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
+    ? Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE)
+    : 1.0,
 
   // Optional: session replay to watch slow interactions on the client.
   // replaysSessionSampleRate: 0.1,
