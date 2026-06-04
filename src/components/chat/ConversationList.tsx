@@ -25,8 +25,8 @@ export function ConversationList() {
 
   if (conversations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 text-center">
-        <p className="text-muted-foreground text-sm mb-2">
+      <div className="flex flex-col items-stretch justify-center px-2 py-6 text-center">
+        <p className="text-muted-foreground text-sm mb-2 px-2">
           No conversations yet. Search for users to start chatting!
         </p>
         <SuggestedUsers />
