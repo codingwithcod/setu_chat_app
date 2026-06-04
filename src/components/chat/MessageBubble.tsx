@@ -358,21 +358,21 @@ export function MessageBubble({
                       })
                     );
                   }}
-                  className={`text-xs px-3 py-2 rounded-lg mb-2 cursor-pointer transition-all duration-200 min-w-[220px] ${
+                  className={`text-xs pl-4 pr-3 py-2 mb-2 cursor-pointer transition-all duration-200 min-w-[220px] ${
                     isOwn ? "reply-preview-own" : "reply-preview-other"
                   }`}
                 >
                   <span
                     className="font-semibold text-[11px]"
-                    style={{ color: isOwn ? "hsl(var(--warning))" : "hsl(var(--info))" }}
+                    style={{ color: isOwn ? "hsl(var(--primary-light))" : "hsl(var(--info))" }}
                   >
                     {message.reply_message.sender?.first_name}
                   </span>
                   <p
                     className={`mt-0.5 overflow-hidden ${
                       isOwn
-                        ? "text-white/75"
-                        : "text-foreground/70"
+                        ? "text-white/90"
+                        : "text-foreground/75"
                     }`}
                     style={{
                       display: "-webkit-box",

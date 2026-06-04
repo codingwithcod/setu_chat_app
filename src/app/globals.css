@@ -113,28 +113,56 @@
   animation: message-highlight-glow 3s ease-out forwards;
 }
 
-/* Reply preview inside message bubbles — OWN messages (purple bg) */
-/* Using warm amber/yellow tint for contrast against purple */
+/* Reply preview inside message bubbles — OWN messages (primary bg) */
+/* A near-black panel carrying a whisper of the theme color (~88% black),
+   so it sits as a premium dark inset inside the bright primary bubble and
+   adapts to every theme. The accent bar is a soft, rounded primary-light
+   pill — intentional, not a flat cheap line. */
 .reply-preview-own {
-  background: hsl(var(--warning) / 0.14);
-  border-left: 3px solid hsl(var(--warning) / 0.6);
-  border-radius: 0.5rem;
+  position: relative;
+  background: color-mix(in srgb, hsl(var(--primary)) 12%, #000 88%);
+  border-radius: 0.6rem;
+  transition: background 0.2s ease;
+}
+
+.reply-preview-own::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 999px;
+  background: hsl(var(--primary-light));
 }
 
 .reply-preview-own:hover {
-  background: hsl(var(--warning) / 0.22);
+  background: color-mix(in srgb, hsl(var(--primary)) 18%, #000 82%);
 }
 
 /* Reply preview inside message bubbles — OTHER messages (dark bg) */
-/* Using info accent */
+/* Teams-inspired but cleaner: a subtle theme-tinted panel with a soft,
+   rounded info-colored accent pill. */
 .reply-preview-other {
-  background: hsl(var(--info) / 0.08);
-  border-left: 3px solid hsl(var(--info) / 0.5);
-  border-radius: 0.5rem;
+  position: relative;
+  background: hsl(var(--info) / 0.10);
+  border-radius: 0.6rem;
+  transition: background 0.2s ease;
+}
+
+.reply-preview-other::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 999px;
+  background: hsl(var(--info));
 }
 
 .reply-preview-other:hover {
-  background: hsl(var(--info) / 0.14);
+  background: hsl(var(--info) / 0.16);
 }
 
 /* ===== Teams-style Message Input ===== */
