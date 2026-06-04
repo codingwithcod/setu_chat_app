@@ -54,13 +54,27 @@ export async function GET(
     ),
   }));
 
-  // Get reply messages and forwarded message info
-  const messagesWithReplies = await Promise.all(
-    messagesWithSortedFiles.map(async (msg) => {
-      let enriched = { ...msg };
+  // Get reply messages and forwarded message info.
+  // Instead of one DB query per message (N+1), collect all referenced IDs and
+  // fetch replies/forwards in two batched queries, then attach via lookup maps.
+  const replyIds = Array.from(
+    new Set(
+      messagesWithSortedFiles
+        .filter((msg) => msg.reply_to)
+        .map((msg) => msg.reply_to as string)
+    )
+  );
+  const forwardedIds = Array.from(
+    new Set(
+      messagesWithSortedFiles
+        .filter((msg) => msg.forwarded_from)
+        .map((msg) => msg.forwarded_from as string)
+    )
+  );
 
-      if (msg.reply_to) {
-        const { data: replyMsg } = await serviceClient
+  const [replyResult, forwardedResult] = await Promise.all([
+    replyIds.length
+      ? serviceClient
           .from("messages")
           .select(
             `
@@ -68,14 +82,10 @@ export async function GET(
             sender:profiles(id, username, first_name, last_name, avatar_url)
           `
           )
-          .eq("id", msg.reply_to)
-          .single();
-
-        enriched = { ...enriched, reply_message: replyMsg };
-      }
-
-      if (msg.forwarded_from) {
-        const { data: fwdMsg } = await serviceClient
+          .in("id", replyIds)
+      : Promise.resolve({ data: [] as any[] }),
+    forwardedIds.length
+      ? serviceClient
           .from("messages")
           .select(
             `
@@ -83,17 +93,38 @@ export async function GET(
             sender:profiles(id, username, first_name, last_name, avatar_url)
           `
           )
-          .eq("id", msg.forwarded_from)
-          .single();
+          .in("id", forwardedIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
 
-        if (fwdMsg) {
-          enriched = { ...enriched, forwarded_message: fwdMsg };
-        }
-      }
-
-      return enriched;
-    })
+  const replyMap = new Map(
+    (replyResult.data || []).map((msg: { id: string }) => [msg.id, msg])
   );
+  const forwardedMap = new Map(
+    (forwardedResult.data || []).map((msg: { id: string }) => [msg.id, msg])
+  );
+
+  const messagesWithReplies = messagesWithSortedFiles.map((msg) => {
+    let enriched = { ...msg };
+
+    if (msg.reply_to) {
+      // Preserve original behavior: key is always present (null if not found).
+      enriched = {
+        ...enriched,
+        reply_message: replyMap.get(msg.reply_to) ?? null,
+      };
+    }
+
+    if (msg.forwarded_from) {
+      // Preserve original behavior: only attach when the message was found.
+      const fwdMsg = forwardedMap.get(msg.forwarded_from);
+      if (fwdMsg) {
+        enriched = { ...enriched, forwarded_message: fwdMsg };
+      }
+    }
+
+    return enriched;
+  });
 
   // Calculate unread count BEFORE updating read receipt (only on initial load)
   let unreadCount = 0;
