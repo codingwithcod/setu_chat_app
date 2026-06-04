@@ -101,6 +101,21 @@ export async function updateSession(request: NextRequest) {
     if (!user && !isAuthPage && !isPublicPage) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+
+    // Admin area — first line of defense. Only role='admin' may proceed.
+    // The /admin layout re-verifies server-side; this keeps the area
+    // invisible to normal users by bouncing them to /chat.
+    if (user && request.nextUrl.pathname.startsWith("/admin")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, is_banned")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || profile.role !== "admin" || profile.is_banned) {
+        return NextResponse.redirect(new URL("/chat", request.url));
+      }
+    }
   } catch {
     // Unexpected error — allow the request through.
   }
