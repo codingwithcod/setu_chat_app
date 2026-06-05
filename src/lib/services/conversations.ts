@@ -6,26 +6,17 @@ export async function listConversations(
   { serviceClient, userId }: ServiceCtx
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<ServiceResult<any>> {
-  const { data: memberOf } = await serviceClient
-    .from("conversation_members")
-    .select("conversation_id")
-    .eq("user_id", userId);
-
-  if (!memberOf || memberOf.length === 0) {
-    return ok([]);
-  }
-
-  const conversationIds = memberOf.map((m: { conversation_id: string }) => m.conversation_id);
-
-  const { data: conversations, error } = await serviceClient
-    .from("conversations")
-    .select(FULL_CONV_SELECT)
-    .in("id", conversationIds)
-    .or("is_deleted.is.null,is_deleted.eq.false")
-    .order("last_message_at", { ascending: false });
+  // One RPC returns the user's (non-deleted) conversations with members +
+  // profiles, ordered by last_message_at desc — replacing the previous two-query
+  // lookup (member ids → conversations). Same filter/order/shape; member
+  // profiles additionally include last_seen.
+  const { data: conversations, error } = await serviceClient.rpc(
+    "get_user_conversations",
+    { p_user_id: userId }
+  );
 
   if (error) return err("INTERNAL_ERROR", error.message, 500);
-  return ok(conversations);
+  return ok(conversations || []);
 }
 
 export async function getConversation(
@@ -81,43 +72,26 @@ export async function createConversation(
     return err("INVALID_REQUEST", "Group name is required", 400);
   }
 
-  // For private: return the existing conversation if one already exists
+  // For private: get-or-create in ONE call. Replaces the old N+1 (a loop over
+  // every conversation the user belonged to, probing each one) — finds the
+  // existing DM between the two users or creates it, returning the full
+  // conversation in the same shape. Existing → existing:true; new → 201.
   if (type === "private") {
     const otherUserId = member_ids[0];
-    const { data: existingMembers } = await serviceClient
-      .from("conversation_members")
-      .select("conversation_id")
-      .eq("user_id", userId);
+    const { data: result, error: rpcError } = await serviceClient.rpc(
+      "get_or_create_private_conversation",
+      { p_user_id: userId, p_other_user_id: otherUserId }
+    );
 
-    if (existingMembers) {
-      for (const member of existingMembers) {
-        const { data: conv } = await serviceClient
-          .from("conversations")
-          .select("id, type")
-          .eq("id", member.conversation_id)
-          .eq("type", "private")
-          .single();
+    if (rpcError) return err("INTERNAL_ERROR", rpcError.message, 500);
 
-        if (conv) {
-          const { data: otherMember } = await serviceClient
-            .from("conversation_members")
-            .select("user_id")
-            .eq("conversation_id", conv.id)
-            .eq("user_id", otherUserId)
-            .single();
+    const { conversation, existing } = (result ?? {}) as {
+      conversation?: Record<string, unknown>;
+      existing?: boolean;
+    };
 
-          if (otherMember) {
-            const { data: fullConv } = await serviceClient
-              .from("conversations")
-              .select(FULL_CONV_SELECT)
-              .eq("id", conv.id)
-              .single();
-
-            return ok({ ...fullConv, existing: true });
-          }
-        }
-      }
-    }
+    if (existing) return ok({ ...conversation, existing: true });
+    return ok(conversation, 201);
   }
 
   const { data: conversation, error: convError } = await serviceClient
