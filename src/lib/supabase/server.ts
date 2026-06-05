@@ -3,15 +3,27 @@ import {
   createClient as createSupabaseClient,
   type SupabaseClient,
 } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 export async function createClient() {
   const cookieStore = await cookies();
+
+  // Mobile (React Native) clients carry the Supabase access token in the
+  // Authorization header instead of cookies. Forwarding it as a global header
+  // makes PostgREST/RLS evaluate queries as that user — the same identity the
+  // web cookie session provides. Web requests have no Bearer header, so this is
+  // a no-op for them.
+  const authorization = (await headers()).get("authorization");
+  const global =
+    authorization?.startsWith("Bearer ")
+      ? { global: { headers: { Authorization: authorization } } }
+      : {};
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      ...global,
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
