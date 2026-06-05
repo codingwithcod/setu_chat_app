@@ -3,38 +3,38 @@ import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
-// GET /api/admin/messages?q=&page=1&type=&status=
-// Recent-first moderation feed across every conversation.
+// GET /api/admin/reports?status=pending&page=1
+// The moderation queue: messages that members have reported.
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
   const { serviceClient } = gate;
 
   const sp = request.nextUrl.searchParams;
-  const q = (sp.get("q") || "").trim();
-  const type = sp.get("type"); // text | image | file | system
-  const status = sp.get("status"); // deleted | edited
+  const status = sp.get("status") || "pending"; // pending | dismissed | actioned | all
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
   let query = serviceClient
-    .from("messages")
+    .from("message_reports")
     .select(
-      `id, content, message_type, is_edited, is_deleted, created_at,
-       sender:sender_id(id, full_name, username, avatar_url),
+      `id, reason, details, status, created_at, reviewed_at,
+       reporter:reporter_id(id, full_name, username, avatar_url),
+       reviewer:reviewed_by(full_name, username),
+       message:message_id(
+         id, content, message_type, is_deleted, created_at,
+         sender:sender_id(id, full_name, username, avatar_url)
+       ),
        conversation:conversation_id(id, type, name)`,
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  if (q) query = query.ilike("content", `%${q}%`);
-  if (type) query = query.eq("message_type", type);
-  if (status === "deleted") query = query.eq("is_deleted", true);
-  if (status === "edited") query = query.eq("is_edited", true);
+  if (status !== "all") query = query.eq("status", status);
 
   const { data, count, error } = await query;
   if (error) {
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    messages: data ?? [],
+    reports: data ?? [],
     total: count ?? 0,
     page,
     pageSize: PAGE_SIZE,

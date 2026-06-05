@@ -21,7 +21,9 @@ import {
   Trash2,
   SmilePlus,
   MoreHorizontal,
+  Flag,
 } from "lucide-react";
+import { ReportMessageModal } from "@/components/chat/ReportMessageModal";
 import {
   Tooltip,
   TooltipTrigger,
@@ -57,6 +59,7 @@ export function MessageBubble({
   const [showActions, setShowActions] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || "");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -696,6 +699,19 @@ export function MessageBubble({
                             Delete
                           </button>
                         )}
+                        {!isOwn && (
+                          <button
+                            className="msg-action-dropdown-item text-destructive"
+                            onClick={() => {
+                              setShowReportModal(true);
+                              setShowMoreMenu(false);
+                              setShowActions(false);
+                            }}
+                          >
+                            <Flag className="h-4 w-4" />
+                            Report
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -742,6 +758,15 @@ export function MessageBubble({
           files={imageFiles}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
+        />
+      )}
+
+      {/* Report modal (others' messages) */}
+      {!isOwn && (
+        <ReportMessageModal
+          messageId={message.id}
+          open={showReportModal}
+          onOpenChange={setShowReportModal}
         />
       )}
     </div>

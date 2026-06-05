@@ -8,7 +8,7 @@ import {
   UsersRound,
   MessageSquare,
   ShieldAlert,
-  KeyRound,
+  Flag,
   Activity,
   TrendingUp,
 } from "lucide-react";
@@ -32,6 +32,7 @@ interface Stats {
   messages_7d: number;
   sessions_active: number;
   api_keys_active: number;
+  reports_pending: number;
 }
 
 interface TrendPoint {
@@ -106,16 +107,17 @@ export default async function AdminDashboardPage() {
           accent="text-purple-500"
         />
         <StatCard
+          label="Pending Reports"
+          value={s.reports_pending ?? 0}
+          icon={Flag}
+          accent="text-orange-500"
+          hint="Awaiting moderation review"
+        />
+        <StatCard
           label="Banned Users"
           value={s.users_banned ?? 0}
           icon={ShieldAlert}
           accent="text-red-500"
-        />
-        <StatCard
-          label="Active API Keys"
-          value={s.api_keys_active ?? 0}
-          icon={KeyRound}
-          accent="text-amber-500"
         />
       </section>
 
