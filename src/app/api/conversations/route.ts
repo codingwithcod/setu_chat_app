@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/verify-token";
 
 // Get all conversations for the current user
 export async function GET() {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  // Hot read path — verify the JWT locally instead of round-tripping to
+  // Supabase Auth. See src/lib/auth/verify-token.ts for the trade-off.
+  const auth = await getAuthUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,7 +20,7 @@ export async function GET() {
   // policy on conversation_members, same as the old service-client path.
   const { data: conversations, error } = await serviceClient.rpc(
     "get_user_conversations",
-    { p_user_id: user.id }
+    { p_user_id: auth.userId }
   );
 
   if (error) {
@@ -39,7 +38,7 @@ export async function GET() {
   // Last message + unread count for every conversation in ONE call.
   const { data: previews } = await serviceClient.rpc(
     "get_conversation_previews",
-    { p_user_id: user.id, p_conversation_ids: conversationIds }
+    { p_user_id: auth.userId, p_conversation_ids: conversationIds }
   );
 
   const previewMap = new Map(
@@ -68,16 +67,13 @@ export async function GET() {
 
 // Create a new conversation (private or group)
 export async function POST(request: Request) {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const auth = await getAuthUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = { id: auth.userId };
 
   const body = await request.json();
   const { type, name, description, memberIds } = body;

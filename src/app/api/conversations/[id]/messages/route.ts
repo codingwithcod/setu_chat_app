@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/verify-token";
 import { fireWebhooks } from "@/lib/webhook-delivery";
 
 // Get messages for a conversation (paginated)
@@ -7,15 +8,13 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
+  const auth = await getAuthUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = { id: auth.userId };
 
   const { searchParams } = new URL(request.url);
   const cursor = searchParams.get("cursor");
@@ -199,15 +198,13 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
+  const auth = await getAuthUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = { id: auth.userId };
 
   const body = await request.json();
 

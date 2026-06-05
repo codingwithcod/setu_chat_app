@@ -1,18 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/verify-token";
 
 // Ensure the "Saved Messages" (self) conversation exists for the current user
 export async function POST() {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const auth = await getAuthUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = { id: auth.userId };
 
   // Direct query: find any "self" type conversation where this user is a member
   const { data: selfConvs } = await serviceClient

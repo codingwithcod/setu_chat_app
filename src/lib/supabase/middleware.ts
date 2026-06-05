@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getCachedAppSettings } from "@/lib/admin/settings";
+import { verifyAccessToken } from "@/lib/auth/jwt";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -47,17 +48,20 @@ export async function updateSession(request: NextRequest) {
   }
 
   try {
+    // Verify the session locally instead of a network round-trip to Supabase
+    // Auth on every navigation. getSession reads the cookie locally AND still
+    // refreshes an expired token when needed — and because our cookies.set
+    // callback above re-writes the refreshed token onto `response`, the SSR
+    // refresh behavior is preserved. We then verify the JWT signature locally
+    // (jose), so trusting the resulting claims is safe.
     const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    // If there's an error (network failure, DNS error, etc.),
-    // allow the request through — don't redirect to login.
-    // The client-side will handle the offline state gracefully.
-    if (error) {
-      return response;
-    }
+    const verified = session
+      ? await verifyAccessToken(session.access_token)
+      : null;
+    const user = verified ? { id: verified.userId } : null;
 
     const isAuthPage =
       request.nextUrl.pathname.startsWith("/login") ||
