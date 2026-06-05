@@ -33,46 +33,36 @@ export async function POST(request: Request) {
     const realIp = request.headers.get("x-real-ip");
     const ip = forwardedFor?.split(",")[0]?.trim() || realIp || null;
 
-    // Check if session token already exists
-    const { data: existingSession } = await serviceClient
+    // Common path in ONE round-trip: update the session if it already exists.
+    // The UPDATE both refreshes the row AND tells us whether it existed — a row
+    // comes back only when a matching session was found, so we no longer need a
+    // separate SELECT first. We intentionally DO NOT geolocate here: geolocation
+    // is a slow external call (up to 3s) and is only meaningful once, when the
+    // device first signs in. The location captured at creation is preserved.
+    const { data: updatedSession } = await serviceClient
       .from("user_sessions")
-      .select("id")
+      .update({
+        last_active_at: new Date().toISOString(),
+        ip_address: ip,
+        device_name: deviceName,
+        device_type: deviceType,
+        browser_name: browserName,
+        os_name: osName,
+      })
       .eq("session_token", sessionToken)
       .eq("user_id", user.id)
-      .single();
+      .select()
+      .maybeSingle();
 
-    if (existingSession) {
-      // Update existing session. We intentionally DO NOT geolocate here:
-      // geolocation is a slow external call (up to 3s) and is only meaningful
-      // once, when the device first signs in. Skipping it on every app load
-      // keeps startup fast; the location captured at creation is preserved.
-      const { data: updatedSession, error: updateError } = await serviceClient
-        .from("user_sessions")
-        .update({
-          last_active_at: new Date().toISOString(),
-          ip_address: ip,
-          device_name: deviceName,
-          device_type: deviceType,
-          browser_name: browserName,
-          os_name: osName,
-        })
-        .eq("id", existingSession.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Failed to update session:", updateError);
-        return NextResponse.json(
-          { error: "Failed to update session" },
-          { status: 500 }
-        );
-      }
-
+    if (updatedSession) {
       return NextResponse.json({
         data: updatedSession,
         new_device_detected: false,
       });
     }
+
+    // No existing session was updated → this is a new device. Fall through to
+    // the (rarely hit) creation path below: geolocate, enforce the limit, insert.
 
     // New session — geolocate the IP once (best-effort, up to 3s) so we can
     // show where this device signed in from. Only runs on creation, never on

@@ -159,41 +159,46 @@ export default function MainLayout({
         setUser(profile);
         setLoadFailed(false);
 
-        // Track session after successful auth
-        try {
-          const deviceInfo = await getDeviceInfo();
-          const sessionToken = getOrCreateSessionToken();
-          const previousSessionId = getCurrentSessionId();
-          const trackRes = await fetch("/api/sessions/track", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              sessionToken,
-              deviceName: deviceInfo.deviceName,
-              deviceType: deviceInfo.deviceType,
-              browserName: deviceInfo.browserName,
-              osName: deviceInfo.osName,
-            }),
-          });
-          const trackData = await trackRes.json();
+        // Track session in the BACKGROUND — it must not block the conversation
+        // list from loading. Revocation detection still runs here: if this
+        // session was revoked elsewhere, we sign out as soon as the response
+        // arrives (a moment after the UI has loaded, which is harmless).
+        void (async () => {
+          try {
+            const deviceInfo = await getDeviceInfo();
+            const sessionToken = getOrCreateSessionToken();
+            const previousSessionId = getCurrentSessionId();
+            const trackRes = await fetch("/api/sessions/track", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                sessionToken,
+                deviceName: deviceInfo.deviceName,
+                deviceType: deviceInfo.deviceType,
+                browserName: deviceInfo.browserName,
+                osName: deviceInfo.osName,
+              }),
+            });
+            const trackData = await trackRes.json();
 
-          if (trackData.data?.id) {
-            // If we had a stored session that no longer exists (was revoked),
-            // and the server created a brand new one → session was revoked, sign out
-            if (previousSessionId && trackData.new_device_detected) {
-              clearSessionToken();
-              await supabase.auth.signOut({ scope: "local" });
-              setUser(null);
-              router.push("/login");
-              return;
+            if (trackData.data?.id) {
+              // If we had a stored session that no longer exists (was revoked),
+              // and the server created a brand new one → session was revoked, sign out
+              if (previousSessionId && trackData.new_device_detected) {
+                clearSessionToken();
+                await supabase.auth.signOut({ scope: "local" });
+                setUser(null);
+                router.push("/login");
+                return;
+              }
+              setCurrentSessionId(trackData.data.id);
             }
-            setCurrentSessionId(trackData.data.id);
+          } catch (sessionError) {
+            console.error("Failed to track session:", sessionError);
           }
-        } catch (sessionError) {
-          console.error("Failed to track session:", sessionError);
-        }
+        })();
 
-        // Load conversations after successful auth
+        // Load conversations immediately — no longer waits on session tracking.
         try {
           const res = await fetch("/api/conversations");
           const data = await res.json();
