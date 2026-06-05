@@ -63,8 +63,20 @@ export default function ConversationPage() {
   }, [conversationId, resetUnreadCount]);
 
 
-  // Load conversation details
+  // Load conversation details — stale-while-revalidate.
+  // If the conversation is already in the sidebar list (the common case when
+  // navigating from the list), show it INSTANTLY from cache so the chat shell
+  // renders without waiting on the network — then refresh it from the server in
+  // the background. Deep-link / hard-refresh (not yet in the list) has no cached
+  // copy and falls back to a plain fetch — identical to the previous behavior.
   useEffect(() => {
+    const cached = useChatStore
+      .getState()
+      .conversations.find((c) => c.id === conversationId);
+    if (cached) {
+      setActiveConversation(cached as ConversationWithDetails);
+    }
+
     const loadConversation = async () => {
       try {
         const res = await fetch(`/api/conversations/${conversationId}`);
@@ -74,7 +86,12 @@ export default function ConversationPage() {
         }
       } catch (error) {
         console.error("Failed to load conversation:", error);
-        router.push("/chat");
+        // Only bounce to /chat if we have nothing to show. If a cached copy is
+        // already on screen, keep it (a transient fetch failure shouldn't kick
+        // the user out of a conversation they can already see).
+        if (!useChatStore.getState().activeConversation) {
+          router.push("/chat");
+        }
       }
     };
 
