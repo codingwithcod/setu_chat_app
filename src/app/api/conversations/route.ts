@@ -14,121 +14,54 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get conversation IDs the user is a member of
-  // Use service client to bypass RLS recursive policy on conversation_members
-  const { data: memberOf } = await serviceClient
-    .from("conversation_members")
-    .select("conversation_id")
-    .eq("user_id", user.id);
-
-  if (!memberOf || memberOf.length === 0) {
-    return NextResponse.json({ data: [] });
-  }
-
-  const conversationIds = memberOf.map((m) => m.conversation_id);
-
-  // Get conversations with members and last message
-  const { data: conversations, error } = await serviceClient
-    .from("conversations")
-    .select(
-      `
-      *,
-      members:conversation_members(
-        *,
-        profile:profiles(id, username, first_name, last_name, avatar_url, is_online)
-      )
-    `
-    )
-    .in("id", conversationIds)
-    .or("is_deleted.is.null,is_deleted.eq.false")
-    .order("last_message_at", { ascending: false });
+  // Fetch every conversation the user belongs to — with members + member
+  // profiles nested — in ONE call. This RPC replaces what used to be two serial
+  // queries (read conversation_members for ids, then fetch conversations with
+  // members). SECURITY DEFINER inside the function bypasses the recursive RLS
+  // policy on conversation_members, same as the old service-client path.
+  const { data: conversations, error } = await serviceClient.rpc(
+    "get_user_conversations",
+    { p_user_id: user.id }
+  );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Get last message + unread count for every conversation in ONE call.
-  // Previously this ran 3 queries PER conversation (an N+1). The RPC batches
-  // them; if it isn't present yet we fall back to the original per-conversation
-  // logic so behavior is identical either way.
-  const { data: previews, error: previewError } = await serviceClient.rpc(
+  if (!conversations || conversations.length === 0) {
+    return NextResponse.json({ data: [] });
+  }
+
+  const conversationIds = (conversations as Array<{ id: string }>).map(
+    (c) => c.id
+  );
+
+  // Last message + unread count for every conversation in ONE call.
+  const { data: previews } = await serviceClient.rpc(
     "get_conversation_previews",
     { p_user_id: user.id, p_conversation_ids: conversationIds }
   );
 
-  let conversationsWithLastMessage;
-  if (!previewError && previews) {
-    const previewMap = new Map(
-      (
-        previews as Array<{
-          conversation_id: string;
-          last_message: unknown;
-          unread_count: number;
-        }>
-      ).map((p) => [p.conversation_id, p])
-    );
-    conversationsWithLastMessage = (conversations || []).map((conv) => {
-      const pv = previewMap.get(conv.id);
-      return {
-        ...conv,
-        last_message: pv?.last_message ?? null,
-        unread_count: Number(pv?.unread_count ?? 0),
-      };
-    });
-  } else {
-    // Fallback: original per-conversation queries (unchanged behavior).
-    conversationsWithLastMessage = await Promise.all(
-      (conversations || []).map(async (conv) => {
-        const { data: messages } = await serviceClient
-          .from("messages")
-          .select(
-            `
-            *,
-            sender:profiles(id, username, first_name, last_name, avatar_url)
-          `
-          )
-          .eq("conversation_id", conv.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
+  const previewMap = new Map(
+    (
+      (previews as Array<{
+        conversation_id: string;
+        last_message: unknown;
+        unread_count: number;
+      }>) || []
+    ).map((p) => [p.conversation_id, p])
+  );
 
-        // Get unread count
-        const { data: readReceipt } = await serviceClient
-          .from("read_receipts")
-          .select("last_read_at")
-          .eq("conversation_id", conv.id)
-          .eq("user_id", user.id)
-          .single();
-
-        let unreadCount = 0;
-        if (readReceipt) {
-          const { count } = await serviceClient
-            .from("messages")
-            .select("id", { count: "exact", head: true })
-            .eq("conversation_id", conv.id)
-            .gt("created_at", readReceipt.last_read_at)
-            .neq("sender_id", user.id);
-
-          unreadCount = count || 0;
-        } else {
-          // No read receipt = user has never opened this conversation
-          // Count ALL messages from other users as unread
-          const { count } = await serviceClient
-            .from("messages")
-            .select("id", { count: "exact", head: true })
-            .eq("conversation_id", conv.id)
-            .neq("sender_id", user.id);
-
-          unreadCount = count || 0;
-        }
-
-        return {
-          ...conv,
-          last_message: messages?.[0] || null,
-          unread_count: unreadCount,
-        };
-      })
-    );
-  }
+  const conversationsWithLastMessage = (
+    conversations as Array<{ id: string }>
+  ).map((conv) => {
+    const pv = previewMap.get(conv.id);
+    return {
+      ...conv,
+      last_message: pv?.last_message ?? null,
+      unread_count: Number(pv?.unread_count ?? 0),
+    };
+  });
 
   return NextResponse.json({ data: conversationsWithLastMessage });
 }
