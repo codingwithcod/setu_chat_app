@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/auth";
+import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function PATCH(
 ) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
-  const { serviceClient, userId } = gate;
+  const { serviceClient, userId, email } = gate;
 
   const { action } = await request.json().catch(() => ({}));
   const reviewedAt = new Date().toISOString();
@@ -29,6 +30,13 @@ export async function PATCH(
       .eq("id", params.id);
     if (error)
       return NextResponse.json({ error: error.message }, { status: 500 });
+    await logAdminAction(serviceClient, {
+      actorId: userId,
+      actorEmail: email,
+      action: "report.dismiss",
+      targetType: "report",
+      targetId: params.id,
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -61,6 +69,13 @@ export async function PATCH(
     if (updErr)
       return NextResponse.json({ error: updErr.message }, { status: 500 });
 
+    await logAdminAction(serviceClient, {
+      actorId: userId,
+      actorEmail: email,
+      action: "message.delete",
+      targetType: "message",
+      targetId: report.message_id,
+    });
     return NextResponse.json({ ok: true });
   }
 

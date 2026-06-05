@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { sendVerificationEmail } from "@/lib/email";
 import { generateToken } from "@/lib/utils";
 import { registerSchema } from "@/lib/validations";
+import { getAppSettings } from "@/lib/admin/settings";
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +11,15 @@ export async function POST(request: Request) {
     const validated = registerSchema.parse(body);
 
     const supabase = await createServiceClient();
+
+    // Respect the admin "allow new sign-ups" flag.
+    const settings = await getAppSettings(supabase);
+    if (!settings.allow_registration) {
+      return NextResponse.json(
+        { error: "New registrations are currently disabled." },
+        { status: 403 }
+      );
+    }
 
     // Check if username is taken
     const { data: existingUser } = await supabase

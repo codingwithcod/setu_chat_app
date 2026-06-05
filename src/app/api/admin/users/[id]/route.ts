@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/auth";
+import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function PATCH(
 ) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
-  const { serviceClient, userId } = gate;
+  const { serviceClient, userId, email } = gate;
   const targetId = params.id;
 
   const { action } = await request.json().catch(() => ({}));
@@ -28,6 +29,24 @@ export async function PATCH(
     );
   }
 
+  // Fetch a human-readable label for the audit log.
+  const { data: target } = await serviceClient
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", targetId)
+    .single();
+  const label = target?.full_name?.trim() || target?.email || targetId;
+
+  const audit = (act: string) =>
+    logAdminAction(serviceClient, {
+      actorId: userId,
+      actorEmail: email,
+      action: act,
+      targetType: "user",
+      targetId,
+      targetLabel: label,
+    });
+
   switch (action) {
     case "promote":
     case "demote": {
@@ -37,6 +56,7 @@ export async function PATCH(
         .eq("id", targetId);
       if (error)
         return NextResponse.json({ error: error.message }, { status: 500 });
+      await audit(action === "promote" ? "user.promote" : "user.demote");
       return NextResponse.json({ ok: true });
     }
     case "ban":
@@ -52,6 +72,7 @@ export async function PATCH(
       if (banned) {
         await serviceClient.from("user_sessions").delete().eq("user_id", targetId);
       }
+      await audit(banned ? "user.ban" : "user.unban");
       return NextResponse.json({ ok: true });
     }
     case "logout": {
@@ -61,6 +82,7 @@ export async function PATCH(
         .eq("user_id", targetId);
       if (error)
         return NextResponse.json({ error: error.message }, { status: 500 });
+      await audit("user.logout");
       return NextResponse.json({ ok: true });
     }
     default:
@@ -78,7 +100,7 @@ export async function DELETE(
 ) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
-  const { serviceClient, userId } = gate;
+  const { serviceClient, userId, email } = gate;
 
   if (params.id === userId) {
     return NextResponse.json(
@@ -87,9 +109,24 @@ export async function DELETE(
     );
   }
 
+  const { data: target } = await serviceClient
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", params.id)
+    .single();
+
   const { error } = await serviceClient.auth.admin.deleteUser(params.id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logAdminAction(serviceClient, {
+    actorId: userId,
+    actorEmail: email,
+    action: "user.delete",
+    targetType: "user",
+    targetId: params.id,
+    targetLabel: target?.full_name?.trim() || target?.email || params.id,
+  });
   return NextResponse.json({ ok: true });
 }

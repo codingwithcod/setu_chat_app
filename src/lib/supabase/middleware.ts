@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getCachedAppSettings } from "@/lib/admin/settings";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -98,7 +99,12 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Redirect unauthenticated users to login
-    if (!user && !isAuthPage && !isPublicPage) {
+    if (
+      !user &&
+      !isAuthPage &&
+      !isPublicPage &&
+      request.nextUrl.pathname !== "/maintenance"
+    ) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
@@ -115,6 +121,39 @@ export async function updateSession(request: NextRequest) {
       if (!profile || profile.role !== "admin" || profile.is_banned) {
         return NextResponse.redirect(new URL("/chat", request.url));
       }
+    }
+
+    // Maintenance mode — when enabled, only admins may use the app. Everyone
+    // else is parked on /maintenance. Auth/public pages and the admin area
+    // stay reachable so admins can sign in and turn it back off.
+    const pathname = request.nextUrl.pathname;
+    const isMaintenancePage = pathname === "/maintenance";
+    const settings = await getCachedAppSettings(supabase);
+
+    if (settings.maintenance_mode) {
+      const exempt =
+        isAuthPage ||
+        isPublicPage ||
+        isMaintenancePage ||
+        pathname.startsWith("/admin");
+
+      if (!exempt) {
+        let isAdmin = false;
+        if (user) {
+          const { data: p } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+          isAdmin = p?.role === "admin";
+        }
+        if (!isAdmin) {
+          return NextResponse.redirect(new URL("/maintenance", request.url));
+        }
+      }
+    } else if (isMaintenancePage) {
+      // Maintenance is off — don't let the page linger.
+      return NextResponse.redirect(new URL("/chat", request.url));
     }
   } catch {
     // Unexpected error — allow the request through.

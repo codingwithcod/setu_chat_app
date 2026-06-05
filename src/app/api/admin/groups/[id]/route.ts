@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/auth";
+import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,13 @@ export async function DELETE(
 ) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
-  const { serviceClient } = gate;
+  const { serviceClient, userId, email } = gate;
+
+  const { data: group } = await serviceClient
+    .from("conversations")
+    .select("name")
+    .eq("id", params.id)
+    .single();
 
   const { error } = await serviceClient
     .from("conversations")
@@ -22,5 +29,14 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logAdminAction(serviceClient, {
+    actorId: userId,
+    actorEmail: email,
+    action: "group.delete",
+    targetType: "group",
+    targetId: params.id,
+    targetLabel: group?.name || "Untitled group",
+  });
   return NextResponse.json({ ok: true });
 }
