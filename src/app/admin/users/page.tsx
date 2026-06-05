@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/utils";
+import { Pagination } from "@/components/admin/Pagination";
 import {
   Search,
   MoreVertical,
@@ -22,8 +23,6 @@ import {
   LogOut,
   Trash2,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 interface AdminUser {
@@ -53,6 +52,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page) });
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (q) params.set("q", q);
     if (status) params.set("status", status);
     if (role) params.set("role", role);
@@ -74,7 +74,7 @@ export default function AdminUsersPage() {
       setTotalPages(data.totalPages);
     }
     setLoading(false);
-  }, [page, q, status, role]);
+  }, [page, pageSize, q, status, role]);
 
   useEffect(() => {
     const t = setTimeout(load, q ? 300 : 0);
@@ -290,30 +290,18 @@ export default function AdminUsersPage() {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Page {page} of {totalPages}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        itemLabel="users"
+      />
     </div>
   );
 }

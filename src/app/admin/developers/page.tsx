@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/admin/StatCard";
 import { formatDate } from "@/lib/utils";
+import { Pagination } from "@/components/admin/Pagination";
 import {
   KeyRound,
   Activity,
@@ -15,8 +16,6 @@ import {
   Gauge,
   Search,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   Ban,
   RotateCcw,
 } from "lucide-react";
@@ -100,6 +99,7 @@ export default function AdminDevelopersPage() {
   // shared list state
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -122,7 +122,7 @@ export default function AdminDevelopersPage() {
 
   const loadList = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page) });
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (q) params.set("q", q);
     const endpoint =
       tab === "keys"
@@ -137,7 +137,7 @@ export default function AdminDevelopersPage() {
       setTotalPages(data.totalPages);
     }
     setLoading(false);
-  }, [tab, page, q]);
+  }, [tab, page, pageSize, q]);
 
   useEffect(() => {
     const t = setTimeout(loadList, q ? 300 : 0);
@@ -420,30 +420,18 @@ export default function AdminDevelopersPage() {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {total} total · page {page} of {totalPages}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        itemLabel={tab === "keys" ? "keys" : "webhooks"}
+      />
     </div>
   );
 }

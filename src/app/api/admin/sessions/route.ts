@@ -3,11 +3,11 @@ import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZES = [10, 20, 50, 100];
 // A session counts as "active" if it pinged within this window.
 const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 
-// GET /api/admin/sessions?q=&page=1&status=&device=
+// GET /api/admin/sessions?q=&page=1&pageSize=20&status=&device=
 // Active device sessions across the platform, most-recently-active first.
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin();
@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
   const status = sp.get("status"); // active | idle
   const device = sp.get("device"); // desktop | mobile | tablet
   const userId = sp.get("user"); // optional: filter to one user
+  const sizeParam = parseInt(sp.get("pageSize") || "20", 10);
+  const PAGE_SIZE = PAGE_SIZES.includes(sizeParam) ? sizeParam : 20;
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;

@@ -3,9 +3,9 @@ import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZES = [10, 20, 50, 100];
 
-// GET /api/admin/developers/webhooks?q=&page=1 — all webhooks with owner.
+// GET /api/admin/developers/webhooks?q=&page=1&pageSize=20 — webhooks with owner.
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
 
   const sp = request.nextUrl.searchParams;
   const q = (sp.get("q") || "").trim();
+  const sizeParam = parseInt(sp.get("pageSize") || "20", 10);
+  const PAGE_SIZE = PAGE_SIZES.includes(sizeParam) ? sizeParam : 20;
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;

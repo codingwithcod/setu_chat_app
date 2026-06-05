@@ -3,9 +3,9 @@ import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZES = [10, 20, 50, 100];
 
-// GET /api/admin/users?q=&page=1&role=&status=
+// GET /api/admin/users?q=&page=1&pageSize=20&role=&status=
 export async function GET(request: NextRequest) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
   const q = (sp.get("q") || "").trim();
   const role = sp.get("role"); // 'admin' | 'user' | null
   const status = sp.get("status"); // 'online' | 'banned' | 'verified' | null
+  const sizeParam = parseInt(sp.get("pageSize") || "20", 10);
+  const PAGE_SIZE = PAGE_SIZES.includes(sizeParam) ? sizeParam : 20;
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
