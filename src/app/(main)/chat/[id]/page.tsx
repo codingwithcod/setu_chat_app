@@ -128,8 +128,10 @@ export default function ConversationPage() {
     const loadMessages = async () => {
       setIsLoading(true);
       try {
+        // Initial load fetches a smaller page (25) for faster first paint;
+        // older history is then paginated in larger batches (see loadMore).
         const res = await fetch(
-          `/api/conversations/${conversationId}/messages?limit=50`
+          `/api/conversations/${conversationId}/messages?limit=25`
         );
         const data = await res.json();
         if (data.data) {
@@ -225,7 +227,9 @@ export default function ConversationPage() {
     setLoadingMore(true);
     try {
       const res = await fetch(
-        `/api/conversations/${conversationId}/messages?limit=50&cursor=${cursor}`
+        `/api/conversations/${conversationId}/messages?limit=50&cursor=${encodeURIComponent(
+          cursor
+        )}`
       );
       const data = await res.json();
       if (data.data) {
