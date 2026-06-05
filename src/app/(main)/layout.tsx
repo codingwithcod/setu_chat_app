@@ -119,10 +119,17 @@ export default function MainLayout({
     const supabase = createClient();
 
     try {
+      // Read the session locally instead of a network round-trip to Supabase
+      // Auth on every cold boot. getSession reads the cookie locally (and
+      // refreshes an expired token only when needed). Token validity is still
+      // enforced downstream: the profile fetch below runs under the user's JWT
+      // (RLS), so an invalid/absent session yields no profile → login. This is
+      // the same local-verify approach already used in the API routes/middleware.
       const {
-        data: { user: authUser },
+        data: { session },
         error,
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getSession();
+      const authUser = session?.user ?? null;
 
       // Network error (offline) — don't redirect, keep existing session
       if (error) {
