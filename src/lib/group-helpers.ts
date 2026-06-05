@@ -20,7 +20,41 @@ export async function getMemberRole(
 }
 
 /**
- * Send a system message in a conversation and update last_message_at.
+ * Get the roles of several users in a conversation in ONE query.
+ * Returns a Map of user_id → role for the members found (absent = not a member,
+ * i.e. treat as null), so callers can resolve multiple roles without a separate
+ * round-trip per user.
+ */
+export async function getMemberRoles(
+  serviceClient: SupabaseClient,
+  conversationId: string,
+  userIds: string[]
+): Promise<Map<string, "owner" | "admin" | "member">> {
+  const { data } = await serviceClient
+    .from("conversation_members")
+    .select("user_id, role")
+    .eq("conversation_id", conversationId)
+    .in("user_id", userIds);
+
+  const roles = new Map<string, "owner" | "admin" | "member">();
+  for (const row of (data || []) as Array<{
+    user_id: string;
+    role: "owner" | "admin" | "member";
+  }>) {
+    roles.set(row.user_id, row.role);
+  }
+  return roles;
+}
+
+/**
+ * Send a system message in a conversation.
+ *
+ * Only inserts the message — we no longer manually update
+ * conversations.last_message_at here, because the `on_new_message` AFTER INSERT
+ * trigger on `messages` already sets it (to the new message's created_at) on
+ * every insert. The manual update was a redundant second round-trip. Dropping it
+ * is behavior-equivalent: the conversation's last_message_at still bumps on each
+ * system message (via the trigger), which is what conversation ordering uses.
  */
 export async function sendSystemMessage(
   serviceClient: SupabaseClient,
@@ -34,11 +68,6 @@ export async function sendSystemMessage(
     content,
     message_type: "system",
   });
-
-  await serviceClient
-    .from("conversations")
-    .update({ last_message_at: new Date().toISOString() })
-    .eq("id", conversationId);
 }
 
 /**

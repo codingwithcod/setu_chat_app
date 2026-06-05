@@ -88,51 +88,34 @@ export async function POST(request: Request) {
 
     const otherUserId = memberIds[0];
 
-    // Check if private conversation already exists
-    // Use service client to bypass RLS recursive policy on conversation_members
-    const { data: existingMembers } = await serviceClient
-      .from("conversation_members")
-      .select("conversation_id")
-      .eq("user_id", user.id);
+    // Get-or-create the private conversation in ONE call. This replaces the old
+    // N+1 (a loop over every conversation the user belonged to, 2 queries each)
+    // with a single RPC that finds the existing DM between the two users or
+    // creates it, and returns the full conversation in the same shape.
+    const { data: result, error: rpcError } = await serviceClient.rpc(
+      "get_or_create_private_conversation",
+      { p_user_id: user.id, p_other_user_id: otherUserId }
+    );
 
-    if (existingMembers) {
-      for (const member of existingMembers) {
-        const { data: conv } = await serviceClient
-          .from("conversations")
-          .select("id, type")
-          .eq("id", member.conversation_id)
-          .eq("type", "private")
-          .single();
-
-        if (conv) {
-          const { data: otherMember } = await serviceClient
-            .from("conversation_members")
-            .select("user_id")
-            .eq("conversation_id", conv.id)
-            .eq("user_id", otherUserId)
-            .single();
-
-          if (otherMember) {
-            // Return existing conversation
-            const { data: fullConv } = await serviceClient
-              .from("conversations")
-              .select(
-                `
-                *,
-                members:conversation_members(
-                  *,
-                  profile:profiles(id, username, first_name, last_name, avatar_url, is_online)
-                )
-              `
-              )
-              .eq("id", conv.id)
-              .single();
-
-            return NextResponse.json({ data: fullConv, existing: true });
-          }
-        }
-      }
+    if (rpcError) {
+      console.error(
+        "[API POST /api/conversations] get_or_create_private_conversation failed:",
+        rpcError.message
+      );
+      return NextResponse.json({ error: rpcError.message }, { status: 500 });
     }
+
+    const { conversation, existing } = (result ?? {}) as {
+      conversation?: unknown;
+      existing?: boolean;
+    };
+
+    // Existing DM → 200 with existing:true; freshly created → 201. Matches the
+    // old responses exactly.
+    if (existing) {
+      return NextResponse.json({ data: conversation, existing: true });
+    }
+    return NextResponse.json({ data: conversation }, { status: 201 });
   }
 
   // Create conversation

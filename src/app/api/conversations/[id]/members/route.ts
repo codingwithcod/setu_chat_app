@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import {
   getMemberRole,
+  getMemberRoles,
   hasPermission,
   sendSystemMessage,
   getUserDisplayName,
@@ -101,9 +102,13 @@ export async function DELETE(
   const isLeaving = userId === user.id;
 
   if (!isLeaving) {
-    // Check permissions for removing others
-    const actorRole = await getMemberRole(serviceClient, params.id, user.id);
-    const targetRole = await getMemberRole(serviceClient, params.id, userId);
+    // Check permissions for removing others — fetch both roles in one query.
+    const roles = await getMemberRoles(serviceClient, params.id, [
+      user.id,
+      userId,
+    ]);
+    const actorRole = roles.get(user.id) || null;
+    const targetRole = roles.get(userId) || null;
 
     if (!actorRole || !targetRole) {
       return NextResponse.json({ error: "User not found in group" }, { status: 404 });
