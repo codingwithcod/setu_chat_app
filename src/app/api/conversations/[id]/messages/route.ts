@@ -14,182 +14,45 @@ export async function GET(
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const user = { id: auth.userId };
-
   const { searchParams } = new URL(request.url);
   const cursor = searchParams.get("cursor");
   const limit = parseInt(searchParams.get("limit") || "50");
 
-  let query = serviceClient
-    .from("messages")
-    .select(
-      `
-      *,
-      sender:profiles(id, username, first_name, last_name, avatar_url, is_online),
-      reactions:message_reactions(id, user_id, reaction),
-      files:message_files(id, file_url, file_name, file_size, file_type, mime_type, display_order)
-    `
-    )
-    .eq("conversation_id", params.id)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (cursor) {
-    query = query.lt("created_at", cursor);
-  }
-
-  const { data: messages, error } = await query;
+  // One RPC returns the fully-enriched message page (sender, reactions, files,
+  // reply_message, forwarded_message), the unread count (computed before marking
+  // read), and the other members' read receipts — and upserts this user's read
+  // receipt as a side effect. Replaces ~6 serial round-trips with one DB call.
+  const { data, error } = await serviceClient.rpc("get_conversation_messages", {
+    p_conversation_id: params.id,
+    p_user_id: auth.userId,
+    p_limit: limit,
+    p_cursor: cursor,
+    p_mark_read: true,
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Sort files by display_order within each message
-  const messagesWithSortedFiles = (messages || []).map((msg) => ({
-    ...msg,
-    files: (msg.files || []).sort(
-      (a: { display_order: number }, b: { display_order: number }) =>
-        a.display_order - b.display_order
-    ),
-  }));
-
-  // Get reply messages and forwarded message info.
-  // Instead of one DB query per message (N+1), collect all referenced IDs and
-  // fetch replies/forwards in two batched queries, then attach via lookup maps.
-  const replyIds = Array.from(
-    new Set(
-      messagesWithSortedFiles
-        .filter((msg) => msg.reply_to)
-        .map((msg) => msg.reply_to as string)
-    )
-  );
-  const forwardedIds = Array.from(
-    new Set(
-      messagesWithSortedFiles
-        .filter((msg) => msg.forwarded_from)
-        .map((msg) => msg.forwarded_from as string)
-    )
-  );
-
-  const [replyResult, forwardedResult] = await Promise.all([
-    replyIds.length
-      ? serviceClient
-          .from("messages")
-          .select(
-            `
-            id, content, message_type, sender_id,
-            sender:profiles(id, username, first_name, last_name, avatar_url)
-          `
-          )
-          .in("id", replyIds)
-      : Promise.resolve({ data: [] as any[] }),
-    forwardedIds.length
-      ? serviceClient
-          .from("messages")
-          .select(
-            `
-            id, content, message_type, sender_id, created_at,
-            sender:profiles(id, username, first_name, last_name, avatar_url)
-          `
-          )
-          .in("id", forwardedIds)
-      : Promise.resolve({ data: [] as any[] }),
-  ]);
-
-  const replyMap = new Map(
-    (replyResult.data || []).map((msg: { id: string }) => [msg.id, msg])
-  );
-  const forwardedMap = new Map(
-    (forwardedResult.data || []).map((msg: { id: string }) => [msg.id, msg])
-  );
-
-  const messagesWithReplies = messagesWithSortedFiles.map((msg) => {
-    let enriched = { ...msg };
-
-    if (msg.reply_to) {
-      // Preserve original behavior: key is always present (null if not found).
-      enriched = {
-        ...enriched,
-        reply_message: replyMap.get(msg.reply_to) ?? null,
-      };
-    }
-
-    if (msg.forwarded_from) {
-      // Preserve original behavior: only attach when the message was found.
-      const fwdMsg = forwardedMap.get(msg.forwarded_from);
-      if (fwdMsg) {
-        enriched = { ...enriched, forwarded_message: fwdMsg };
-      }
-    }
-
-    return enriched;
-  });
-
-  // Calculate unread count BEFORE updating read receipt (only on initial load)
-  let unreadCount = 0;
-  if (!cursor && messages && messages.length > 0) {
-    const { data: readReceipt } = await serviceClient
-      .from("read_receipts")
-      .select("last_read_at")
-      .eq("conversation_id", params.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (readReceipt) {
-      const { count } = await serviceClient
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("conversation_id", params.id)
-        .gt("created_at", readReceipt.last_read_at)
-        .neq("sender_id", user.id);
-
-      unreadCount = count || 0;
-    } else {
-      // No read receipt = never opened → all messages from others are unread
-      const { count } = await serviceClient
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("conversation_id", params.id)
-        .neq("sender_id", user.id);
-
-      unreadCount = count || 0;
-    }
-  }
-
-  // Update read receipt (marks everything as read AND delivered)
-  if (messages && messages.length > 0) {
-    await serviceClient.from("read_receipts").upsert(
-      {
-        conversation_id: params.id,
-        user_id: user.id,
-        last_read_message_id: messages[0].id,
-        last_read_at: new Date().toISOString(),
-        delivered_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "conversation_id,user_id",
-      }
-    );
-  }
-
-  // Fetch read receipts of OTHER users in this conversation (for status indicators)
-  const { data: otherReadReceipts } = await serviceClient
-    .from("read_receipts")
-    .select("user_id, last_read_at, last_read_message_id, delivered_at")
-    .eq("conversation_id", params.id)
-    .neq("user_id", user.id);
-
-  const hasMore = messages?.length === limit;
-  const nextCursor = messages?.length
+  // The RPC returns messages newest-first (matching the old query); the response
+  // sends them oldest-first, exactly as before.
+  const result = (data ?? {}) as {
+    messages?: Array<{ created_at: string }>;
+    unread_count?: number;
+    other_read_receipts?: unknown[];
+  };
+  const messages = result.messages ?? [];
+  const hasMore = messages.length === limit;
+  const nextCursor = messages.length
     ? messages[messages.length - 1].created_at
     : null;
 
   return NextResponse.json({
-    data: messagesWithReplies?.reverse() || [],
+    data: [...messages].reverse(),
     hasMore,
     nextCursor,
-    unreadCount,
-    otherReadReceipts: otherReadReceipts || [],
+    unreadCount: Number(result.unread_count ?? 0),
+    otherReadReceipts: result.other_read_receipts ?? [],
   });
 }
 
