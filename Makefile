@@ -12,7 +12,7 @@
 .PHONY: help dev deploy down logs status \
         build restart-app restart-supabase \
         setup-supabase start-supabase stop-supabase \
-        start-app stop-app clean network
+        start-app stop-app clean network migrate
 
 # ------------------------------------------
 # Configuration
@@ -56,7 +56,7 @@ dev-down: ## Stop local dev containers
 #  🚀  PRODUCTION DEPLOYMENT
 # ==========================================
 
-deploy: network setup-supabase build start-app ## Full deploy: Supabase + App + Traefik
+deploy: network setup-supabase migrate build start-app ## Full deploy: Supabase + App + Traefik
 	@echo ""
 	@echo "  ============================================"
 	@echo "  ✅  Deployment Complete!"
@@ -90,6 +90,41 @@ stop-supabase: ## Stop Supabase services
 	cd $(SUPABASE_DIR) && docker compose down
 
 restart-supabase: stop-supabase start-supabase ## Restart Supabase services
+
+migrate: ## Run database migrations against self-hosted Supabase
+	@MIGRATIONS_DIR="supabase/migrations"; \
+	SUPABASE_DIR="$(SUPABASE_DIR)"; \
+	if [ ! -d "$$MIGRATIONS_DIR" ]; then \
+		echo "  ⚠️  No migrations directory found. Skipping."; \
+		exit 0; \
+	fi; \
+	PG_PASS=$$(grep '^POSTGRES_PASSWORD=' "$$SUPABASE_DIR/.env" | cut -d'=' -f2- | tr -d '\r'); \
+	if [ -z "$$PG_PASS" ]; then \
+		echo "  ⚠️  Cannot read POSTGRES_PASSWORD. Skipping migrations."; \
+		exit 0; \
+	fi; \
+	DB_CONTAINER=$$(cd "$$SUPABASE_DIR" && docker compose ps -q db 2>/dev/null); \
+	if [ -z "$$DB_CONTAINER" ]; then \
+		echo "  ⚠️  Supabase DB container not found. Skipping migrations."; \
+		exit 0; \
+	fi; \
+	echo "  🗄️  Running database migrations..."; \
+	FAILED=0; \
+	for sql_file in $$(ls $$MIGRATIONS_DIR/*.sql 2>/dev/null | sort); do \
+		fname=$$(basename "$$sql_file"); \
+		echo "    ▸ $$fname"; \
+		docker cp "$$sql_file" "$$DB_CONTAINER:/tmp/migration.sql"; \
+		docker exec "$$DB_CONTAINER" psql -U postgres -d postgres -f /tmp/migration.sql > /dev/null 2>&1 || FAILED=$$((FAILED + 1)); \
+		docker exec "$$DB_CONTAINER" rm -f /tmp/migration.sql; \
+	done; \
+	echo "  ✅ Migrations complete! ($$FAILED warnings)"; \
+	echo "  🪣 Creating storage buckets..."; \
+	docker exec "$$DB_CONTAINER" psql -U postgres -d postgres -c "\
+		INSERT INTO storage.buckets (id, name, public) VALUES ('profile-avatars', 'profile-avatars', true) ON CONFLICT (id) DO NOTHING; \
+		INSERT INTO storage.buckets (id, name, public) VALUES ('chat-images', 'chat-images', false) ON CONFLICT (id) DO NOTHING; \
+		INSERT INTO storage.buckets (id, name, public) VALUES ('chat-files', 'chat-files', false) ON CONFLICT (id) DO NOTHING; \
+	" 2>/dev/null || true; \
+	echo "  ✅ Storage buckets ready."
 
 # ------------------------------------------
 #  App targets
