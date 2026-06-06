@@ -1,4 +1,5 @@
 /**
+export const dynamic = "force-dynamic";
  * OAuth 2.0 Dynamic Client Registration (RFC 7591)
  *
  * POST /api/oauth/register

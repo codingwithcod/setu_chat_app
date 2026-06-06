@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendVerificationEmail } from "@/lib/email";
 import { generateToken } from "@/lib/utils";

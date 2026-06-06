@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase/server";
 import { resetPasswordSchema } from "@/lib/validations";
 

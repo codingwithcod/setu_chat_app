@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ALL_PERMISSION_SCOPES, type PermissionScope } from "@/lib/api-key-auth";
 

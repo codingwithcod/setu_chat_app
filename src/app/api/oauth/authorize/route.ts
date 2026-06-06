@@ -1,4 +1,5 @@
 /**
+export const dynamic = "force-dynamic";
  * OAuth Authorization Code endpoint — called by the consent page after user approves.
  *
  * POST /api/oauth/authorize

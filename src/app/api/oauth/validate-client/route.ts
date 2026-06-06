@@ -1,4 +1,5 @@
 /**
+export const dynamic = "force-dynamic";
  * Validate an OAuth client — used by the consent page to show client name.
  *
  * GET /api/oauth/validate-client?client_id=...&redirect_uri=...

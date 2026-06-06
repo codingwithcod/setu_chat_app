@@ -1,4 +1,5 @@
 /**
+export const dynamic = "force-dynamic";
  * OAuth 2.1 Token Endpoint
  *
  * POST /api/oauth/token

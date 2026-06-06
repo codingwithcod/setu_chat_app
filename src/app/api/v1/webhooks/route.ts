@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
   authenticateApiKey,
