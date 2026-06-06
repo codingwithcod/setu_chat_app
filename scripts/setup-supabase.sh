@@ -307,6 +307,17 @@ networks:
 OVERRIDE
 
     log_ok "Override file created at $override_file"
+
+    # Ensure COMPOSE_FILE in Supabase .env includes the override.
+    # Supabase sets COMPOSE_FILE=docker-compose.yml which disables
+    # auto-loading of docker-compose.override.yml.
+    local env_file="$SUPABASE_DIR/.env"
+    if grep -q '^COMPOSE_FILE=' "$env_file" 2>/dev/null; then
+        if ! grep -q 'docker-compose.override.yml' "$env_file"; then
+            sed -i 's|^COMPOSE_FILE=docker-compose.yml|COMPOSE_FILE=docker-compose.yml:docker-compose.override.yml|' "$env_file"
+            log_ok "Patched COMPOSE_FILE in .env to include override."
+        fi
+    fi
 }
 
 # ------------------------------------------
