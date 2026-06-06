@@ -526,6 +526,16 @@ configure_app_env() {
     update_env_var "SUPABASE_SERVICE_ROLE_KEY" "$service_role_key" "$app_env_file"
     update_env_var "NEXT_PUBLIC_APP_URL" "https://${APP_DOMAIN}" "$app_env_file"
 
+    # Self-hosted Supabase uses HS256 (symmetric) JWT signing. The app's
+    # middleware needs this secret to verify access tokens locally, because
+    # the JWKS endpoint returns empty keys in self-hosted mode.
+    local jwt_secret
+    jwt_secret=$(grep '^JWT_SECRET=' "$supabase_env" | cut -d'=' -f2-)
+    if [ -n "$jwt_secret" ]; then
+        update_env_var "SUPABASE_JWT_SECRET" "$jwt_secret" "$app_env_file"
+        log_ok "JWT_SECRET copied for local token verification."
+    fi
+
     log_ok "App .env updated → connected to self-hosted Supabase."
 }
 
