@@ -64,6 +64,12 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_APP_URL=https://chat.theabhipatel.com
+    # Resolve the self-hosted Supabase domain to Traefik inside Docker.
+    # Without this, the container tries hairpin NAT (goes out to the internet
+    # and back) which fails on most EC2/VPS setups. The middleware's JWKS
+    # fetch and server-side Supabase calls need this to work.
+    extra_hosts:
+      - "supabase.chat.theabhipatel.com:host-gateway"
     labels:
       - "traefik.enable=true"
       # --- HTTPS Router ---
