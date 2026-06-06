@@ -389,8 +389,8 @@ stop_unused_services() {
     # vector              - log shipping for analytics
     # imgproxy            - image transformations (not used)
     # edge-functions      - Deno Edge Functions (not used)
-    # meta                - pg-meta for Studio (only admin dashboard)
-    local unused_services="analytics vector imgproxy edge-functions meta"
+    # NOTE: meta (pg-meta) is kept running — Studio Table Editor needs it.
+    local unused_services="analytics vector imgproxy edge-functions"
 
     for svc in $unused_services; do
         if docker compose ps -q "$svc" 2>/dev/null | grep -q .; then
