@@ -28,6 +28,9 @@ build
 # Tauri (not needed for web deploy)
 src-tauri
 
+# Mobile app (not needed for web deploy)
+mobile
+
 # Docker files (don't copy into image)
 Dockerfile
 docker-compose*.yml
