@@ -1,8 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 
+import type { PickedAsset } from '@/lib/media';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageWithSender } from '@/types';
 
@@ -16,6 +26,10 @@ interface MessageInputProps {
   onCancelEdit?: () => void;
   onConfirmEdit?: (text: string) => void;
   onAttach?: () => void;
+  /** Staged attachments awaiting send. */
+  attachments?: PickedAsset[];
+  onRemoveAttachment?: (index: number) => void;
+  uploading?: boolean;
 }
 
 export function MessageInput({
@@ -27,10 +41,14 @@ export function MessageInput({
   onCancelEdit,
   onConfirmEdit,
   onAttach,
+  attachments = [],
+  onRemoveAttachment,
+  uploading = false,
 }: MessageInputProps) {
   const { colors, radius } = useTheme();
   const [text, setText] = useState('');
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const hasAttachments = attachments.length > 0;
 
   const pickEmoji = (e: EmojiType) => {
     setText((t) => t + e.emoji);
@@ -69,13 +87,17 @@ export function MessageInput({
     setText('');
   }
 
+  const canSend = !!text.trim() || hasAttachments;
+
   const submit = () => {
+    if (uploading) return;
     const value = text.trim();
-    if (!value) return;
     if (editing) {
+      if (!value) return;
       onConfirmEdit?.(value);
     } else {
-      onSend(value);
+      if (!canSend) return;
+      onSend(value); // screen reads staged attachments separately
     }
     setText('');
   };
@@ -104,6 +126,44 @@ export function MessageInput({
         </View>
       )}
 
+      {hasAttachments && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tray}
+          contentContainerStyle={styles.trayContent}
+        >
+          {attachments.map((a, i) => (
+            <View
+              key={`${a.uri}-${i}`}
+              style={[styles.thumb, { backgroundColor: colors.secondary }]}
+            >
+              {a.file_type === 'image' || a.file_type === 'video' ? (
+                <Image source={{ uri: a.uri }} style={styles.thumbImg} contentFit="cover" alt={a.name} />
+              ) : (
+                <Ionicons
+                  name={a.file_type === 'audio' ? 'musical-notes' : 'document'}
+                  size={26}
+                  color={colors.mutedForeground}
+                />
+              )}
+              {a.file_type === 'video' && (
+                <View style={styles.playOverlay}>
+                  <Ionicons name="play" size={16} color="#fff" />
+                </View>
+              )}
+              <Pressable
+                onPress={() => onRemoveAttachment?.(i)}
+                style={styles.removeBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="close-circle" size={20} color="#fff" />
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
       <View style={styles.row}>
         {!editing && (
           <Pressable onPress={onAttach} hitSlop={8} style={styles.iconBtn}>
@@ -129,17 +189,21 @@ export function MessageInput({
         />
         <Pressable
           onPress={submit}
-          disabled={!text.trim()}
+          disabled={!canSend || uploading}
           style={[
             styles.sendBtn,
-            { backgroundColor: text.trim() ? colors.primary : colors.secondary },
+            { backgroundColor: canSend && !uploading ? colors.primary : colors.secondary },
           ]}
         >
-          <Ionicons
-            name={editing ? 'checkmark' : 'send'}
-            size={20}
-            color={text.trim() ? colors.primaryForeground : colors.mutedForeground}
-          />
+          {uploading ? (
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
+          ) : (
+            <Ionicons
+              name={editing ? 'checkmark' : 'send'}
+              size={20}
+              color={canSend ? colors.primaryForeground : colors.mutedForeground}
+            />
+          )}
         </Pressable>
       </View>
 
@@ -157,6 +221,33 @@ export function MessageInput({
 
 const styles = StyleSheet.create({
   container: { borderTopWidth: StyleSheet.hairlineWidth, paddingBottom: 6 },
+  tray: { maxHeight: 88 },
+  trayContent: { gap: 8, padding: 8, paddingBottom: 0 },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  thumbImg: { width: '100%', height: '100%' },
+  playOverlay: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBtn: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 10,
+  },
   contextBar: {
     flexDirection: 'row',
     alignItems: 'center',

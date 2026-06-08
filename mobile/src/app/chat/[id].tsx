@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Pressable,
   StyleSheet,
@@ -13,11 +14,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AttachmentMenu } from '@/components/chat/AttachmentMenu';
 import { DateSeparator } from '@/components/chat/DateSeparator';
 import { MessageActionSheet } from '@/components/chat/MessageActionSheet';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import { MAX_FILE_MB, uploadAsset, type PickedAsset } from '@/lib/media';
 import { Avatar } from '@/components/ui/Avatar';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
@@ -73,6 +76,45 @@ export default function ChatScreen() {
 
   const [replyingTo, setReplyingTo] = useState<MessageWithSender | null>(null);
   const [editing, setEditing] = useState<MessageWithSender | null>(null);
+  const [staged, setStaged] = useState<PickedAsset[]>([]);
+  const [attachMenu, setAttachMenu] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const onPicked = useCallback((assets: PickedAsset[], tooLarge: string[]) => {
+    if (assets.length) setStaged((prev) => [...prev, ...assets].slice(0, 10));
+    if (tooLarge.length) {
+      Alert.alert(
+        'File too large',
+        `These exceed the ${MAX_FILE_MB} MB limit and were skipped:\n${tooLarge.join('\n')}`
+      );
+    }
+  }, []);
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      const reply = replyingTo;
+      if (staged.length > 0) {
+        const toUpload = staged;
+        setUploading(true);
+        try {
+          const uploaded = await Promise.all(toUpload.map(uploadAsset));
+          setStaged([]);
+          setReplyingTo(null);
+          await sendMessage(text, reply, uploaded);
+        } catch (err) {
+          const detail =
+            err instanceof Error ? err.message : 'Please try again.';
+          Alert.alert('Upload failed', detail);
+        } finally {
+          setUploading(false);
+        }
+      } else {
+        setReplyingTo(null);
+        sendMessage(text, reply);
+      }
+    },
+    [staged, replyingTo, sendMessage]
+  );
   const [actionMsg, setActionMsg] = useState<MessageWithSender | null>(null);
 
   const listRef = useRef<FlashListRef<Row>>(null);
@@ -209,10 +251,7 @@ export default function ChatScreen() {
 
         <View style={{ paddingBottom: insets.bottom }}>
           <MessageInput
-            onSend={(text) => {
-              sendMessage(text, replyingTo);
-              setReplyingTo(null);
-            }}
+            onSend={handleSend}
             onType={onType}
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(null)}
@@ -222,9 +261,21 @@ export default function ChatScreen() {
               if (editing) editMessage(editing.id, text);
               setEditing(null);
             }}
+            onAttach={() => setAttachMenu(true)}
+            attachments={staged}
+            onRemoveAttachment={(i) =>
+              setStaged((prev) => prev.filter((_, idx) => idx !== i))
+            }
+            uploading={uploading}
           />
         </View>
       </KeyboardAvoidingView>
+
+      <AttachmentMenu
+        visible={attachMenu}
+        onClose={() => setAttachMenu(false)}
+        onPicked={onPicked}
+      />
 
       <MessageActionSheet
         message={actionMsg}

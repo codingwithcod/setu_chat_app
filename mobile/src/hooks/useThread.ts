@@ -10,11 +10,13 @@ import type {
   ConversationMember,
   ConversationWithDetails,
   Message,
+  MessageFile,
   MessageReaction,
   MessageStatus,
   MessageWithSender,
   OtherReadReceipt,
   Profile,
+  UploadedFileData,
 } from '@/types';
 import { computeStatus } from '@/lib/receipts';
 
@@ -274,18 +276,37 @@ export function useThread(conversationId: string) {
 
   // ── Actions ─────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (content: string, replyTo?: MessageWithSender | null) => {
+    async (
+      content: string,
+      replyTo?: MessageWithSender | null,
+      files?: UploadedFileData[]
+    ) => {
       const text = content.trim();
-      if (!text || !myId) return;
+      const hasFiles = !!files && files.length > 0;
+      if ((!text && !hasFiles) || !myId) return;
       const cid = clientId();
       const now = new Date().toISOString();
+      const messageType = hasFiles ? files![0].file_type : 'text';
+      const optimisticFiles: MessageFile[] | undefined = hasFiles
+        ? files!.map((f, i) => ({
+            id: `tmpf${i}-${cid}`,
+            message_id: cid,
+            file_url: f.url,
+            file_name: f.name,
+            file_size: f.size,
+            file_type: f.file_type,
+            mime_type: f.mime_type,
+            display_order: i,
+            created_at: now,
+          }))
+        : undefined;
       const optimistic: MessageWithSender = {
         id: cid,
         _clientId: cid,
         conversation_id: conversationId,
         sender_id: myId,
-        content: text,
-        message_type: 'text',
+        content: text || null,
+        message_type: messageType,
         reply_to: replyTo?.id ?? null,
         forwarded_from: null,
         is_edited: false,
@@ -295,13 +316,19 @@ export function useThread(conversationId: string) {
         sender: (profile as Profile) ?? ({ id: myId } as Profile),
         status: 'sending',
         reply_message: replyTo ? { ...replyTo, sender: replyTo.sender } : undefined,
+        files: optimisticFiles,
       };
       setMessages((prev) => [...prev, optimistic]);
 
       try {
         const server = await api.post<MessageWithSender>(
           `/api/conversations/${conversationId}/messages`,
-          { content: text, reply_to: replyTo?.id ?? undefined }
+          {
+            content: text || null,
+            message_type: messageType,
+            reply_to: replyTo?.id ?? undefined,
+            files: hasFiles ? files : undefined,
+          }
         );
         setMessages((prev) => {
           if (prev.some((m) => m.id === server.id)) {

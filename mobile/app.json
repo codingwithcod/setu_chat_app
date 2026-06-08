@@ -33,7 +33,9 @@
           "image": "./assets/images/setu-white-tr.png",
           "imageWidth": 120
         }
-      ]
+      ],
+      "expo-video",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

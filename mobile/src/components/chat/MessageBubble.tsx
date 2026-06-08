@@ -3,6 +3,7 @@ import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AnimatedEmoji } from '@/components/chat/AnimatedEmoji';
+import { MessageMedia } from '@/components/chat/MessageMedia';
 import { MessageStatus } from '@/components/chat/MessageStatus';
 import { getEmojiInfo, getEmojiSize } from '@/lib/emoji';
 import { formatMessageTime } from '@/lib/time';
@@ -130,6 +131,10 @@ function MessageBubbleBase({
             {message.reply_message.content ?? 'Attachment'}
           </Text>
         </View>
+      )}
+
+      {message.files && message.files.length > 0 && (
+        <MessageMedia files={message.files} onOwn={isOwn} />
       )}
 
       {bigEmoji ? (
