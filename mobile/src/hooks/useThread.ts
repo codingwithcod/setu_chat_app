@@ -308,7 +308,17 @@ export function useThread(conversationId: string) {
             return prev.filter((m) => m._clientId !== cid);
           }
           return prev.map((m) =>
-            m._clientId === cid ? { ...server, status: undefined } : m
+            m._clientId === cid
+              ? {
+                  ...server,
+                  status: undefined,
+                  // The POST response omits the nested reply/forward objects
+                  // (only the ids) — keep the ones from the optimistic message
+                  // so the reply preview doesn't vanish after sending.
+                  reply_message: server.reply_message ?? m.reply_message,
+                  forwarded_message: server.forwarded_message ?? m.forwarded_message,
+                }
+              : m
           );
         });
       } catch {
@@ -337,7 +347,14 @@ export function useThread(conversationId: string) {
             return prev.filter((m) => m._clientId !== cid);
           }
           return prev.map((m) =>
-            m._clientId === cid ? { ...server, status: undefined } : m
+            m._clientId === cid
+              ? {
+                  ...server,
+                  status: undefined,
+                  reply_message: server.reply_message ?? m.reply_message,
+                  forwarded_message: server.forwarded_message ?? m.forwarded_message,
+                }
+              : m
           );
         });
       } catch {

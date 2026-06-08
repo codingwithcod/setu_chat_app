@@ -179,6 +179,42 @@ export function hsl(triplet: Hsl, alpha?: number): string {
     : `hsla(${h}, ${s}, ${l}, ${alpha})`;
 }
 
+/** Parse an "H S% L%" triplet to [r, g, b] (0–255). */
+function hslToRgb(triplet: Hsl): [number, number, number] {
+  const [hs, ss, ls] = triplet.split(/\s+/);
+  const h = parseFloat(hs);
+  const s = parseFloat(ss) / 100;
+  const l = parseFloat(ls) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) [r, g] = [c, x];
+  else if (h < 120) [r, g] = [x, c];
+  else if (h < 180) [g, b] = [c, x];
+  else if (h < 240) [g, b] = [x, c];
+  else if (h < 300) [r, b] = [x, c];
+  else [r, b] = [c, x];
+  return [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255),
+  ];
+}
+
+/**
+ * CSS `color-mix(in srgb, <color> percent%, #000 (100-percent)%)` — i.e. mix a
+ * color with black. Since black contributes 0, each channel = channel * pct/100.
+ * Used to match the web's gradient bubble + reply-inset colors.
+ */
+export function mixBlack(triplet: Hsl, percent: number): string {
+  const [r, g, b] = hslToRgb(triplet);
+  const f = percent / 100;
+  return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
+}
+
 // Shape that screens consume: every token pre-resolved to a color string,
 // plus a helper for alpha variants.
 export interface ThemeColors {
@@ -218,6 +254,10 @@ export interface ThemeColors {
   withAlpha: (token: keyof ThemeColors | string, alpha: number) => string;
   /** The brand wordmark gradient stops (primary-light → primary → tertiary). */
   gradient: [string, string, string];
+  /** Own message bubble gradient stops (primary darkened 6% → 20%), matches web. */
+  bubbleOwn: [string, string];
+  /** Reply-preview inset background inside own bubbles (near-black w/ primary tint). */
+  replyOwnBg: string;
 }
 
 export function buildColors(presetId: ThemePresetId, mode: ColorMode): ThemeColors {
@@ -258,6 +298,10 @@ export function buildColors(presetId: ThemePresetId, mode: ColorMode): ThemeColo
     withAlpha: (token, alpha) => hsl(t[token as string] ?? t.primary, alpha),
     // Matches web .gradient-text: linear-gradient(primary-light, primary, tertiary/0.8)
     gradient: [hsl(t.primaryLight), hsl(t.primary), hsl(t.tertiary, 0.8)],
+    // .msg-bubble-sent: linear-gradient(primary 94%/black, primary 80%/black)
+    bubbleOwn: [mixBlack(t.primary, 94), mixBlack(t.primary, 80)],
+    // .reply-preview-own: color-mix(primary 12%, #000 88%)
+    replyOwnBg: mixBlack(t.primary, 12),
   };
 }
 

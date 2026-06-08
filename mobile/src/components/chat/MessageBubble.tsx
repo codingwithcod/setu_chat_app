@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -46,7 +47,6 @@ function MessageBubbleBase({
     !message.forwarded_from &&
     !(message.files && message.files.length > 0);
 
-  const bubbleBg = bigEmoji ? 'transparent' : isOwn ? colors.primary : colors.card;
   const textColor = isOwn ? colors.primaryForeground : colors.foreground;
   const metaColor = bigEmoji
     ? colors.mutedForeground
@@ -85,88 +85,111 @@ function MessageBubbleBase({
 
   const senderColor = colors.tertiary;
 
+  const bubbleStyle = [
+    styles.bubble,
+    {
+      borderRadius: radius.lg,
+      borderBottomRightRadius: isOwn ? 4 : radius.lg,
+      borderBottomLeftRadius: isOwn ? radius.lg : 4,
+    },
+    bigEmoji && styles.bigEmojiBubble,
+  ];
+
+  const bubbleInner = (
+    <>
+      {showSender && !isOwn && (
+        <Text style={[styles.sender, { color: senderColor }]} numberOfLines={1}>
+          {message.sender?.first_name} {message.sender?.last_name}
+        </Text>
+      )}
+
+      {message.forwarded_from && (
+        <Text style={[styles.forwarded, { color: metaColor }]}>↪ Forwarded</Text>
+      )}
+
+      {message.reply_message && (
+        <View
+          style={[
+            styles.reply,
+            {
+              backgroundColor: isOwn ? colors.replyOwnBg : colors.withAlpha('info', 0.1),
+              borderLeftColor: isOwn ? colors.primaryLight : colors.info,
+            },
+          ]}
+        >
+          <Text style={[styles.replyName, { color: textColor }]} numberOfLines={1}>
+            {message.reply_message.sender?.first_name ?? 'Reply'}
+          </Text>
+          <Text
+            style={[
+              styles.replyText,
+              { color: isOwn ? 'rgba(255,255,255,0.78)' : colors.mutedForeground },
+            ]}
+            numberOfLines={1}
+          >
+            {message.reply_message.content ?? 'Attachment'}
+          </Text>
+        </View>
+      )}
+
+      {bigEmoji ? (
+        <View style={styles.bigEmojiRow}>
+          {emojiInfo.emojis.map((e, i) => (
+            <AnimatedEmoji key={i} emoji={e} size={getEmojiSize(emojiInfo.count)} />
+          ))}
+        </View>
+      ) : (
+        !!message.content && (
+          <Text style={[styles.content, { color: textColor }]}>{message.content}</Text>
+        )
+      )}
+
+      <View style={styles.meta}>
+        {message.is_edited && (
+          <Text style={[styles.edited, { color: metaColor }]}>edited</Text>
+        )}
+        <Text style={[styles.time, { color: metaColor }]}>
+          {formatMessageTime(message.created_at)}
+        </Text>
+        {isOwn &&
+          (status === 'failed' ? (
+            <Pressable onPress={() => onRetry?.(message)} hitSlop={8} style={styles.retry}>
+              <Text style={styles.retryText}>Tap to retry</Text>
+              <MessageStatus status={status} color={metaColor} />
+            </Pressable>
+          ) : (
+            <MessageStatus status={status} color={metaColor} />
+          ))}
+      </View>
+    </>
+  );
+
   return (
     <View style={[styles.wrap, isOwn ? styles.alignEnd : styles.alignStart]}>
-      <Pressable
-        onLongPress={() => onLongPress(message)}
-        delayLongPress={250}
-        style={[
-          styles.bubble,
-          {
-            backgroundColor: bubbleBg,
-            borderRadius: radius.lg,
-            borderBottomRightRadius: isOwn ? 4 : radius.lg,
-            borderBottomLeftRadius: isOwn ? radius.lg : 4,
-          },
-          bigEmoji && styles.bigEmojiBubble,
-        ]}
-      >
-        {showSender && !isOwn && (
-          <Text style={[styles.sender, { color: senderColor }]} numberOfLines={1}>
-            {message.sender?.first_name} {message.sender?.last_name}
-          </Text>
-        )}
-
-        {message.forwarded_from && (
-          <Text style={[styles.forwarded, { color: metaColor }]}>
-            ↪ Forwarded
-          </Text>
-        )}
-
-        {message.reply_message && (
+      <Pressable onLongPress={() => onLongPress(message)} delayLongPress={250}>
+        {isOwn && !bigEmoji ? (
+          <LinearGradient
+            colors={colors.bubbleOwn}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={bubbleStyle}
+          >
+            {bubbleInner}
+          </LinearGradient>
+        ) : (
           <View
             style={[
-              styles.reply,
+              bubbleStyle,
               {
-                backgroundColor: isOwn ? 'rgba(0,0,0,0.18)' : colors.withAlpha('info', 0.12),
-                borderLeftColor: isOwn ? colors.primaryLight : colors.info,
+                backgroundColor: bigEmoji ? 'transparent' : colors.muted,
+                borderWidth: bigEmoji || isOwn ? 0 : StyleSheet.hairlineWidth,
+                borderColor: colors.withAlpha('border', 0.6),
               },
             ]}
           >
-            <Text style={[styles.replyName, { color: textColor }]} numberOfLines={1}>
-              {message.reply_message.sender?.first_name ?? 'Reply'}
-            </Text>
-            <Text style={[styles.replyText, { color: metaColor }]} numberOfLines={1}>
-              {message.reply_message.content ?? 'Attachment'}
-            </Text>
+            {bubbleInner}
           </View>
         )}
-
-        {bigEmoji ? (
-          <View style={styles.bigEmojiRow}>
-            {emojiInfo.emojis.map((e, i) => (
-              <AnimatedEmoji key={i} emoji={e} size={getEmojiSize(emojiInfo.count)} />
-            ))}
-          </View>
-        ) : (
-          !!message.content && (
-            <Text style={[styles.content, { color: textColor }]}>
-              {message.content}
-            </Text>
-          )
-        )}
-
-        <View style={styles.meta}>
-          {message.is_edited && (
-            <Text style={[styles.edited, { color: metaColor }]}>edited</Text>
-          )}
-          <Text style={[styles.time, { color: metaColor }]}>
-            {formatMessageTime(message.created_at)}
-          </Text>
-          {isOwn &&
-            (status === 'failed' ? (
-              <Pressable
-                onPress={() => onRetry?.(message)}
-                hitSlop={8}
-                style={styles.retry}
-              >
-                <Text style={styles.retryText}>Tap to retry</Text>
-                <MessageStatus status={status} color={metaColor} />
-              </Pressable>
-            ) : (
-              <MessageStatus status={status} color={metaColor} />
-            ))}
-        </View>
       </Pressable>
 
       {reactionGroups.length > 0 && (

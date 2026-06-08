@@ -1,7 +1,13 @@
+import {
+  DarkTheme as NavDarkTheme,
+  DefaultTheme as NavDefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+  type Theme as NavigationTheme,
+} from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -35,21 +41,46 @@ function useAuthGate() {
 
 function RootNavigator() {
   const { initializing } = useAuth();
-  const { hydrated } = useTheme();
+  const { hydrated, colors, scheme } = useTheme();
   useAuthGate();
 
   useEffect(() => {
     if (!initializing && hydrated) SplashScreen.hideAsync();
   }, [initializing, hydrated]);
 
+  // Override React Navigation's theme so the navigator container itself uses
+  // our themed background — otherwise its default white shows through during
+  // screen transitions (the back-navigation flash).
+  const navTheme = useMemo<NavigationTheme>(() => {
+    const base = scheme === 'dark' ? NavDarkTheme : NavDefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.background,
+        card: colors.card,
+        border: colors.border,
+        primary: colors.primary,
+        text: colors.foreground,
+      },
+    };
+  }, [scheme, colors]);
+
   if (initializing || !hydrated) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="chat/[id]" options={{ animation: 'slide_from_right' }} />
-    </Stack>
+    <NavigationThemeProvider value={navTheme}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="chat/[id]" options={{ animation: 'slide_from_right' }} />
+      </Stack>
+    </NavigationThemeProvider>
   );
 }
 
