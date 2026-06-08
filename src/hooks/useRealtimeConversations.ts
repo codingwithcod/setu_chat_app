@@ -47,6 +47,7 @@ export function useRealtimeConversations() {
   const incrementUnreadCount = useChatStore(
     (state) => state.incrementUnreadCount
   );
+  const setMemberPresence = useChatStore((state) => state.setMemberPresence);
   const { showNotification, isDocumentVisibleRef } = useBrowserNotification();
   const userIdRef = useRef<string | null>(null);
 
@@ -99,6 +100,35 @@ export function useRealtimeConversations() {
               avatar_url: updated.avatar_url,
             });
           }
+        }
+      )
+      .subscribe();
+
+    // Listen for presence changes on profiles (is_online / last_seen). This is
+    // what makes a peer go ONLINE live: when they open the app, sign in, or
+    // their heartbeat refreshes last_seen, the row UPDATE pushes here and we
+    // patch our cached copy of that user. The going-OFFLINE direction is still
+    // backed by the last_seen TTL (see isUserOnline) so a hard browser close —
+    // which never writes is_online=false — still falls offline on its own.
+    const presenceChannel = supabase
+      .channel("realtime-profiles-presence")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+        },
+        (payload) => {
+          const p = payload.new as {
+            id: string;
+            is_online: boolean;
+            last_seen: string;
+          };
+          setMemberPresence(p.id, {
+            is_online: p.is_online,
+            last_seen: p.last_seen,
+          });
         }
       )
       .subscribe();
@@ -252,6 +282,7 @@ export function useRealtimeConversations() {
     return () => {
       supabase.removeChannel(membersChannel);
       supabase.removeChannel(conversationsChannel);
+      supabase.removeChannel(presenceChannel);
       supabase.removeChannel(messagesChannel);
     };
   }, [
@@ -260,6 +291,7 @@ export function useRealtimeConversations() {
     updateConversation,
     removeConversation,
     incrementUnreadCount,
+    setMemberPresence,
     showNotification,
     isDocumentVisibleRef,
   ]);

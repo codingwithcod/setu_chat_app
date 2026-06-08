@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { getInitials } from "@/lib/utils";
+import { isUserOnline } from "@/lib/presence";
+import { useNow } from "@/hooks/useNow";
 import { Search, Loader2 } from "lucide-react";
 import type { SearchResult } from "@/types";
 
@@ -20,6 +22,7 @@ export function UserSearch({ onSelect }: UserSearchProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const now = useNow();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -140,7 +143,7 @@ export function UserSearch({ onSelect }: UserSearchProps) {
                   </AvatarFallback>
                 </Avatar>
                 <OnlineIndicator
-                  isOnline={user.is_online}
+                  isOnline={isUserOnline(user, now)}
                   size="sm"
                   className="absolute -bottom-0.5 -right-0.5"
                 />

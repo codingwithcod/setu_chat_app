@@ -6,6 +6,8 @@ import { useChatStore } from "@/stores/useChatStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { getInitials } from "@/lib/utils";
+import { isUserOnline } from "@/lib/presence";
+import { useNow } from "@/hooks/useNow";
 import { Sparkles, Loader2 } from "lucide-react";
 import type { SearchResult, ConversationWithDetails } from "@/types";
 
@@ -24,6 +26,7 @@ export function SuggestedUsers() {
   } = useChatStore();
   const [isLoading, setIsLoading] = useState(!suggestedUsersLoaded);
   const [startingChatWith, setStartingChatWith] = useState<string | null>(null);
+  const now = useNow();
 
   useEffect(() => {
     // Already fetched this session (cached in the store) — reuse, don't refetch.
@@ -122,7 +125,7 @@ export function SuggestedUsers() {
                   </AvatarFallback>
                 </Avatar>
                 <OnlineIndicator
-                  isOnline={user.is_online}
+                  isOnline={isUserOnline(user, now)}
                   size="sm"
                   className="absolute -bottom-0.5 -right-0.5"
                 />

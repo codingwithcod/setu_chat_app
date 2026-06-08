@@ -50,6 +50,10 @@ interface ChatState {
   resetUnreadCount: (conversationId: string) => void;
   setSuggestedUsers: (users: SearchResult[]) => void;
   removeSuggestedUser: (userId: string) => void;
+  setMemberPresence: (
+    userId: string,
+    presence: { is_online: boolean; last_seen: string }
+  ) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -149,4 +153,32 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       suggestedUsers: state.suggestedUsers.filter((u) => u.id !== userId),
     })),
+  // Patch a single user's live presence (is_online / last_seen) wherever their
+  // profile is cached — every conversation member, the active conversation, and
+  // the suggested-users list. Driven by realtime profiles UPDATE events so a
+  // peer coming online/offline reflects without a refetch. Does NOT re-sort
+  // conversations (presence doesn't affect ordering).
+  setMemberPresence: (userId, presence) =>
+    set((state) => {
+      const patchConv = (conv: ConversationWithDetails) => {
+        if (!conv.members?.some((m) => m.user_id === userId)) return conv;
+        return {
+          ...conv,
+          members: conv.members.map((m) =>
+            m.user_id === userId && m.profile
+              ? { ...m, profile: { ...m.profile, ...presence } }
+              : m
+          ),
+        };
+      };
+      return {
+        conversations: state.conversations.map(patchConv),
+        activeConversation: state.activeConversation
+          ? patchConv(state.activeConversation)
+          : null,
+        suggestedUsers: state.suggestedUsers.map((u) =>
+          u.id === userId ? { ...u, ...presence } : u
+        ),
+      };
+    }),
 }));

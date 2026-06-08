@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
+import { isUserOnline } from "@/lib/presence";
+import { useNow } from "@/hooks/useNow";
 import {
   Search,
   X,
@@ -40,6 +42,7 @@ export function ForwardMessageModal() {
   const { forwardingMessage, setForwardingMessage, conversations } =
     useChatStore();
   const { user } = useAuthStore();
+  const now = useNow();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -474,7 +477,7 @@ export function ForwardMessageModal() {
                                   )}
                                 </AvatarFallback>
                               </Avatar>
-                              {profile.is_online && (
+                              {isUserOnline(profile, now) && (
                                 <span className="fwd-online-dot" />
                               )}
                             </div>
@@ -483,7 +486,7 @@ export function ForwardMessageModal() {
                                 {profile.first_name} {profile.last_name}
                               </span>
                               <span className="fwd-result-meta">
-                                {profile.is_online ? "Online" : "Offline"}
+                                {isUserOnline(profile, now) ? "Online" : "Offline"}
                               </span>
                             </div>
                             <div
@@ -539,7 +542,7 @@ export function ForwardMessageModal() {
                                   )}
                                 </AvatarFallback>
                               </Avatar>
-                              {result.is_online && (
+                              {isUserOnline(result, now) && (
                                 <span className="fwd-online-dot" />
                               )}
                             </div>

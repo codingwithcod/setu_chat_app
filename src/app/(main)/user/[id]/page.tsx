@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { getInitials, formatDate } from "@/lib/utils";
+import { isUserOnline } from "@/lib/presence";
+import { useNow } from "@/hooks/useNow";
 import {
   ArrowLeft,
   Mail,
@@ -36,6 +38,7 @@ export default function PublicProfilePage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const now = useNow();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -122,7 +125,7 @@ export default function PublicProfilePage() {
                 </AvatarFallback>
               </Avatar>
               <OnlineIndicator
-                isOnline={profile.is_online}
+                isOnline={isUserOnline(profile, now)}
                 size="md"
                 className="absolute bottom-1 right-1"
               />
@@ -141,7 +144,7 @@ export default function PublicProfilePage() {
             </p>
           )}
           <div className="flex items-center justify-center gap-2 mt-2">
-            {profile.is_online ? (
+            {isUserOnline(profile, now) ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Online

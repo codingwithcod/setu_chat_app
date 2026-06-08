@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { getInitials, formatDate } from "@/lib/utils";
+import { isUserOnline } from "@/lib/presence";
+import { useNow } from "@/hooks/useNow";
 import {
   ArrowLeft,
   Phone,
@@ -32,6 +34,7 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
   const router = useRouter();
   const { user } = useAuthStore();
   const { setSidebarOpen, updateConversation } = useChatStore();
+  const now = useNow();
 
   // Check if this conversation is pinned by the current user
   const currentMembership = conversation.members?.find(
@@ -75,7 +78,7 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
     : "Unknown User";
 
   const avatar = isSelf ? (user?.avatar_url || null) : isGroup ? conversation.avatar_url : otherProfile?.avatar_url;
-  const isOnline = isSelf ? false : otherProfile?.is_online || false;
+  const isOnline = isSelf ? false : isUserOnline(otherProfile, now);
   const initials = isSelf
     ? (user ? getInitials(user.first_name, user.last_name) : "SM")
     : isGroup

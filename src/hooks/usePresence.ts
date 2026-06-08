@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { PRESENCE_HEARTBEAT_MS } from "@/lib/presence";
 
 export function usePresence() {
   const { user } = useAuthStore();
@@ -53,7 +54,10 @@ export function usePresence() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Heartbeat to maintain online status — every 60 seconds
+    // Heartbeat to keep last_seen fresh while the tab is open. Other clients
+    // treat a user as offline once last_seen goes stale (see isUserOnline), so
+    // this interval MUST stay well under PRESENCE_TTL_MS or peers would flicker
+    // offline between beats.
     const heartbeat = setInterval(() => {
       if (!document.hidden && userIdRef.current) {
         supabase
@@ -65,7 +69,7 @@ export function usePresence() {
           .eq("id", userIdRef.current)
           .then();
       }
-    }, 60000);
+    }, PRESENCE_HEARTBEAT_MS);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);

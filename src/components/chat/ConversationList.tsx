@@ -9,6 +9,8 @@ import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { ConversationListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { SuggestedUsers } from "@/components/chat/SuggestedUsers";
 import { getInitials, formatDate, truncate } from "@/lib/utils";
+import { isUserOnline } from "@/lib/presence";
+import { useNow } from "@/hooks/useNow";
 import { Users, Bookmark, Pin } from "lucide-react";
 import type { ConversationWithDetails } from "@/types";
 
@@ -17,6 +19,7 @@ export function ConversationList() {
   const pathname = usePathname();
   const { conversations, conversationsLoaded } = useChatStore();
   const { user } = useAuthStore();
+  const now = useNow();
 
   if (!conversationsLoaded) return <ConversationListSkeleton />;
 
@@ -69,7 +72,7 @@ export function ConversationList() {
         : "Unknown User",
       subtitle: null,
       avatar: otherProfile?.avatar_url,
-      isOnline: otherProfile?.is_online || false,
+      isOnline: isUserOnline(otherProfile, now),
       initials: otherProfile
         ? getInitials(otherProfile.first_name, otherProfile.last_name)
         : "??",
