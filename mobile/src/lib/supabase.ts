@@ -1,10 +1,31 @@
 import 'react-native-url-polyfill/auto';
 
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
 import { config } from './config';
 import { secureStorage } from './secure-storage';
+
+/**
+ * Storage adapter chosen per platform:
+ *   - native (iOS/Android): encrypted SecureStore-backed storage.
+ *   - web/SSR: localStorage when a browser `window` exists, otherwise a no-op
+ *     so server-side rendering (Node, where `window` is undefined) never throws.
+ * The app targets native; this just keeps `expo start`'s web target from
+ * crashing the dev server.
+ */
+const webStorage = {
+  getItem: (key: string) =>
+    typeof window !== 'undefined' ? window.localStorage.getItem(key) : null,
+  setItem: (key: string, value: string) => {
+    if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    if (typeof window !== 'undefined') window.localStorage.removeItem(key);
+  },
+};
+
+const storage = Platform.OS === 'web' ? webStorage : secureStorage;
 
 /**
  * Supabase client for the mobile app. Used directly for:
@@ -16,7 +37,7 @@ import { secureStorage } from './secure-storage';
  */
 export const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {
   auth: {
-    storage: secureStorage,
+    storage,
     autoRefreshToken: true,
     persistSession: true,
     // No URL-based session detection on native (that's a web/OAuth concern).
