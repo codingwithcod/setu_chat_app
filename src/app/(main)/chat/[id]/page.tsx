@@ -568,7 +568,7 @@ export default function ConversationPage() {
           {isLoading ? (
             <MessageListSkeleton />
           ) : messages.length === 0 ? (
-            <div className="flex min-h-full items-center justify-center">
+            <div className="flex flex-1 items-center justify-center">
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
                   No messages yet. Start the conversation! 👋

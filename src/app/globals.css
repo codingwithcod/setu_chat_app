@@ -175,6 +175,11 @@
   max-width: 56rem; /* ~896px */
   margin-left: auto;
   margin-right: auto;
+  /* Flex column so a `flex-1` child (the empty state) can fill the available
+     height and center itself. The scroll container (absolute inset-0) gives a
+     definite height, and `min-h-full` on this column inherits it. */
+  display: flex;
+  flex-direction: column;
 }
 
 /* === Chat message bubbles ===========================================
