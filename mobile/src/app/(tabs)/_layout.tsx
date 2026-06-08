@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+import { usePresenceHeartbeat } from '@/hooks/usePresenceHeartbeat';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  usePresenceHeartbeat();
 
   return (
     <Tabs
