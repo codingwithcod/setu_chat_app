@@ -58,18 +58,47 @@ export function useBrowserNotification() {
   const permissionRef = useRef<NotificationPermission>("default");
   const isDocumentVisibleRef = useRef(true);
 
-  // Request notification permission on mount (browser only — Tauri handles its own)
+  // Request notification permission (browser only — Tauri handles its own).
+  //
+  // Requesting only on mount is unreliable: Safari and Firefox REQUIRE a user
+  // gesture to show the permission prompt, and some browsers (notably Chrome in
+  // Incognito) silently ignore a gesture-less request. That's the main reason
+  // notifications appear "sometimes" and not at all in an Incognito window that
+  // never granted permission. So we try immediately (works in Chrome normal
+  // windows) AND arm a one-time first-gesture fallback that covers the rest.
   useEffect(() => {
     if (isTauriEnv()) return; // Tauri handles permission on first use
     if (typeof window === "undefined" || !("Notification" in window)) return;
 
     permissionRef.current = Notification.permission;
+    if (Notification.permission !== "default") return; // already granted/denied
 
-    if (Notification.permission === "default") {
-      Notification.requestPermission().then((permission) => {
-        permissionRef.current = permission;
-      });
-    }
+    const ask = () => {
+      try {
+        Notification.requestPermission().then((permission) => {
+          permissionRef.current = permission;
+        });
+      } catch {
+        // Older browsers throw on the promise form — ignore.
+      }
+    };
+
+    // Immediate attempt (Chrome normal windows honor this).
+    ask();
+
+    // First-gesture fallback for browsers that require a user interaction.
+    const onGesture = () => {
+      if (Notification.permission === "default") ask();
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+    window.addEventListener("pointerdown", onGesture, { once: true });
+    window.addEventListener("keydown", onGesture, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
   }, []);
 
   // Track document visibility (tab focused / not focused)
@@ -106,7 +135,10 @@ export function useBrowserNotification() {
         return false;
       }
 
-      if (permissionRef.current !== "granted") {
+      // Read the LIVE permission, not the cached ref — the ref can lag behind
+      // a permission the user granted after mount, causing dropped notifications.
+      permissionRef.current = Notification.permission;
+      if (Notification.permission !== "granted") {
         return false;
       }
 
@@ -115,8 +147,11 @@ export function useBrowserNotification() {
           body,
           icon: "/favicon.ico",
           tag: conversationId || "setu-chat",
+          // renotify re-alerts (sound/vibrate) when another message arrives for
+          // the same conversation tag, instead of silently replacing it.
+          renotify: true,
           silent: false,
-        });
+        } as NotificationOptions);
 
         // Navigate to the conversation on click
         notification.onclick = () => {
