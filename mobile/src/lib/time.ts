@@ -41,6 +41,25 @@ export function formatMessageTime(iso: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '' : timeHM(d);
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Date-separator label: "Today", "Yesterday", or "12 Jun 2026". */
+export function formatDayLabel(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const today = startOfDay(new Date());
+  const diffDays = Math.round((today - startOfDay(d)) / DAY_MS);
+  if (diffDays <= 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** True if two ISO timestamps fall on different calendar days. */
+export function isDifferentDay(a: string, b: string): boolean {
+  return startOfDay(new Date(a)) !== startOfDay(new Date(b));
+}
+
 /** "last seen" subtitle from a profile's last_seen. */
 export function formatLastSeen(iso: string | null | undefined): string {
   if (!iso) return 'offline';

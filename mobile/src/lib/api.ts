@@ -88,9 +88,29 @@ function safeJson(text: string): JsonEnvelope | null {
   }
 }
 
+async function requestFull<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = { ...(await authHeader()) };
+  const res = await fetch(`${config.apiUrl}${path}`, {
+    method: opts.method ?? 'GET',
+    headers,
+    signal: opts.signal,
+  });
+  const text = await res.text();
+  const json = text ? safeJson(text) : null;
+  if (!res.ok) {
+    const message = json?.error || json?.message || `Request failed (${res.status})`;
+    throw new ApiError(res.status, message);
+  }
+  return json as T;
+}
+
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) =>
     request<T>(path, { method: 'GET', signal }),
+  /** GET without unwrapping `data` — for endpoints that return a rich envelope
+   * (e.g. messages: { data, hasMore, nextCursor, otherReadReceipts }). */
+  getFull: <T>(path: string, signal?: AbortSignal) =>
+    requestFull<T>(path, { method: 'GET', signal }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body }),
   patch: <T>(path: string, body?: unknown) =>

@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/verify-token";
 
 // Edit or delete a message
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await getAuthUser();
 
-  if (!user) {
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,7 +24,7 @@ export async function PATCH(
       is_edited: true,
     })
     .eq("id", params.id)
-    .eq("sender_id", user.id)
+    .eq("sender_id", auth.userId)
     .select(
       `
       *,
@@ -47,13 +45,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await getAuthUser();
 
-  if (!user) {
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -64,7 +59,7 @@ export async function DELETE(
       content: null,
     })
     .eq("id", params.id)
-    .eq("sender_id", user.id);
+    .eq("sender_id", auth.userId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
