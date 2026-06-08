@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageWithSender } from '@/types';
@@ -29,6 +30,33 @@ export function MessageInput({
 }: MessageInputProps) {
   const { colors, radius } = useTheme();
   const [text, setText] = useState('');
+  const [emojiOpen, setEmojiOpen] = useState(false);
+
+  const pickEmoji = (e: EmojiType) => {
+    setText((t) => t + e.emoji);
+    onType();
+  };
+
+  const pickerTheme = {
+    backdrop: '#00000066',
+    knob: colors.primary,
+    container: colors.card,
+    header: colors.mutedForeground,
+    skinTonesContainer: colors.secondary,
+    category: {
+      icon: colors.mutedForeground,
+      iconActive: colors.primaryForeground,
+      container: colors.secondary,
+      containerActive: colors.primary,
+    },
+    search: {
+      text: colors.foreground,
+      placeholder: colors.mutedForeground,
+      icon: colors.mutedForeground,
+      background: colors.secondary,
+    },
+    emoji: { selected: colors.accent },
+  };
 
   // When entering edit mode, prefill once.
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,6 +110,9 @@ export function MessageInput({
             <Ionicons name="add-circle-outline" size={28} color={colors.mutedForeground} />
           </Pressable>
         )}
+        <Pressable onPress={() => setEmojiOpen(true)} hitSlop={8} style={styles.iconBtn}>
+          <Ionicons name="happy-outline" size={26} color={colors.mutedForeground} />
+        </Pressable>
         <TextInput
           value={text}
           onChangeText={(t) => {
@@ -111,6 +142,15 @@ export function MessageInput({
           />
         </Pressable>
       </View>
+
+      <EmojiPicker
+        open={emojiOpen}
+        onClose={() => setEmojiOpen(false)}
+        onEmojiSelected={pickEmoji}
+        enableSearchBar
+        categoryPosition="top"
+        theme={pickerTheme}
+      />
     </View>
   );
 }

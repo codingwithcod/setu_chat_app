@@ -1,7 +1,9 @@
 import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AnimatedEmoji } from '@/components/chat/AnimatedEmoji';
 import { MessageStatus } from '@/components/chat/MessageStatus';
+import { getEmojiInfo, getEmojiSize } from '@/lib/emoji';
 import { formatMessageTime } from '@/lib/time';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageStatus as Status, MessageWithSender } from '@/types';
@@ -30,9 +32,27 @@ function MessageBubbleBase({
 }: MessageBubbleProps) {
   const { colors, radius } = useTheme();
 
-  const bubbleBg = isOwn ? colors.primary : colors.card;
+  // Big "live" animated emoji for emoji-only messages (1–3 emojis), like web.
+  const emojiInfo = useMemo(
+    () =>
+      message.content
+        ? getEmojiInfo(message.content)
+        : { isEmojiOnly: false, count: 0, emojis: [] as string[] },
+    [message.content]
+  );
+  const bigEmoji =
+    emojiInfo.isEmojiOnly &&
+    !message.reply_message &&
+    !message.forwarded_from &&
+    !(message.files && message.files.length > 0);
+
+  const bubbleBg = bigEmoji ? 'transparent' : isOwn ? colors.primary : colors.card;
   const textColor = isOwn ? colors.primaryForeground : colors.foreground;
-  const metaColor = isOwn ? colors.primaryForeground : colors.mutedForeground;
+  const metaColor = bigEmoji
+    ? colors.mutedForeground
+    : isOwn
+      ? colors.primaryForeground
+      : colors.mutedForeground;
 
   // Aggregate reactions by emoji.
   const reactionGroups = useMemo(() => {
@@ -78,6 +98,7 @@ function MessageBubbleBase({
             borderBottomRightRadius: isOwn ? 4 : radius.lg,
             borderBottomLeftRadius: isOwn ? radius.lg : 4,
           },
+          bigEmoji && styles.bigEmojiBubble,
         ]}
       >
         {showSender && !isOwn && (
@@ -111,8 +132,18 @@ function MessageBubbleBase({
           </View>
         )}
 
-        {!!message.content && (
-          <Text style={[styles.content, { color: textColor }]}>{message.content}</Text>
+        {bigEmoji ? (
+          <View style={styles.bigEmojiRow}>
+            {emojiInfo.emojis.map((e, i) => (
+              <AnimatedEmoji key={i} emoji={e} size={getEmojiSize(emojiInfo.count)} />
+            ))}
+          </View>
+        ) : (
+          !!message.content && (
+            <Text style={[styles.content, { color: textColor }]}>
+              {message.content}
+            </Text>
+          )
         )}
 
         <View style={styles.meta}>
@@ -173,6 +204,8 @@ const styles = StyleSheet.create({
   alignEnd: { alignItems: 'flex-end' },
   alignStart: { alignItems: 'flex-start' },
   bubble: { maxWidth: '82%', paddingHorizontal: 12, paddingVertical: 8 },
+  bigEmojiBubble: { paddingHorizontal: 0, paddingVertical: 2 },
+  bigEmojiRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
   sender: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
   forwarded: { fontSize: 12, fontStyle: 'italic', marginBottom: 2 },
   content: { fontSize: 15.5, lineHeight: 21 },
