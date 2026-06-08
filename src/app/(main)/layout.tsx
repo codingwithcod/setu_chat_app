@@ -8,6 +8,7 @@ import { useChatStore } from "@/stores/useChatStore";
 import { usePresence } from "@/hooks/usePresence";
 import { useRealtimeConversations } from "@/hooks/useRealtimeConversations";
 import { useRealtimeSessions } from "@/hooks/useRealtimeSessions";
+import { useWebPush } from "@/hooks/useWebPush";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { NetworkBanner } from "@/components/shared/NetworkBanner";
 import {
@@ -92,6 +93,7 @@ export default function MainLayout({
 
   usePresence();
   useRealtimeConversations();
+  useWebPush();
 
   // Session management
   const { pendingSessions, addNewLogin, dismissSession } =

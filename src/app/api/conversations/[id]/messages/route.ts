@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getAuthUser } from "@/lib/auth/verify-token";
 import { fireWebhooks } from "@/lib/webhook-delivery";
+import { notifyNewMessage } from "@/lib/push/notify-message";
 
 // Get messages for a conversation (paginated)
 export async function GET(
@@ -95,6 +96,10 @@ export async function POST(
     console.error("Message insert error:", error.message, "Body:", JSON.stringify(body));
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Fire background push notifications to the other members (fire-and-forget,
+  // mirrors fireWebhooks). The service worker / in-app path dedup foreground.
+  void notifyNewMessage(serviceClient, message);
 
   // Insert message files if provided
   if (body.files && Array.isArray(body.files) && body.files.length > 0) {

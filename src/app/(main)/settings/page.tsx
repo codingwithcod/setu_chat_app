@@ -23,6 +23,7 @@ import {
   clearSessionToken,
   getCurrentSessionId,
 } from "@/lib/session-manager";
+import { unsubscribeWebPush } from "@/lib/push/web-client";
 import {
   isNotificationSoundEnabled,
   setNotificationSoundEnabled,
@@ -300,6 +301,9 @@ export default function SettingsPage() {
 
     // Clear session token from localStorage
     clearSessionToken();
+
+    // Remove this device's push subscription so it stops receiving pushes.
+    await unsubscribeWebPush();
 
     await supabase
       .from("profiles")

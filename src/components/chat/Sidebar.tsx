@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { clearSessionToken, getCurrentSessionId } from "@/lib/session-manager";
+import { unsubscribeWebPush } from "@/lib/push/web-client";
 import { useChatStore } from "@/stores/useChatStore";
 import { UserSearch } from "@/components/search/UserSearch";
 import { ConversationList } from "@/components/chat/ConversationList";
@@ -53,6 +54,9 @@ export function Sidebar() {
 
     // Clear session token from localStorage
     clearSessionToken();
+
+    // Remove this device's push subscription so it stops receiving pushes.
+    await unsubscribeWebPush();
 
     await supabase
       .from("profiles")

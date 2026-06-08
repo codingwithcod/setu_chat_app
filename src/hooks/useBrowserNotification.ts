@@ -145,7 +145,8 @@ export function useBrowserNotification() {
       try {
         const notification = new Notification(title, {
           body,
-          icon: "/favicon.ico",
+          icon: "/icons/setu-logo.png",
+          badge: "/icons/setu-badge.png",
           tag: conversationId || "setu-chat",
           // renotify re-alerts (sound/vibrate) when another message arrives for
           // the same conversation tag, instead of silently replacing it.

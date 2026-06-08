@@ -1,4 +1,5 @@
 import { fireWebhooks } from "@/lib/webhook-delivery";
+import { notifyNewMessage } from "@/lib/push/notify-message";
 import { ServiceCtx, ServiceResult, ok, err } from "./types";
 
 export interface SendMessageParams {
@@ -46,6 +47,9 @@ export async function sendMessage(
     .single();
 
   if (error) return err("INTERNAL_ERROR", error.message, 500);
+
+  // Background push to other members (fire-and-forget).
+  void notifyNewMessage(serviceClient, message);
 
   fireWebhooks(serviceClient, "message.received", conversation_id, userId, {
     conversation_id,
