@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useRealtimeAuthVersion } from "@/hooks/useRealtimeAuth";
 import { playNotificationSound } from "@/lib/notification-sound";
 import type { MessageWithSender } from "@/types";
 
@@ -26,6 +27,7 @@ export function useRealtimeMessages(conversationId: string | null) {
   const addMessage = useChatStore((state) => state.addMessage);
   const updateMessage = useChatStore((state) => state.updateMessage);
   const { user } = useAuthStore();
+  const realtimeAuthVersion = useRealtimeAuthVersion();
   const userIdRef = useRef<string | null>(null);
 
   // Keep ref in sync
@@ -283,5 +285,5 @@ export function useRealtimeMessages(conversationId: string | null) {
       supabase.removeChannel(reactionChannel);
       reactionChannelRef = null;
     };
-  }, [conversationId, addMessage, updateMessage]);
+  }, [conversationId, realtimeAuthVersion, addMessage, updateMessage]);
 }

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { useBrowserNotification } from "@/hooks/useBrowserNotification";
+import { useRealtimeAuthVersion } from "@/hooks/useRealtimeAuth";
 import type { ConversationWithDetails, MessageWithSender } from "@/types";
 
 /**
@@ -49,6 +50,7 @@ export function useRealtimeConversations() {
   );
   const setMemberPresence = useChatStore((state) => state.setMemberPresence);
   const { showNotification, isDocumentVisibleRef } = useBrowserNotification();
+  const realtimeAuthVersion = useRealtimeAuthVersion();
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -287,6 +289,7 @@ export function useRealtimeConversations() {
     };
   }, [
     user?.id,
+    realtimeAuthVersion,
     addConversation,
     updateConversation,
     removeConversation,
