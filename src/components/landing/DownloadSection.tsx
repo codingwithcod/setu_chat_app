@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink, Smartphone, Laptop, Globe, Monitor, ArrowRight, ChevronRight, Check } from "lucide-react";
+import { Download, ExternalLink, Smartphone, Laptop, Globe, Monitor, ArrowRight, ChevronRight, Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
@@ -151,13 +151,15 @@ export default function DownloadSection() {
                   </div>
                 </div>
 
-                <Button
-                  className={`w-full mt-5 bg-gradient-to-r ${p.gradient} text-white border-0 font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-300 gap-2 h-11`}
-                >
-                  <Download className="h-4 w-4" />
-                  Download for {p.name.split(" ")[0]}
-                  <ArrowRight className="h-4 w-4 ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                </Button>
+                <div className="w-full mt-5 h-11 rounded-md relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/30 via-violet-500/30 to-primary/30 p-[1px]">
+                    <div className="w-full h-full rounded-[5px] bg-background/90 backdrop-blur-sm" />
+                  </div>
+                  <div className="relative z-10 flex items-center justify-center gap-2.5 h-full text-sm font-semibold text-foreground/70">
+                    <Clock className="h-4 w-4 text-primary/60 animate-pulse" />
+                    Coming Soon
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -202,12 +204,15 @@ export default function DownloadSection() {
                     <span>{p.size}</span>
                   </div>
 
-                  <Button
-                    className={`w-full mt-5 bg-gradient-to-r ${p.gradient} text-white border-0 font-semibold shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-300 gap-2 h-10`}
-                  >
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+                  <div className="w-full mt-5 h-10 rounded-md relative overflow-hidden">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/30 via-violet-500/30 to-primary/30 p-[1px]">
+                      <div className="w-full h-full rounded-[5px] bg-background/90 backdrop-blur-sm" />
+                    </div>
+                    <div className="relative z-10 flex items-center justify-center gap-2.5 h-full text-sm font-semibold text-foreground/70">
+                      <Clock className="h-4 w-4 text-primary/60 animate-pulse" />
+                      Coming Soon
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
