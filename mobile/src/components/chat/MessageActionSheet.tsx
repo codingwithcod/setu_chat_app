@@ -15,6 +15,7 @@ interface MessageActionSheetProps {
   onReact: (messageId: string, emoji: string) => void;
   onEdit: (m: MessageWithSender) => void;
   onDelete: (m: MessageWithSender) => void;
+  onForward: (m: MessageWithSender) => void;
 }
 
 export function MessageActionSheet({
@@ -25,6 +26,7 @@ export function MessageActionSheet({
   onReact,
   onEdit,
   onDelete,
+  onForward,
 }: MessageActionSheetProps) {
   const { colors, radius } = useTheme();
   if (!message) return null;
@@ -88,6 +90,9 @@ export function MessageActionSheet({
 
           {!message.is_deleted && (
             <Action icon="arrow-undo-outline" label="Reply" onPress={() => onReply(message)} />
+          )}
+          {!message.is_deleted && (
+            <Action icon="arrow-redo-outline" label="Forward" onPress={() => onForward(message)} />
           )}
           {canCopy && (
             <Action

@@ -104,6 +104,42 @@ export async function pickDocument(): Promise<PickResult> {
   return partition(assets);
 }
 
+/** Pick a single square image for an avatar (with crop UI). */
+export async function pickAvatar(): Promise<PickedAsset | null> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) return null;
+  const res = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.8,
+  });
+  if (res.canceled || !res.assets[0]) return null;
+  return fromImagePickerAsset(res.assets[0]);
+}
+
+/**
+ * Upload an avatar to a dedicated bucket (`profile-avatars` or `group-avatars`)
+ * with an entityId folder, matching the web. Returns the public URL.
+ */
+export async function uploadAvatar(
+  asset: PickedAsset,
+  bucket: 'profile-avatars' | 'group-avatars',
+  entityId: string
+): Promise<string> {
+  const form = new FormData();
+  form.append('file', {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.mimeType,
+  } as unknown as Blob);
+  form.append('bucket', bucket);
+  form.append('entityId', entityId);
+
+  const data = await api.upload<{ url: string }>('/api/upload', form);
+  return data.url;
+}
+
 /** Upload one picked asset to /api/upload and return the message file payload. */
 export async function uploadAsset(asset: PickedAsset): Promise<UploadedFileData> {
   const form = new FormData();

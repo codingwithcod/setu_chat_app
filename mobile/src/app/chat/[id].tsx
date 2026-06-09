@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AttachmentMenu } from '@/components/chat/AttachmentMenu';
 import { DateSeparator } from '@/components/chat/DateSeparator';
+import { ForwardMessageModal } from '@/components/chat/ForwardMessageModal';
 import { MessageActionSheet } from '@/components/chat/MessageActionSheet';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageInput } from '@/components/chat/MessageInput';
@@ -116,6 +117,7 @@ export default function ChatScreen() {
     [staged, replyingTo, sendMessage]
   );
   const [actionMsg, setActionMsg] = useState<MessageWithSender | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<MessageWithSender | null>(null);
 
   const listRef = useRef<FlashListRef<Row>>(null);
   const nearBottomRef = useRef(true);
@@ -195,27 +197,33 @@ export default function ChatScreen() {
         <Pressable onPress={() => router.back()} hitSlop={10} style={styles.back}>
           <Ionicons name="chevron-back" size={26} color={colors.foreground} />
         </Pressable>
-        <Avatar uri={display?.avatarUri} name={display?.title} size={40} online={display?.online} />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
-            {display?.title ?? 'Chat'}
-          </Text>
-          {typingUsers.length > 0 ? (
-            <Text style={[styles.subtitle, { color: colors.primary }]}>typing…</Text>
-          ) : display && !display.isGroup && !display.isSelf ? (
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              {display.online
-                ? 'online'
-                : formatLastSeen(
-                    conversation?.members?.find((m) => m.user_id !== myId)?.profile?.last_seen
-                  )}
+        <Pressable
+          style={styles.headerInfo}
+          disabled={!isGroup}
+          onPress={() => isGroup && router.push(`/group/${conversationId}`)}
+        >
+          <Avatar uri={display?.avatarUri} name={display?.title} size={40} online={display?.online} />
+          <View style={styles.headerText}>
+            <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
+              {display?.title ?? 'Chat'}
             </Text>
-          ) : isGroup ? (
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              {conversation?.members?.length ?? 0} members
-            </Text>
-          ) : null}
-        </View>
+            {typingUsers.length > 0 ? (
+              <Text style={[styles.subtitle, { color: colors.primary }]}>typing…</Text>
+            ) : display && !display.isGroup && !display.isSelf ? (
+              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+                {display.online
+                  ? 'online'
+                  : formatLastSeen(
+                      conversation?.members?.find((m) => m.user_id !== myId)?.profile?.last_seen
+                    )}
+              </Text>
+            ) : isGroup ? (
+              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+                {conversation?.members?.length ?? 0} members · tap for info
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView
@@ -285,7 +293,10 @@ export default function ChatScreen() {
         onReact={toggleReaction}
         onEdit={(m) => setEditing(m)}
         onDelete={confirmDelete}
+        onForward={(m) => setForwardMsg(m)}
       />
+
+      <ForwardMessageModal message={forwardMsg} onClose={() => setForwardMsg(null)} />
     </Screen>
   );
 }
@@ -302,6 +313,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   back: { paddingHorizontal: 8, height: '100%', justifyContent: 'center' },
+  headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerText: { flex: 1 },
   title: { fontSize: 17, fontWeight: '700' },
   subtitle: { fontSize: 13 },
