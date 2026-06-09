@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   StyleSheet,
@@ -106,7 +107,10 @@ export function AddMembersModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={close}>
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
+      >
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable onPress={close} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="close" size={24} color={colors.foreground} />
@@ -140,6 +144,7 @@ export function AddMembersModal({
           data={results}
           keyExtractor={(item) => item.id}
           renderItem={renderUser}
+          style={styles.flex}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             search.loading ? (
@@ -162,12 +167,13 @@ export function AddMembersModal({
             loading={saving}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   container: { flex: 1 },
   header: {
     height: 56,

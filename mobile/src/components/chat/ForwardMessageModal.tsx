@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   StyleSheet,
@@ -206,7 +207,10 @@ export function ForwardMessageModal({ message, onClose }: ForwardMessageModalPro
       onRequestClose={close}
       transparent={false}
     >
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
+      >
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable onPress={close} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="close" size={24} color={colors.foreground} />
@@ -248,6 +252,7 @@ export function ForwardMessageModal({ message, onClose }: ForwardMessageModalPro
           data={rows}
           keyExtractor={(item) => `${item.kind}-${item.id}`}
           renderItem={renderRow}
+          style={styles.flex}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             search.loading ? (
@@ -270,12 +275,13 @@ export function ForwardMessageModal({ message, onClose }: ForwardMessageModalPro
             loading={sending}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   container: { flex: 1 },
   header: {
     height: 56,

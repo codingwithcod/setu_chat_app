@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -105,6 +106,7 @@ export default function NewGroupScreen() {
         <View style={{ width: 34 }} />
       </View>
 
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
       {/* Group name */}
       <View style={styles.nameWrap}>
         <View style={[styles.groupIcon, { backgroundColor: colors.accent }]}>
@@ -127,6 +129,7 @@ export default function NewGroupScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.chipsScroll}
           contentContainerStyle={styles.chips}
         >
           {selected.map((u) => (
@@ -169,6 +172,7 @@ export default function NewGroupScreen() {
         data={search.results}
         keyExtractor={(item) => item.id}
         renderItem={renderUser}
+        style={styles.flex}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           search.loading ? (
@@ -198,11 +202,13 @@ export default function NewGroupScreen() {
           loading={creating}
         />
       </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   header: {
     height: 56,
     flexDirection: 'row',
@@ -234,6 +240,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  chipsScroll: { flexGrow: 0, maxHeight: 92 },
   chips: { gap: 14, paddingHorizontal: 16, paddingBottom: 12 },
   chip: { width: 56, alignItems: 'center', gap: 4 },
   chipRemove: {
