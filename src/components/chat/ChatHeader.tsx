@@ -24,6 +24,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ConversationWithDetails } from "@/types";
 
 interface ChatHeaderProps {
@@ -103,7 +109,7 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
   };
 
   return (
-    <div className="flex items-center justify-between border-b border-border px-4 py-3 glass-strong">
+    <div className="relative z-50 flex items-center justify-between border-b border-border px-4 py-3 glass-strong">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -142,12 +148,30 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
       </div>
 
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="rounded-full hidden sm:flex">
-          <Phone className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="rounded-full hidden sm:flex">
-          <Video className="h-4 w-4" />
-        </Button>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full hidden sm:flex">
+                <Phone className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Coming Soon</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full hidden sm:flex">
+                <Video className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Coming Soon</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
