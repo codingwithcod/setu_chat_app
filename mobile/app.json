@@ -36,7 +36,23 @@
         }
       ],
       "expo-video",
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Setu needs access to your photos so you can send images and set your profile or group photo.",
+          "cameraPermission": "Setu needs access to your camera so you can take and send photos and videos.",
+          "microphonePermission": "Setu needs access to your microphone to record audio in the videos you capture."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
