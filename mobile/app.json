@@ -4,7 +4,7 @@
     "slug": "setu",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/setu-logo.png",
+    "icon": "./assets/images/icon-branded.png",
     "scheme": "setu",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#0A0A0B",
@@ -16,7 +16,7 @@
       "package": "app.setu.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#e84393",
-        "foregroundImage": "./assets/images/setu-white-tr.png"
+        "foregroundImage": "./assets/images/android-icon-foreground-branded.png"
       },
       "predictiveBackGestureEnabled": false
     },
