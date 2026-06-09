@@ -6,6 +6,7 @@ import { AnimatedEmoji } from '@/components/chat/AnimatedEmoji';
 import { MessageMedia } from '@/components/chat/MessageMedia';
 import { MessageStatus } from '@/components/chat/MessageStatus';
 import { getEmojiInfo, getEmojiSize } from '@/lib/emoji';
+import { haptics } from '@/lib/haptics';
 import { formatMessageTime } from '@/lib/time';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageStatus as Status, MessageWithSender } from '@/types';
@@ -171,7 +172,13 @@ function MessageBubbleBase({
 
   return (
     <View style={[styles.wrap, isOwn ? styles.alignEnd : styles.alignStart]}>
-      <Pressable onLongPress={() => onLongPress(message)} delayLongPress={250}>
+      <Pressable
+        onLongPress={() => {
+          haptics.medium();
+          onLongPress(message);
+        }}
+        delayLongPress={250}
+      >
         {isOwn && !bigEmoji ? (
           <LinearGradient
             colors={colors.bubbleOwn}

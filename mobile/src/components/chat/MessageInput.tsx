@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 
+import { haptics } from '@/lib/haptics';
 import type { PickedAsset } from '@/lib/media';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageWithSender } from '@/types';
@@ -97,6 +98,7 @@ export function MessageInput({
       onConfirmEdit?.(value);
     } else {
       if (!canSend) return;
+      haptics.light();
       onSend(value); // screen reads staged attachments separately
     }
     setText('');

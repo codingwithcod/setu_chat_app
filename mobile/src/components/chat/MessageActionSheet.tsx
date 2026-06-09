@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageWithSender } from '@/types';
 
@@ -74,6 +75,7 @@ export function MessageActionSheet({
                 <Pressable
                   key={e}
                   onPress={() => {
+                    haptics.light();
                     onReact(message.id, e);
                     onClose();
                   }}

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeModePreference } from '@/theme/theme';
 
@@ -23,7 +24,10 @@ export function ThemeSwitcher() {
           return (
             <Pressable
               key={m.id}
-              onPress={() => setMode(m.id)}
+              onPress={() => {
+                haptics.selection();
+                setMode(m.id);
+              }}
               style={[
                 styles.segmentItem,
                 { borderRadius: radius.sm },
@@ -58,7 +62,10 @@ export function ThemeSwitcher() {
           return (
             <Pressable
               key={p.id}
-              onPress={() => setPreset(p.id)}
+              onPress={() => {
+                haptics.selection();
+                setPreset(p.id);
+              }}
               style={[
                 styles.presetRow,
                 {

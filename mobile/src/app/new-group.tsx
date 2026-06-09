@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { useUserSearch } from '@/hooks/useUsers';
 import { createGroup } from '@/lib/conversation-actions';
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { SearchResult } from '@/types';
 
@@ -57,6 +58,7 @@ export default function NewGroupScreen() {
         { name: name.trim(), memberIds: selected.map((u) => u.id) },
         queryClient
       );
+      haptics.success();
       router.replace(`/chat/${id}`);
     } catch (err) {
       setCreating(false);

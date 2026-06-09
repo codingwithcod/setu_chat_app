@@ -1,12 +1,13 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { ActivityIndicator, RefreshControl, StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 
 import { ComingSoon } from '@/components/ComingSoon';
 import { ConversationRow } from '@/components/chat/ConversationRow';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Screen } from '@/components/ui/Screen';
+import { RowSkeletonList } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useConversations } from '@/hooks/useConversations';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -35,9 +36,7 @@ export default function ChatsScreen() {
     <Screen edges={['top', 'left', 'right']}>
       <ScreenHeader brand />
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <RowSkeletonList />
       ) : isError ? (
         <ComingSoon
           icon="cloud-offline-outline"
@@ -73,6 +72,5 @@ export default function ChatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   sep: { height: StyleSheet.hairlineWidth, marginLeft: 80 },
 });

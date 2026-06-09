@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -27,8 +28,15 @@ export default function ContactsScreen() {
 
   const [query, setQuery] = useState('');
   const search = useUserSearch(query);
-  const { users: suggested, loading: loadingSuggested } = useSuggestedUsers();
+  const { users: suggested, loading: loadingSuggested, reload } = useSuggestedUsers();
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }, [reload]);
 
   const openChat = useCallback(
     async (user: SearchResult) => {
@@ -127,6 +135,16 @@ export default function ContactsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderUser}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          showResults ? undefined : (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          )
+        }
         ListEmptyComponent={
           search.loading || loadingSuggested ? (
             <View style={styles.center}>

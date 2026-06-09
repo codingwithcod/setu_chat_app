@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -24,6 +25,7 @@ import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { MAX_FILE_MB, uploadAsset, type PickedAsset } from '@/lib/media';
 import { Avatar } from '@/components/ui/Avatar';
 import { Screen } from '@/components/ui/Screen';
+import { ThreadSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import {
   CONVERSATIONS_KEY,
@@ -232,8 +234,35 @@ export default function ChatScreen() {
         keyboardVerticalOffset={0}
       >
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
+          <View style={styles.flex}>
+            <ThreadSkeleton />
+          </View>
+        ) : rows.length === 0 ? (
+          <View style={[styles.flex, styles.empty]}>
+            <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+              No messages yet. Start the conversation! 👋
+            </Text>
+            <Pressable
+              onPress={() => handleSend('👋')}
+              style={({ pressed }) => [
+                styles.sayHiShadow,
+                { shadowColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+                pressed && { transform: [{ scale: 0.97 }] },
+              ]}
+            >
+              <LinearGradient
+                colors={colors.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sayHiBorder}
+              >
+                <View style={[styles.sayHiInner, { backgroundColor: colors.card }]}>
+                  <Text style={[styles.sayHiText, { color: colors.foreground }]}>
+                    Say Hi 👋
+                  </Text>
+                </View>
+              </LinearGradient>
+            </Pressable>
           </View>
         ) : (
           <FlashList
@@ -303,7 +332,18 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  empty: { alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 },
+  emptySubtitle: { fontSize: 14.5, textAlign: 'center', lineHeight: 21 },
+  sayHiShadow: {
+    borderRadius: 999,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  sayHiBorder: { borderRadius: 999, padding: 1.5 },
+  sayHiInner: { borderRadius: 999, paddingVertical: 10, paddingHorizontal: 24 },
+  sayHiText: { fontSize: 14, fontWeight: '700' },
   header: {
     height: 60,
     flexDirection: 'row',
