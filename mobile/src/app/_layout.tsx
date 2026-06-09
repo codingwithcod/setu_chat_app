@@ -7,6 +7,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect, useMemo } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -47,6 +48,14 @@ function RootNavigator() {
   useEffect(() => {
     if (!initializing && hydrated) SplashScreen.hideAsync();
   }, [initializing, hydrated]);
+
+  // Paint the NATIVE root/window background to match the theme. Without this the
+  // window defaults to white and flashes through during native-stack slide
+  // transitions (e.g. pressing back out of a chat). contentStyle/navTheme only
+  // theme the JS scenes, not the native layer behind them.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+  }, [colors.background]);
 
   // Override React Navigation's theme so the navigator container itself uses
   // our themed background — otherwise its default white shows through during
