@@ -28,16 +28,13 @@ export async function GET(
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
   const serviceClient = await createServiceClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const auth = await getAuthUser();
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = { id: auth.userId };
 
   const body = await request.json();
   const updates: Record<string, unknown> = {};

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/verify-token";
 
 /**
  * GET /api/sessions
@@ -8,14 +9,11 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
  */
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const auth = await getAuthUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const user = { id: auth.userId };
 
     // Get current session token from header
     const currentToken = request.headers.get("x-session-token");
@@ -57,14 +55,11 @@ export async function GET(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const auth = await getAuthUser();
+    if (!auth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const user = { id: auth.userId };
 
     const currentToken = request.headers.get("x-session-token");
 

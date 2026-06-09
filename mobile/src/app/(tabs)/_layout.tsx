@@ -1,12 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { usePresenceHeartbeat } from '@/hooks/usePresenceHeartbeat';
+import { useNotificationStore } from '@/stores/notifications';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   usePresenceHeartbeat();
+  useActivityFeed();
+  const unread = useNotificationStore((s) => s.unreadCount);
 
   return (
     <Tabs
@@ -44,6 +48,8 @@ export default function TabsLayout() {
         name="activity"
         options={{
           title: 'Activity',
+          tabBarBadge: unread > 0 ? (unread > 99 ? '99+' : unread) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.primaryForeground },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
