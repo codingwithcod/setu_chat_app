@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { usePresenceHeartbeat } from '@/hooks/usePresenceHeartbeat';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useNotificationStore } from '@/stores/notifications';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -10,6 +11,7 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   usePresenceHeartbeat();
   useActivityFeed();
+  usePushNotifications();
   const unread = useNotificationStore((s) => s.unreadCount);
 
   return (

@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { api } from '@/lib/api';
+import { unregisterPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types';
 
@@ -104,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Remove this device's push registration while we're still authenticated.
+    await unregisterPush();
     await supabase.auth.signOut();
     setProfile(null);
   }, []);
