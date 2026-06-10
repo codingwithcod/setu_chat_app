@@ -65,7 +65,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
