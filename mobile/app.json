@@ -4,7 +4,7 @@
     "slug": "setu",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon-branded.png",
+    "icon": "./assets/images/icon-dark.png",
     "scheme": "setu",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#0A0A0B",
@@ -17,8 +17,8 @@
       "package": "app.setu.mobile",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#e84393",
-        "foregroundImage": "./assets/images/android-icon-foreground-branded.png"
+        "backgroundColor": "#060608",
+        "foregroundImage": "./assets/images/android-icon-foreground-dark.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -36,9 +36,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#e84393",
-          "image": "./assets/images/setu-white-tr.png",
-          "imageWidth": 120
+          "backgroundColor": "#000000",
+          "image": "./assets/images/splash-dark.png",
+          "resizeMode": "cover"
         }
       ],
       "expo-video",
