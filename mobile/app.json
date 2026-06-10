@@ -8,12 +8,14 @@
     "scheme": "setu",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#0A0A0B",
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.setu.mobile"
     },
     "android": {
       "package": "app.setu.mobile",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#e84393",
         "foregroundImage": "./assets/images/android-icon-foreground-branded.png"
@@ -66,8 +68,7 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},

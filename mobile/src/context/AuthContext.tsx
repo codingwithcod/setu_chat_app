@@ -60,13 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     // Restore any persisted session on launch.
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (!active) return;
-      setSession(s);
-      currentUserId.current = s?.user.id ?? null;
-      if (s?.user.id) loadProfile(s.user.id).finally(() => setInitializing(false));
-      else setInitializing(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        if (!active) return;
+        setSession(s);
+        currentUserId.current = s?.user.id ?? null;
+        if (s?.user.id) loadProfile(s.user.id).finally(() => setInitializing(false));
+        else setInitializing(false);
+      })
+      .catch(() => {
+        // Never let a session-restore failure hang the splash forever.
+        if (active) setInitializing(false);
+      });
 
     // React to sign-in / sign-out / token refresh.
     const {
