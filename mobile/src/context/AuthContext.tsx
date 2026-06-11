@@ -66,8 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setSession(s);
         currentUserId.current = s?.user.id ?? null;
-        if (s?.user.id) loadProfile(s.user.id).finally(() => setInitializing(false));
-        else setInitializing(false);
+        // Unblock the splash as soon as the session is restored (a fast local
+        // storage read). Don't wait on the profile network fetch — load it in
+        // the background; screens render fine with profile === null and fill in.
+        setInitializing(false);
+        if (s?.user.id) loadProfile(s.user.id);
       })
       .catch(() => {
         // Never let a session-restore failure hang the splash forever.
