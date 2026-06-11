@@ -4,7 +4,17 @@ import { type NextRequest, NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public API + MCP server + OAuth endpoints — skip cookie session auth
+  // SEO files - skip middleware entirely so they return pure XML/JSON
+  const isSeoFile =
+    pathname === "/sitemap.xml" ||
+    pathname === "/robots.txt" ||
+    pathname === "/manifest.webmanifest";
+
+  if (isSeoFile) {
+    return NextResponse.next();
+  }
+
+  // Public API + MCP server + OAuth endpoints - skip cookie session auth
   // (these authenticate via Bearer API key / OAuth in the route handler)
   // and add CORS headers for cross-origin clients.
   const isPublicApi =
