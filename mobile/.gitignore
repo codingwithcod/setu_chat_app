@@ -42,3 +42,7 @@ example
 # generated native folders
 /ios
 /android
+
+setu-5483d-firebase-adminsdk-fbsvc-30937977eb.json
+# Firebase service-account private key (FCM credential) — never commit; upload via `eas credentials`
+*-firebase-adminsdk-*.json

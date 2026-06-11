@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "274038393696",
+    "project_id": "setu-5483d",
+    "storage_bucket": "setu-5483d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:274038393696:android:eec30ba8bb6afa6e022c05",
+        "android_client_info": {
+          "package_name": "app.setu.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9qIhy4BV14_kMjjskZUF35SmHajweSvo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
