@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { useChatStore } from "@/stores/useChatStore";
 import { toast } from "@/stores/useToastStore";
 import { validateFile, getFileCategory } from "@/lib/file-validation";
@@ -35,11 +42,13 @@ interface MessageInputProps {
   conversationId: string;
 }
 
-export function MessageInput({
-  onSend,
-  onTyping,
-  conversationId,
-}: MessageInputProps) {
+export interface MessageInputHandle {
+  /** Stage external files (drag & drop) through the same validation as the attach menu */
+  addFiles: (files: FileList) => void;
+}
+
+export const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
+  function MessageInput({ onSend, onTyping, conversationId }, ref) {
   const { replyingTo, setReplyingTo } = useChatStore();
   const [message, setMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -293,6 +302,30 @@ export function MessageInput({
     [stagedFiles, getStagedCategory]
   );
 
+  // Expose addFiles so the chat page can stage drag & dropped files
+  useImperativeHandle(
+    ref,
+    () => ({
+      addFiles: (files: FileList) => {
+        if (uploading || files.length === 0) return;
+        addStagedFiles(files, "file");
+      },
+    }),
+    [addStagedFiles, uploading]
+  );
+
+  // Stage files pasted from the clipboard (screenshots, copied files)
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = e.clipboardData?.files;
+      if (!files || files.length === 0) return;
+      e.preventDefault();
+      if (uploading) return;
+      addStagedFiles(files, "file");
+    },
+    [addStagedFiles, uploading]
+  );
+
   const handleRemoveStagedFile = useCallback((fileId: string) => {
     setStagedFiles((prev) => {
       const file = prev.find((f) => f.id === fileId);
@@ -472,6 +505,7 @@ export function MessageInput({
             onTyping();
           }}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder="Type a message..."
@@ -536,4 +570,5 @@ export function MessageInput({
      </div>
     </div>
   );
-}
+  }
+);

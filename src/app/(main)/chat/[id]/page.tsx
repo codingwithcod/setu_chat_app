@@ -9,13 +9,13 @@ import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageBubble } from "@/components/chat/MessageBubble";
-import { MessageInput } from "@/components/chat/MessageInput";
+import { MessageInput, type MessageInputHandle } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { MessageListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
 import { getFailedMessages, addFailedMessage, removeFailedMessage } from "@/lib/failed-messages";
 import type { MessageWithSender, ConversationWithDetails, UploadedFileData, OtherReadReceipt, MessageStatus, MessageReceiptDetail } from "@/types";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, Paperclip } from "lucide-react";
 
 export default function ConversationPage() {
   const params = useParams();
@@ -49,6 +49,13 @@ export default function ConversationPage() {
 
   // Ref to track typing indicator element
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
+
+  // Drag & drop files onto the conversation
+  const messageInputRef = useRef<MessageInputHandle>(null);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  // Depth counter: dragenter/dragleave fire for every child element crossed,
+  // so only hide the overlay when the depth returns to zero.
+  const dragDepthRef = useRef(0);
 
   // Realtime hooks
   useRealtimeMessages(conversationId);
@@ -525,6 +532,42 @@ export default function ConversationPage() {
     }
   };
 
+  // Drag & drop handlers (only react to drags that contain files,
+  // not text selections or dragged messages)
+  const dragHasFiles = (e: React.DragEvent) =>
+    e.dataTransfer.types.includes("Files");
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    setIsDraggingFiles(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDraggingFiles(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setIsDraggingFiles(false);
+    if (e.dataTransfer.files.length > 0) {
+      messageInputRef.current?.addFiles(e.dataTransfer.files);
+    }
+  };
+
   // Calculate where to place the unread divider
   const unreadDividerIndex =
     unreadCount > 0 && messages.length > 0
@@ -546,7 +589,25 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="relative flex h-full flex-col"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drop files overlay */}
+      {isDraggingFiles && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 px-12 py-10">
+            <Paperclip className="h-8 w-8 text-primary" />
+            <p className="text-sm font-medium text-foreground">
+              Drop files to attach
+            </p>
+          </div>
+        </div>
+      )}
+
       <ChatHeader conversation={activeConversation} />
 
       {/* Messages container wrapper (relative for FAB positioning) */}
@@ -642,6 +703,7 @@ export default function ConversationPage() {
       </div>
 
       <MessageInput
+        ref={messageInputRef}
         onSend={handleSendMessage}
         onTyping={sendTyping}
         conversationId={conversationId}
