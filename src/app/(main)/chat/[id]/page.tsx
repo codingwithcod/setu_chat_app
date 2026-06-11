@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
@@ -475,6 +476,54 @@ export default function ConversationPage() {
           });
           // In case this was a retry, remove from failed storage
           removeFailedMessage(conversationId, optimisticMessage.id);
+
+          // A delivered/read receipt can arrive over realtime BEFORE this
+          // POST returns — while the message still had its temp id — and the
+          // receipt listener skips temp messages, so that update is lost.
+          // Re-check receipts once so the status doesn't stick at "sent".
+          void (async () => {
+            try {
+              const supabase = createClient();
+              const { data: receipts } = await supabase
+                .from("read_receipts")
+                .select(
+                  "user_id, last_read_at, last_read_message_id, delivered_at"
+                )
+                .eq("conversation_id", conversationId)
+                .neq("user_id", user.id);
+              if (!receipts || receipts.length === 0) return;
+
+              const conversation = useChatStore.getState().activeConversation;
+              const otherMembers = (conversation?.members || [])
+                .filter((m) => m.user_id !== user.id)
+                .map((m) => ({
+                  user_id: m.user_id,
+                  first_name: m.profile.first_name,
+                  last_name: m.profile.last_name,
+                }));
+
+              const sentMessage = {
+                ...optimisticMessage,
+                id: savedMessage.id,
+                created_at: savedMessage.created_at,
+              } as MessageWithSender;
+              const details = computeReceiptDetails(
+                sentMessage,
+                receipts as OtherReadReceipt[],
+                otherMembers
+              );
+              const aggregate = getAggregateStatus(details);
+              if (aggregate !== "sent") {
+                useChatStore.getState().updateMessage(savedMessage.id, {
+                  status: aggregate,
+                  receiptDetails:
+                    conversation?.type === "group" ? details : undefined,
+                });
+              }
+            } catch {
+              // Best-effort — a later receipt event will correct the status
+            }
+          })();
         }
       }
     } catch (error) {

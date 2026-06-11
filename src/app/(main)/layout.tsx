@@ -232,7 +232,33 @@ export default function MainLayout({
           const res = await fetch("/api/conversations");
           const data = await res.json();
           if (data.data) {
-            setConversations(data.data as ConversationWithDetails[]);
+            const conversations = data.data as ConversationWithDetails[];
+            setConversations(conversations);
+
+            // Mark unread conversations as delivered — messages that arrived
+            // while this device was offline got no realtime INSERT event, so
+            // nothing else records their delivery.
+            const undelivered = conversations.filter(
+              (c) => (c.unread_count || 0) > 0
+            );
+            if (undelivered.length > 0) {
+              const now = new Date().toISOString();
+              supabase
+                .from("read_receipts")
+                .upsert(
+                  undelivered.map((c) => ({
+                    conversation_id: c.id,
+                    user_id: authUser.id,
+                    delivered_at: now,
+                  })),
+                  { onConflict: "conversation_id,user_id" }
+                )
+                .then(({ error }) => {
+                  if (error) {
+                    console.error("Failed to mark delivered:", error);
+                  }
+                });
+            }
           }
         } catch (convError) {
           console.error("Failed to load conversations:", convError);
