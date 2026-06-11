@@ -39,29 +39,35 @@ export function Sidebar() {
 
   const handleSignOut = async () => {
     const supabase = createClient();
-
-    // Delete the current session record so it doesn't show on other devices
     const currentSessionId = getCurrentSessionId();
+    const uid = user?.id;
+
+    // Fire all server-side cleanup in the BACKGROUND while we're still
+    // authenticated — don't block the redirect on these network round-trips.
+    // `keepalive` lets the requests finish even after we navigate to /login.
     if (currentSessionId) {
-      try {
-        await fetch(`/api/sessions/${currentSessionId}`, {
-          method: "DELETE",
-        });
-      } catch {
-        // Best-effort cleanup
-      }
+      // Delete the current session record so it doesn't show on other devices.
+      fetch(`/api/sessions/${currentSessionId}`, {
+        method: "DELETE",
+        keepalive: true,
+      }).catch(() => {});
+    }
+    // Remove this device's push subscription so it stops receiving pushes.
+    void unsubscribeWebPush();
+    // Mark offline (best-effort; presence also clears on disconnect).
+    if (uid) {
+      supabase
+        .from("profiles")
+        .update({ is_online: false, last_seen: new Date().toISOString() })
+        .eq("id", uid)
+        .then(
+          () => {},
+          () => {}
+        );
     }
 
-    // Clear session token from localStorage
+    // Clear local auth and redirect immediately — no waiting on the network.
     clearSessionToken();
-
-    // Remove this device's push subscription so it stops receiving pushes.
-    await unsubscribeWebPush();
-
-    await supabase
-      .from("profiles")
-      .update({ is_online: false, last_seen: new Date().toISOString() })
-      .eq("id", user?.id);
     await supabase.auth.signOut({ scope: "local" });
     setUser(null);
     router.push("/login");
