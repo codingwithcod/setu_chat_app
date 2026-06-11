@@ -1,5 +1,3 @@
-"use client";
-
 import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import StatsSection from "@/components/landing/StatsSection";
@@ -14,27 +12,29 @@ import McpSection from "@/components/landing/McpSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
-import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import ScrollAnimationProvider from "@/components/shared/ScrollAnimationProvider";
+import { HomeJsonLd } from "@/components/seo/JsonLd";
 
 export default function Home() {
-  useScrollAnimation();
-
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <Navbar />
-      <HeroSection />
-      <StatsSection />
-      <FeaturesSection />
-      <TechShowcase />
-      <RealtimeSection />
-      <SecuritySection />
-      <DownloadSection />
-      <GroupsSection />
-      <APISection />
-      <McpSection />
-      <TestimonialsSection />
-      <CTASection />
-      <Footer />
-    </div>
+    <ScrollAnimationProvider>
+      <HomeJsonLd />
+      <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+        <Navbar />
+        <HeroSection />
+        <StatsSection />
+        <FeaturesSection />
+        <TechShowcase />
+        <RealtimeSection />
+        <SecuritySection />
+        <DownloadSection />
+        <GroupsSection />
+        <APISection />
+        <McpSection />
+        <TestimonialsSection />
+        <CTASection />
+        <Footer />
+      </div>
+    </ScrollAnimationProvider>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Github, Twitter } from "lucide-react";
+import { Github, Linkedin } from "lucide-react";
 import setuLogo from "@/app/setu-white-tr.png";
 import { DevelopedBy } from "@/components/shared/DevelopedBy";
 
@@ -17,12 +17,12 @@ const footerLinks = {
     { label: "Public API Docs", href: "/docs/public-api" },
     { label: "MCP Server Docs", href: "/docs/mcp-server" },
     { label: "API Studio", href: "/developer" },
+    { label: "GitHub", href: "https://github.com/theabhipatel/setu_chat_app" },
   ],
   Company: [
-    { label: "About", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "About", href: "https://www.theabhipatel.com/" },
+    { label: "LinkedIn", href: "https://www.linkedin.com/in/theabhipatel" },
+    { label: "GitHub", href: "https://github.com/theabhipatel" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "#" },
@@ -45,13 +45,25 @@ export default function Footer() {
               <span className="text-xl font-extrabold gradient-text">Setu</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-              A modern, real-time chat application built for seamless communication.
+              A modern, real-time chat application built for seamless communication. Created by Abhishek Patel (TheAbhiPatel).
             </p>
             <div className="flex items-center gap-3">
-              <a href="#" className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Twitter">
-                <Twitter className="h-4 w-4" />
+              <a
+                href="https://www.linkedin.com/in/theabhipatel"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="LinkedIn - TheAbhiPatel"
+              >
+                <Linkedin className="h-4 w-4" />
               </a>
-              <a href="#" className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="GitHub">
+              <a
+                href="https://github.com/theabhipatel"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="GitHub - TheAbhiPatel"
+              >
                 <Github className="h-4 w-4" />
               </a>
             </div>
@@ -66,6 +78,7 @@ export default function Footer() {
                   <li key={l.label}>
                     <a
                       href={l.href}
+                      {...(l.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {l.label}
@@ -80,7 +93,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Setu. All rights reserved.
+            &copy; {new Date().getFullYear()} Setu. All rights reserved.
           </p>
           <DevelopedBy />
         </div>
