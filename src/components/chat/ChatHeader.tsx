@@ -34,11 +34,25 @@ import {
 } from "@/components/ui/tooltip";
 import type { ConversationWithDetails } from "@/types";
 
+export type ChatHeaderTab = "chat" | "files" | "photos";
+
+const HEADER_TABS: { key: ChatHeaderTab; label: string }[] = [
+  { key: "chat", label: "Chat" },
+  { key: "files", label: "Files" },
+  { key: "photos", label: "Photos" },
+];
+
 interface ChatHeaderProps {
   conversation: ConversationWithDetails;
+  activeTab: ChatHeaderTab;
+  onTabChange: (tab: ChatHeaderTab) => void;
 }
 
-export function ChatHeader({ conversation }: ChatHeaderProps) {
+export function ChatHeader({
+  conversation,
+  activeTab,
+  onTabChange,
+}: ChatHeaderProps) {
   const router = useRouter();
   const { user } = useAuthStore();
   const { setSidebarOpen, updateConversation } = useChatStore();
@@ -164,6 +178,24 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
             {subtitle}
           </p>
         </div>
+      </div>
+
+      {/* Teams-style tabs — stretch to the header's bottom border so the
+          active underline sits on it (-my-3 cancels the header padding) */}
+      <div className="flex flex-1 items-stretch self-stretch -my-3 ml-4 mr-2 min-w-0 overflow-x-auto">
+        {HEADER_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => onTabChange(tab.key)}
+            className={`flex items-center px-3 text-sm font-medium border-b-2 transition-colors shrink-0 ${
+              activeTab === tab.key
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       <div className="flex items-center gap-1">

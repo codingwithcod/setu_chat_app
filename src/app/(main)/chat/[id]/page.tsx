@@ -7,7 +7,11 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatHeader, type ChatHeaderTab } from "@/components/chat/ChatHeader";
+import {
+  ConversationFiles,
+  ConversationPhotos,
+} from "@/components/chat/ConversationMediaTabs";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { MessageInput, type MessageInputHandle } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
@@ -34,6 +38,7 @@ export default function ConversationPage() {
   } = useChatStore();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<ChatHeaderTab>("chat");
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -67,6 +72,7 @@ export default function ConversationPage() {
     hasScrolledToUnread.current = false;
     setUnreadCount(0);
     setNewMessageCount(0);
+    setActiveTab("chat");
   }, [conversationId, resetUnreadCount]);
 
 
@@ -538,7 +544,7 @@ export default function ConversationPage() {
     e.dataTransfer.types.includes("Files");
 
   const handleDragEnter = (e: React.DragEvent) => {
-    if (!dragHasFiles(e)) return;
+    if (activeTab !== "chat" || !dragHasFiles(e)) return;
     e.preventDefault();
     dragDepthRef.current += 1;
     setIsDraggingFiles(true);
@@ -559,7 +565,7 @@ export default function ConversationPage() {
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    if (!dragHasFiles(e)) return;
+    if (activeTab !== "chat" || !dragHasFiles(e)) return;
     e.preventDefault();
     dragDepthRef.current = 0;
     setIsDraggingFiles(false);
@@ -608,8 +614,19 @@ export default function ConversationPage() {
         </div>
       )}
 
-      <ChatHeader conversation={activeConversation} />
+      <ChatHeader
+        conversation={activeConversation}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
+      {/* Chat tab — kept mounted (just hidden) on other tabs so the scroll
+          position and staged input survive tab switches */}
+      <div
+        className={
+          activeTab === "chat" ? "flex flex-1 flex-col min-h-0" : "hidden"
+        }
+      >
       {/* Messages container wrapper (relative for FAB positioning) */}
       <div className="relative flex-1">
         <div
@@ -708,6 +725,15 @@ export default function ConversationPage() {
         onTyping={sendTyping}
         conversationId={conversationId}
       />
+      </div>
+
+      {/* Files / Photos tabs */}
+      {activeTab === "files" && (
+        <ConversationFiles conversationId={conversationId} />
+      )}
+      {activeTab === "photos" && (
+        <ConversationPhotos conversationId={conversationId} />
+      )}
 
       {/* Forward message modal */}
       <ForwardMessageModal />
