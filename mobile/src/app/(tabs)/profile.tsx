@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Screen } from '@/components/ui/Screen';
 import { Touchable } from '@/components/ui/Touchable';
 import { useAuth } from '@/context/AuthContext';
@@ -17,18 +19,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
   const { profile, session, signOut } = useAuth();
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   const displayName =
     profile?.full_name?.trim() ||
     [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
     'Setu user';
-
-  function confirmSignOut() {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
-    ]);
-  }
 
   return (
     <Screen edges={['top', 'left', 'right']}>
@@ -94,10 +90,25 @@ export default function ProfileScreen() {
         <Button
           label="Sign out"
           variant="outline"
-          onPress={confirmSignOut}
+          onPress={() => setSignOutOpen(true)}
           left={<Ionicons name="log-out-outline" size={20} color={colors.foreground} />}
         />
       </ScrollView>
+
+      <ConfirmDialog
+        visible={signOutOpen}
+        icon="log-out-outline"
+        title="Sign out?"
+        message="You'll need to sign in again to access your chats."
+        confirmLabel="Sign out"
+        cancelLabel="Cancel"
+        destructive
+        onCancel={() => setSignOutOpen(false)}
+        onConfirm={() => {
+          setSignOutOpen(false);
+          signOut();
+        }}
+      />
     </Screen>
   );
 }

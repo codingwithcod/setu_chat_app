@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useChatStore } from "@/stores/useChatStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileImageViewer } from "@/components/shared/ProfileImageViewer";
 import { Badge } from "@/components/ui/badge";
 import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { ConversationListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -20,6 +22,10 @@ export function ConversationList() {
   const { conversations, conversationsLoaded } = useChatStore();
   const { user } = useAuthStore();
   const now = useNow();
+  const [avatarPreview, setAvatarPreview] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
 
   if (!conversationsLoaded) return <ConversationListSkeleton />;
 
@@ -121,8 +127,22 @@ export function ConversationList() {
             : ""
         }`}
       >
-        {/* Avatar */}
-        <div className="relative shrink-0">
+        {/* Avatar — click opens fullscreen preview instead of the chat */}
+        <div
+          className={`relative shrink-0 ${info.avatar ? "cursor-pointer" : ""}`}
+          onClick={
+            info.avatar
+              ? (e) => {
+                  e.stopPropagation();
+                  setAvatarPreview({ url: info.avatar!, name: info.name });
+                }
+              : undefined
+          }
+          role={info.avatar ? "button" : undefined}
+          aria-label={
+            info.avatar ? `View ${info.name}'s profile picture` : undefined
+          }
+        >
           <Avatar className="h-11 w-11">
             <AvatarImage src={info.avatar || ""} alt={info.name} />
             <AvatarFallback>
@@ -225,6 +245,15 @@ export function ConversationList() {
       {/* Suggested Users — at the bottom, show when fewer than 5 non-self conversations */}
       {nonSelfConversationCount < 5 && (
         <SuggestedUsers />
+      )}
+
+      {/* Fullscreen profile picture viewer */}
+      {avatarPreview && (
+        <ProfileImageViewer
+          url={avatarPreview.url}
+          name={avatarPreview.name}
+          onClose={() => setAvatarPreview(null)}
+        />
       )}
     </div>
   );

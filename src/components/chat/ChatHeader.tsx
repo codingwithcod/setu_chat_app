@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileImageViewer } from "@/components/shared/ProfileImageViewer";
 import { Button } from "@/components/ui/button";
 import { OnlineIndicator } from "@/components/shared/OnlineIndicator";
 import { getInitials, formatDate } from "@/lib/utils";
@@ -41,6 +43,7 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
   const { user } = useAuthStore();
   const { setSidebarOpen, updateConversation } = useChatStore();
   const now = useNow();
+  const [showAvatarPreview, setShowAvatarPreview] = useState(false);
 
   // Check if this conversation is pinned by the current user
   const currentMembership = conversation.members?.find(
@@ -120,7 +123,12 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
           <ArrowLeft className="h-5 w-5" />
         </Button>
 
-        <div className="relative">
+        <div
+          className={`relative ${avatar ? "cursor-pointer" : ""}`}
+          onClick={avatar ? () => setShowAvatarPreview(true) : undefined}
+          role={avatar ? "button" : undefined}
+          aria-label={avatar ? `View ${name}'s profile picture` : undefined}
+        >
           <Avatar className="h-10 w-10">
             <AvatarImage src={avatar || ""} alt={name} />
             <AvatarFallback>
@@ -137,7 +145,18 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
         </div>
 
         <div>
-          <h3 className="font-semibold text-sm">{name}</h3>
+          <h3
+            className={`font-semibold text-sm ${
+              otherMember ? "cursor-pointer hover:underline" : ""
+            }`}
+            onClick={
+              otherMember
+                ? () => router.push(`/user/${otherMember.user_id}`)
+                : undefined
+            }
+          >
+            {name}
+          </h3>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             {!isGroup && isOnline && (
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -214,6 +233,15 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Fullscreen profile picture viewer */}
+      {showAvatarPreview && avatar && (
+        <ProfileImageViewer
+          url={avatar}
+          name={name}
+          onClose={() => setShowAvatarPreview(false)}
+        />
+      )}
     </div>
   );
 }
