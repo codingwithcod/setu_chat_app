@@ -38,7 +38,7 @@
         {
           "backgroundColor": "#000000",
           "image": "./assets/images/splash-logo.png",
-          "imageWidth": 360,
+          "imageWidth": 280,
           "resizeMode": "contain"
         }
       ],
