@@ -81,7 +81,14 @@ export function Sheet({ visible, onClose, children, title }: SheetProps) {
   if (!mounted) return null;
 
   return (
-    <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
+    <Modal
+      visible
+      transparent
+      statusBarTranslucent
+      navigationBarTranslucent
+      animationType="none"
+      onRequestClose={onClose}
+    >
       <GestureHandlerRootView style={styles.flex}>
         {/* Frosted backdrop */}
         <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>

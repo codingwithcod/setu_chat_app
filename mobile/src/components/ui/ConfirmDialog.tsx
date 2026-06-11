@@ -80,7 +80,14 @@ export function ConfirmDialog({
   const accent = destructive ? colors.destructive : colors.primary;
 
   return (
-    <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onCancel}>
+    <Modal
+      visible
+      transparent
+      statusBarTranslucent
+      navigationBarTranslucent
+      animationType="none"
+      onRequestClose={onCancel}
+    >
       <View style={styles.center}>
         <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
           <BlurView

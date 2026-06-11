@@ -29,7 +29,7 @@ function ConversationRowBase({ conversation, myId, onPress }: ConversationRowPro
   return (
     <Touchable
       onPress={() => onPress(conversation.id)}
-      style={[styles.row, { backgroundColor: colors.background }]}
+      style={[styles.row, styles.transparent]}
     >
       {d.isSelf ? (
         <View style={[styles.selfAvatar, { backgroundColor: colors.primary }]}>
@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 12,
   },
+  transparent: { backgroundColor: 'transparent' },
   selfAvatar: {
     width: 52,
     height: 52,
