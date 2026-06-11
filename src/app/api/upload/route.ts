@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getAuthUser } from "@/lib/auth/verify-token";
+import { safeUploadContentType } from "@/lib/file-validation";
 
 export async function POST(request: Request) {
   const serviceClient = await createServiceClient();
@@ -81,6 +82,9 @@ export async function POST(request: Request) {
       .upload(fileName, file, {
         cacheControl: "3600",
         upsert: false,
+        // Force code/text/html files to be stored as text/plain so the public
+        // URL can never execute embedded scripts when opened in a browser.
+        contentType: safeUploadContentType(file.name, file.type),
       });
 
     if (error) {

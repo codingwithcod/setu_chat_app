@@ -61,7 +61,7 @@ export function AttachmentMenu({
     {
       icon: FileIcon,
       label: "File",
-      hint: "Documents, audio & more",
+      hint: "Documents, code, audio & more",
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
       onClick: () => fileInputRef.current?.click(),
@@ -90,7 +90,7 @@ export function AttachmentMenu({
         ref={fileInputRef}
         type="file"
         className="hidden"
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm,audio/*"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm,audio/*,.md,.markdown,.txt,.rtf,.csv,.tsv,.log,.json,.yaml,.yml,.toml,.xml,.ini,.js,.jsx,.mjs,.cjs,.ts,.tsx,.py,.pyi,.css,.scss,.less,.java,.kt,.go,.rs,.c,.cpp,.h,.cs,.rb,.php,.swift,.dart,.sql,.html,.svg"
         onChange={handleFile}
       />
 

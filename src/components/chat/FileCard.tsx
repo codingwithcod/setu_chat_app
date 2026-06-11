@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, FileSpreadsheet, FileIcon, Download, FileArchive, Music } from "lucide-react";
+import { FileText, FileSpreadsheet, FileIcon, FileCode, Download, FileArchive, Music } from "lucide-react";
 import {
   Tooltip,
   TooltipTrigger,
@@ -39,13 +39,24 @@ const FILE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
   "audio/ogg": { icon: Music, color: "text-pink-400" },
 };
 
-function getFileIconInfo(mimeType: string | null) {
+// Code / plain-text extensions get a code icon (their MIME is unreliable).
+const CODE_EXTENSIONS = new Set([
+  "md", "markdown", "txt", "rtf", "csv", "tsv", "log",
+  "json", "yaml", "yml", "toml", "xml", "ini",
+  "js", "jsx", "mjs", "cjs", "ts", "tsx", "py", "pyi",
+  "css", "scss", "less",
+  "java", "kt", "go", "rs", "c", "cpp", "h", "cs", "rb", "php", "swift", "dart", "sql", "html", "svg",
+]);
+
+function getFileIconInfo(mimeType: string | null, fileName: string) {
   if (mimeType && FILE_ICONS[mimeType]) return FILE_ICONS[mimeType];
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (CODE_EXTENSIONS.has(ext)) return { icon: FileCode, color: "text-cyan-400" };
   return { icon: FileIcon, color: "text-muted-foreground" };
 }
 
 export function FileCard({ file, isOwn }: FileCardProps) {
-  const { icon: Icon, color } = getFileIconInfo(file.mime_type);
+  const { icon: Icon, color } = getFileIconInfo(file.mime_type, file.file_name);
 
   const handleOpenFile = () => {
     window.open(file.file_url, "_blank");

@@ -16,7 +16,19 @@ export function formatBytes(bytes?: number | null): string {
   return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
-function iconFor(mime?: string | null): { name: keyof typeof Ionicons.glyphMap; color: string } {
+// Code / plain-text extensions get a code icon (their MIME is unreliable).
+const CODE_EXTENSIONS = new Set([
+  'md', 'markdown', 'txt', 'rtf', 'csv', 'tsv', 'log',
+  'json', 'yaml', 'yml', 'toml', 'xml', 'ini',
+  'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'py', 'pyi',
+  'css', 'scss', 'less',
+  'java', 'kt', 'go', 'rs', 'c', 'cpp', 'h', 'cs', 'rb', 'php', 'swift', 'dart', 'sql', 'html', 'svg',
+]);
+
+function iconFor(
+  mime?: string | null,
+  name?: string | null
+): { name: keyof typeof Ionicons.glyphMap; color: string } {
   const m = mime ?? '';
   if (m.includes('pdf')) return { name: 'document-text', color: '#ef4444' };
   if (m.includes('word') || m.includes('msword') || m.includes('document'))
@@ -27,12 +39,14 @@ function iconFor(mime?: string | null): { name: keyof typeof Ionicons.glyphMap; 
     return { name: 'easel', color: '#f97316' };
   if (m.includes('zip') || m.includes('rar') || m.includes('compressed'))
     return { name: 'archive', color: '#eab308' };
+  const ext = (name ?? '').split('.').pop()?.toLowerCase() ?? '';
+  if (CODE_EXTENSIONS.has(ext)) return { name: 'code-slash', color: '#06b6d4' };
   return { name: 'document', color: '#64748b' };
 }
 
 export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean }) {
   const { colors, radius } = useTheme();
-  const icon = iconFor(file.mime_type);
+  const icon = iconFor(file.mime_type, file.file_name);
 
   return (
     <Pressable

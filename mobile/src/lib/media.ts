@@ -28,6 +28,29 @@ export function mimeToFileType(mime?: string | null): FileCategory {
   return 'file';
 }
 
+// Code / plain-text source files. Matched by EXTENSION because their MIME types
+// are unreliable (.ts reports as video/mp2t, .md / .py often empty). These must
+// always be treated as a downloadable file, never as video/audio. The server
+// stores them as text/plain so they can't execute.
+const CODE_TEXT_EXTENSIONS = new Set([
+  'md', 'markdown', 'txt', 'rtf', 'csv', 'tsv', 'log',
+  'json', 'yaml', 'yml', 'toml', 'xml', 'ini',
+  'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'py', 'pyi',
+  'css', 'scss', 'less',
+  'java', 'kt', 'go', 'rs', 'c', 'cpp', 'h', 'cs', 'rb', 'php', 'swift', 'dart', 'sql', 'html', 'svg',
+]);
+
+function isCodeTextFile(name: string): boolean {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  return CODE_TEXT_EXTENSIONS.has(ext);
+}
+
+/** Categorise a picked file, honouring code/text extensions over their MIME. */
+function fileTypeFor(name: string, mime?: string | null): FileCategory {
+  if (isCodeTextFile(name)) return 'file';
+  return mimeToFileType(mime);
+}
+
 function tooBig(size: number): boolean {
   return size > MAX_FILE_MB * 1024 * 1024;
 }
@@ -99,7 +122,7 @@ export async function pickDocument(): Promise<PickResult> {
     name: a.name,
     mimeType: a.mimeType ?? 'application/octet-stream',
     size: a.size ?? 0,
-    file_type: mimeToFileType(a.mimeType),
+    file_type: fileTypeFor(a.name, a.mimeType),
   }));
   return partition(assets);
 }
@@ -162,7 +185,8 @@ export async function uploadAsset(asset: PickedAsset): Promise<UploadedFileData>
     name: data.name,
     size: data.size,
     mime_type: data.mime_type,
-    // The upload endpoint doesn't return file_type — derive it like the web does.
-    file_type: mimeToFileType(data.mime_type ?? asset.mimeType),
+    // The upload endpoint doesn't return file_type — derive it like the web does,
+    // keying off the filename so code/text files (e.g. .ts → video/mp2t) stay a file.
+    file_type: fileTypeFor(asset.name, data.mime_type ?? asset.mimeType),
   };
 }
