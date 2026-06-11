@@ -20,6 +20,8 @@ import {
   getOrCreateSessionToken,
   getCurrentSessionId,
   setCurrentSessionId,
+  getCurrentSessionUserId,
+  setCurrentSessionUserId,
   clearSessionToken,
 } from "@/lib/session-manager";
 import { Loader2, WifiOff, Wifi, RefreshCw, CheckCircle2 } from "lucide-react";
@@ -175,6 +177,16 @@ export default function MainLayout({
         void (async () => {
           try {
             const deviceInfo = await getDeviceInfo();
+
+            // If the stored session belongs to a DIFFERENT account (fresh
+            // signup or account switch on this browser — e.g. server-side
+            // sign-outs can't clear localStorage), start a clean session
+            // instead of mistaking the new session for a revocation below.
+            const previousSessionUserId = getCurrentSessionUserId();
+            if (previousSessionUserId && previousSessionUserId !== profile.id) {
+              clearSessionToken();
+            }
+
             const sessionToken = getOrCreateSessionToken();
             const previousSessionId = getCurrentSessionId();
             const trackRes = await fetch("/api/sessions/track", {
@@ -191,9 +203,16 @@ export default function MainLayout({
             const trackData = await trackRes.json();
 
             if (trackData.data?.id) {
-              // If we had a stored session that no longer exists (was revoked),
-              // and the server created a brand new one → session was revoked, sign out
-              if (previousSessionId && trackData.new_device_detected) {
+              // If we had a stored session FOR THIS USER that no longer exists
+              // (was revoked), and the server created a brand new one →
+              // session was revoked, sign out. The user check matters: a
+              // stale session id left over from another account (new signup,
+              // account switch) must not be treated as a revocation.
+              if (
+                previousSessionId &&
+                previousSessionUserId === profile.id &&
+                trackData.new_device_detected
+              ) {
                 clearSessionToken();
                 await supabase.auth.signOut({ scope: "local" });
                 setUser(null);
@@ -201,6 +220,7 @@ export default function MainLayout({
                 return;
               }
               setCurrentSessionId(trackData.data.id);
+              setCurrentSessionUserId(profile.id);
             }
           } catch (sessionError) {
             console.error("Failed to track session:", sessionError);

@@ -27,6 +27,19 @@ function LoginContent() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isWaitingForBrowser, setIsWaitingForBrowser] = useState(false);
 
+  // Already-authenticated users don't belong here. Middleware redirects full
+  // page loads; this covers bfcache/client-router-cache renders. Skip when a
+  // TOTP verification is pending (middleware allows auth pages in that state).
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const totpPending = document.cookie.includes("totp_pending=true");
+      if (session && !totpPending) {
+        router.replace("/chat");
+      }
+    });
+  }, [router]);
+
   // Check for error params from callback redirects
   useEffect(() => {
     const errorParam = searchParams.get("error");

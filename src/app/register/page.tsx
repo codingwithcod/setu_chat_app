@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
@@ -23,11 +24,24 @@ import setuLogo from "@/app/setu-white-tr.png";
 import { DevelopedBy } from "@/components/shared/DevelopedBy";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isWaitingForBrowser, setIsWaitingForBrowser] = useState(false);
+
+  // Already-authenticated users don't belong here. Middleware redirects full
+  // page loads; this covers bfcache/client-router-cache renders.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const totpPending = document.cookie.includes("totp_pending=true");
+      if (session && !totpPending) {
+        router.replace("/chat");
+      }
+    });
+  }, [router]);
 
   const {
     register,

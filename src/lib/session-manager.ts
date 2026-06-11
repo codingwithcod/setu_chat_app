@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const SESSION_TOKEN_KEY = "setu-session-token";
 const SESSION_ID_KEY = "setu-current-session-id";
+const SESSION_USER_KEY = "setu-current-session-user";
 
 /**
  * Get the current session token from localStorage, or create a new one.
@@ -38,6 +39,7 @@ export function clearSessionToken(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_TOKEN_KEY);
   localStorage.removeItem(SESSION_ID_KEY);
+  localStorage.removeItem(SESSION_USER_KEY);
 }
 
 /**
@@ -54,4 +56,22 @@ export function setCurrentSessionId(id: string): void {
 export function getCurrentSessionId(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(SESSION_ID_KEY);
+}
+
+/**
+ * Store which user the tracked session belongs to. Lets us tell an account
+ * switch (new signup / different login on this browser) apart from a
+ * revocation of our own session.
+ */
+export function setCurrentSessionUserId(userId: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SESSION_USER_KEY, userId);
+}
+
+/**
+ * Get the user ID the tracked session belongs to.
+ */
+export function getCurrentSessionUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(SESSION_USER_KEY);
 }
