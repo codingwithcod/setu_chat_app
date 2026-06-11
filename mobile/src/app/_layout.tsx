@@ -14,6 +14,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useAppFonts } from '@/theme/fonts';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
@@ -44,11 +45,12 @@ function useAuthGate() {
 function RootNavigator() {
   const { initializing } = useAuth();
   const { hydrated, colors, scheme } = useTheme();
+  const fontsLoaded = useAppFonts();
   useAuthGate();
 
   useEffect(() => {
-    if (!initializing && hydrated) SplashScreen.hideAsync();
-  }, [initializing, hydrated]);
+    if (!initializing && hydrated && fontsLoaded) SplashScreen.hideAsync();
+  }, [initializing, hydrated, fontsLoaded]);
 
   // Paint the NATIVE root/window background to match the theme. Without this the
   // window defaults to white and flashes through during native-stack slide
@@ -80,7 +82,7 @@ function RootNavigator() {
     };
   }, [scheme, colors]);
 
-  if (initializing || !hydrated) return null;
+  if (initializing || !hydrated || !fontsLoaded) return null;
 
   return (
     <NavigationThemeProvider value={navTheme}>

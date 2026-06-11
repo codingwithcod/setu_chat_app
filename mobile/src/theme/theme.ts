@@ -43,6 +43,8 @@ const LIGHT_BASE = {
   warning: '38 92% 50%',
   warningForeground: '0 0% 100%',
   info: '187 92% 53%',
+  // Raised surface — a step above `card` for sheets/headers/elevated rows.
+  surface: '0 0% 98.5%',
 } as const;
 
 const DARK_BASE = {
@@ -67,6 +69,9 @@ const DARK_BASE = {
   warning: '45 93% 47%',
   warningForeground: '0 0% 100%',
   info: '187 92% 53%',
+  // Raised surface — sits a touch above `card` (5.5%) to give elevated
+  // elements (sheets, headers, FAB, pressed rows) a sense of depth.
+  surface: '240 8% 10%',
 } as const;
 
 // ─── Color presets (theme-config.ts THEME_PRESETS) ───────────────────
@@ -222,6 +227,7 @@ export interface ThemeColors {
   foreground: string;
   card: string;
   cardForeground: string;
+  surface: string;
   popover: string;
   popoverForeground: string;
   primary: string;
@@ -268,6 +274,7 @@ export function buildColors(presetId: ThemePresetId, mode: ColorMode): ThemeColo
     foreground: get('foreground'),
     card: get('card'),
     cardForeground: get('cardForeground'),
+    surface: get('surface'),
     popover: get('popover'),
     popoverForeground: get('popoverForeground'),
     primary: get('primary'),
@@ -322,3 +329,55 @@ export const Spacing = {
   xl: 24,
   xxl: 32,
 } as const;
+
+/**
+ * Dark-tuned elevation presets. Shadows are near-invisible on dark backgrounds,
+ * so these lean on a soft, slightly-spread black plus Android `elevation`.
+ * For a branded lift, pass a color (e.g. primary) as `shadowColor` at the call
+ * site — see `glow()`.
+ */
+export const Elevation = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.38,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+} as const;
+
+/**
+ * A colored "glow" shadow — used to give primary buttons/FABs a branded lift.
+ * `color` should be a solid color string (e.g. colors.primary).
+ */
+export function glow(color: string, strength: 'sm' | 'md' = 'md') {
+  return strength === 'sm'
+    ? {
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.45,
+        shadowRadius: 8,
+        elevation: 6,
+      }
+    : {
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.55,
+        shadowRadius: 16,
+        elevation: 12,
+      };
+}

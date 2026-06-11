@@ -14,7 +14,7 @@ interface ScreenHeaderProps {
 export function ScreenHeader({ title, brand, right }: ScreenHeaderProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.row, { borderBottomColor: colors.border }]}>
+    <View style={styles.row}>
       {brand ? (
         <Logo size="sm" />
       ) : (
@@ -32,7 +32,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   title: { fontSize: 22, fontWeight: '800' },
   right: { flexDirection: 'row', alignItems: 'center', gap: 12 },

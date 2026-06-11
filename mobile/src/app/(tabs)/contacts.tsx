@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -16,8 +17,10 @@ import {
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { UserRow } from '@/components/contacts/UserRow';
 import { Screen } from '@/components/ui/Screen';
+import { Touchable } from '@/components/ui/Touchable';
 import { useSuggestedUsers, useUserSearch } from '@/hooks/useUsers';
 import { startPrivateChat } from '@/lib/conversation-actions';
+import { glow } from '@/theme/theme';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { SearchResult } from '@/types';
 
@@ -25,6 +28,7 @@ export default function ContactsScreen() {
   const { colors, radius } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const tabBarHeight = useBottomTabBarHeight();
 
   const [query, setQuery] = useState('');
   const search = useUserSearch(query);
@@ -107,21 +111,20 @@ export default function ContactsScreen() {
 
       {/* New group entry (hidden while searching) */}
       {!showResults && (
-        <Pressable
+        <Touchable
           onPress={() => router.push('/new-group')}
-          style={({ pressed }) => [
-            styles.newGroup,
-            { backgroundColor: pressed ? colors.secondary : 'transparent' },
-          ]}
+          style={[styles.newGroup, { backgroundColor: 'transparent' }]}
         >
-          <View style={[styles.newGroupIcon, { backgroundColor: colors.primary }]}>
+          <View
+            style={[styles.newGroupIcon, { backgroundColor: colors.primary }, glow(colors.primary, 'sm')]}
+          >
             <Ionicons name="people" size={22} color={colors.primaryForeground} />
           </View>
           <Text style={[styles.newGroupLabel, { color: colors.foreground }]}>
             New Group
           </Text>
           <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-        </Pressable>
+        </Touchable>
       )}
 
       {!showResults && (
@@ -135,6 +138,7 @@ export default function ContactsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderUser}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 8 }}
         refreshControl={
           showResults ? undefined : (
             <RefreshControl

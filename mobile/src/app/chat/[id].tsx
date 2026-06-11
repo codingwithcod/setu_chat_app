@@ -8,11 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AttachmentMenu } from '@/components/chat/AttachmentMenu';
@@ -25,6 +25,7 @@ import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { MAX_FILE_MB, uploadAsset, type PickedAsset } from '@/lib/media';
 import { Avatar } from '@/components/ui/Avatar';
 import { Screen } from '@/components/ui/Screen';
+import { Touchable } from '@/components/ui/Touchable';
 import { ThreadSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -41,7 +42,13 @@ import type { ConversationWithDetails, MessageWithSender } from '@/types';
 
 type Row =
   | { kind: 'date'; id: string; iso: string }
-  | { kind: 'message'; id: string; message: MessageWithSender; showSender: boolean };
+  | {
+      kind: 'message';
+      id: string;
+      message: MessageWithSender;
+      showSender: boolean;
+      grouped: boolean;
+    };
 
 export default function ChatScreen() {
   const { colors } = useTheme();
@@ -138,16 +145,39 @@ export default function ChatScreen() {
     const out: Row[] = [];
     let prev: MessageWithSender | null = null;
     for (const m of messages) {
-      if (!prev || isDifferentDay(prev.created_at, m.created_at)) {
+      const newDay = !prev || isDifferentDay(prev.created_at, m.created_at);
+      if (newDay) {
         out.push({ kind: 'date', id: `date-${m.id}`, iso: m.created_at });
       }
       const showSender =
         isGroup && m.sender_id !== myId && prev?.sender_id !== m.sender_id;
-      out.push({ kind: 'message', id: m._clientId ?? m.id, message: m, showSender });
+      // Continuation: same sender, same day, within 4 minutes of the previous.
+      const grouped =
+        !!prev &&
+        !newDay &&
+        prev.sender_id === m.sender_id &&
+        new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() < 4 * 60 * 1000;
+      out.push({ kind: 'message', id: m._clientId ?? m.id, message: m, showSender, grouped });
       prev = m;
     }
     return out;
   }, [messages, isGroup, myId]);
+
+  // Send/receive pop: spring fresh messages in, but never the existing history
+  // or older paginated messages. We seed a "newest seen" timestamp on first
+  // load; only messages newer than that (and not yet popped) animate.
+  const poppedRef = useRef<Set<string>>(new Set());
+  const newestSeenRef = useRef<number>(0);
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!seededRef.current && messages.length) {
+      newestSeenRef.current = messages.reduce(
+        (mx, m) => Math.max(mx, new Date(m.created_at).getTime()),
+        0
+      );
+      seededRef.current = true;
+    }
+  }, [messages]);
 
   // Auto-scroll to bottom on new messages (mine always; others if near bottom).
   useEffect(() => {
@@ -176,11 +206,20 @@ export default function ChatScreen() {
     ({ item }: { item: Row }) => {
       if (item.kind === 'date') return <DateSeparator iso={item.iso} />;
       const m = item.message;
+      // Pop in only genuinely-new messages (each at most once).
+      const t = new Date(m.created_at).getTime();
+      let animateIn = false;
+      if (seededRef.current && t > newestSeenRef.current && !poppedRef.current.has(item.id)) {
+        animateIn = true;
+        poppedRef.current.add(item.id);
+      }
       return (
         <MessageBubble
           message={m}
           isOwn={m.sender_id === myId}
           showSender={item.showSender}
+          grouped={item.grouped}
+          animateIn={animateIn}
           status={statusFor(m)}
           myId={myId}
           onLongPress={setActionMsg}
@@ -195,13 +234,14 @@ export default function ChatScreen() {
   return (
     <Screen edges={['top', 'left', 'right']}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={10} style={styles.back}>
+      <View style={styles.header}>
+        <Touchable onPress={() => router.back()} hitSlop={10} style={styles.back}>
           <Ionicons name="chevron-back" size={26} color={colors.foreground} />
-        </Pressable>
-        <Pressable
+        </Touchable>
+        <Touchable
           style={styles.headerInfo}
           disabled={!isGroup}
+          haptic="none"
           onPress={() => isGroup && router.push(`/group/${conversationId}`)}
         >
           <Avatar uri={display?.avatarUri} name={display?.title} size={40} online={display?.online} />
@@ -225,7 +265,7 @@ export default function ChatScreen() {
               </Text>
             ) : null}
           </View>
-        </Pressable>
+        </Touchable>
       </View>
 
       <KeyboardAvoidingView
@@ -238,17 +278,13 @@ export default function ChatScreen() {
             <ThreadSkeleton />
           </View>
         ) : rows.length === 0 ? (
-          <View style={[styles.flex, styles.empty]}>
+          <Animated.View entering={FadeInDown.duration(320)} style={[styles.flex, styles.empty]}>
             <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
               No messages yet. Start the conversation! 👋
             </Text>
-            <Pressable
+            <Touchable
               onPress={() => handleSend('👋')}
-              style={({ pressed }) => [
-                styles.sayHiShadow,
-                { shadowColor: colors.primary, opacity: pressed ? 0.9 : 1 },
-                pressed && { transform: [{ scale: 0.97 }] },
-              ]}
+              style={[styles.sayHiShadow, { shadowColor: colors.primary }]}
             >
               <LinearGradient
                 colors={colors.gradient}
@@ -262,26 +298,28 @@ export default function ChatScreen() {
                   </Text>
                 </View>
               </LinearGradient>
-            </Pressable>
-          </View>
+            </Touchable>
+          </Animated.View>
         ) : (
-          <FlashList
-            ref={listRef}
-            data={rows}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            onScroll={onScroll}
-            scrollEventThrottle={64}
-            onStartReached={hasMore ? loadOlder : undefined}
-            onStartReachedThreshold={0.3}
-            ListHeaderComponent={
-              loadingOlder ? (
-                <ActivityIndicator style={{ marginVertical: 12 }} color={colors.primary} />
-              ) : null
-            }
-            contentContainerStyle={{ paddingVertical: 8 }}
-            keyboardDismissMode="interactive"
-          />
+          <Animated.View entering={FadeIn.duration(260)} style={styles.flex}>
+            <FlashList
+              ref={listRef}
+              data={rows}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              onScroll={onScroll}
+              scrollEventThrottle={64}
+              onStartReached={hasMore ? loadOlder : undefined}
+              onStartReachedThreshold={0.3}
+              ListHeaderComponent={
+                loadingOlder ? (
+                  <ActivityIndicator style={{ marginVertical: 12 }} color={colors.primary} />
+                ) : null
+              }
+              contentContainerStyle={{ paddingVertical: 8 }}
+              keyboardDismissMode="interactive"
+            />
+          </Animated.View>
         )}
 
         <TypingIndicator users={typingUsers} />
@@ -350,7 +388,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingRight: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   back: { paddingHorizontal: 8, height: '100%', justifyContent: 'center' },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },

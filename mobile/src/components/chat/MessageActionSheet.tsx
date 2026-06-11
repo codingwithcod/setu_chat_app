@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Sheet } from '@/components/ui/Sheet';
+import { Touchable } from '@/components/ui/Touchable';
 import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageWithSender } from '@/types';
@@ -29,11 +32,16 @@ export function MessageActionSheet({
   onDelete,
   onForward,
 }: MessageActionSheetProps) {
-  const { colors, radius } = useTheme();
-  if (!message) return null;
+  const { colors } = useTheme();
+  // Retain the last message so content stays put during the close animation.
+  const [shown, setShown] = useState<MessageWithSender | null>(message);
+  useEffect(() => {
+    if (message) setShown(message);
+  }, [message]);
 
-  const canEdit = isOwn && message.message_type === 'text' && !message.is_deleted;
-  const canCopy = !!message.content && !message.is_deleted;
+  const m = shown;
+  const canEdit = !!m && isOwn && m.message_type === 'text' && !m.is_deleted;
+  const canCopy = !!m && !!m.content && !m.is_deleted;
 
   const Action = ({
     icon,
@@ -46,92 +54,75 @@ export function MessageActionSheet({
     color?: string;
     onPress: () => void;
   }) => (
-    <Pressable
+    <Touchable
       onPress={() => {
         onPress();
         onClose();
       }}
-      style={({ pressed }) => [
-        styles.action,
-        { backgroundColor: pressed ? colors.secondary : 'transparent' },
-      ]}
+      style={styles.action}
     >
       <Ionicons name={icon} size={22} color={color ?? colors.foreground} />
-      <Text style={[styles.actionLabel, { color: color ?? colors.foreground }]}>
-        {label}
-      </Text>
-    </Pressable>
+      <Text style={[styles.actionLabel, { color: color ?? colors.foreground }]}>{label}</Text>
+    </Touchable>
   );
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={[styles.sheet, { backgroundColor: colors.card, borderRadius: radius.xl }]}
-        >
-          {!message.is_deleted && (
+    <Sheet visible={!!message} onClose={onClose}>
+      {m && (
+        <>
+          {!m.is_deleted && (
             <View style={[styles.emojiRow, { borderBottomColor: colors.border }]}>
               {QUICK_EMOJIS.map((e) => (
-                <Pressable
+                <Touchable
                   key={e}
+                  haptic="none"
                   onPress={() => {
                     haptics.light();
-                    onReact(message.id, e);
+                    onReact(m.id, e);
                     onClose();
                   }}
-                  style={({ pressed }) => [
-                    styles.emojiBtn,
-                    pressed && { backgroundColor: colors.secondary },
-                  ]}
+                  style={styles.emojiBtn}
                 >
                   <Text style={styles.emoji}>{e}</Text>
-                </Pressable>
+                </Touchable>
               ))}
             </View>
           )}
 
-          {!message.is_deleted && (
-            <Action icon="arrow-undo-outline" label="Reply" onPress={() => onReply(message)} />
+          {!m.is_deleted && (
+            <Action icon="arrow-undo-outline" label="Reply" onPress={() => onReply(m)} />
           )}
-          {!message.is_deleted && (
-            <Action icon="arrow-redo-outline" label="Forward" onPress={() => onForward(message)} />
+          {!m.is_deleted && (
+            <Action icon="arrow-redo-outline" label="Forward" onPress={() => onForward(m)} />
           )}
           {canCopy && (
             <Action
               icon="copy-outline"
               label="Copy"
-              onPress={() => Clipboard.setStringAsync(message.content ?? '')}
+              onPress={() => Clipboard.setStringAsync(m.content ?? '')}
             />
           )}
-          {canEdit && (
-            <Action icon="create-outline" label="Edit" onPress={() => onEdit(message)} />
-          )}
-          {isOwn && !message.is_deleted && (
+          {canEdit && <Action icon="create-outline" label="Edit" onPress={() => onEdit(m)} />}
+          {isOwn && !m.is_deleted && (
             <Action
               icon="trash-outline"
               label="Delete"
               color={colors.destructive}
-              onPress={() => onDelete(message)}
+              onPress={() => onDelete(m)}
             />
           )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </>
+      )}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-    padding: 12,
-  },
-  sheet: { overflow: 'hidden', paddingBottom: 8, marginBottom: 8 },
   emojiRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 10,
+    marginBottom: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   emojiBtn: { padding: 8, borderRadius: 24 },

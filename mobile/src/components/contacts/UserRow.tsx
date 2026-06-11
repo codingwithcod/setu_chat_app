@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
+import { Touchable } from '@/components/ui/Touchable';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { SearchResult } from '@/types';
 
@@ -31,13 +32,10 @@ export function UserRow({ user, onPress, right, subtitle, disabled }: UserRowPro
   const name = fullName(user);
 
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
       disabled={disabled || !onPress}
-      style={({ pressed }) => [
-        styles.row,
-        { backgroundColor: pressed && onPress ? colors.secondary : 'transparent' },
-      ]}
+      style={[styles.row, { backgroundColor: 'transparent' }]}
     >
       <Avatar
         uri={user.avatar_url}
@@ -54,7 +52,7 @@ export function UserRow({ user, onPress, right, subtitle, disabled }: UserRowPro
         </Text>
       </View>
       {right}
-    </Pressable>
+    </Touchable>
   );
 }
 

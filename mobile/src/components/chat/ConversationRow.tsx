@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
+import { Touchable } from '@/components/ui/Touchable';
 import {
   conversationDisplay,
   lastMessagePreview,
@@ -26,12 +27,9 @@ function ConversationRowBase({ conversation, myId, onPress }: ConversationRowPro
   const hasUnread = unread > 0;
 
   return (
-    <Pressable
+    <Touchable
       onPress={() => onPress(conversation.id)}
-      style={({ pressed }) => [
-        styles.row,
-        { backgroundColor: pressed ? colors.secondary : colors.background },
-      ]}
+      style={[styles.row, { backgroundColor: colors.background }]}
     >
       {d.isSelf ? (
         <View style={[styles.selfAvatar, { backgroundColor: colors.primary }]}>
@@ -84,7 +82,7 @@ function ConversationRowBase({ conversation, myId, onPress }: ConversationRowPro
           </View>
         )}
       </View>
-    </Pressable>
+    </Touchable>
   );
 }
 

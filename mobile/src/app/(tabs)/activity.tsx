@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { Touchable } from '@/components/ui/Touchable';
 
 import { ComingSoon } from '@/components/ComingSoon';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -14,6 +17,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 export default function ActivityScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
@@ -36,16 +40,14 @@ export default function ActivityScreen() {
             ? 'people'
             : 'notifications';
       return (
-        <Pressable
+        <Touchable
           onPress={() => onPress(item)}
-          style={({ pressed }) => [
+          style={[
             styles.row,
             {
-              backgroundColor: pressed
-                ? colors.secondary
-                : item.read
-                  ? 'transparent'
-                  : colors.withAlpha('primary', 0.06),
+              backgroundColor: item.read
+                ? 'transparent'
+                : colors.withAlpha('primary', 0.06),
             },
           ]}
         >
@@ -68,7 +70,7 @@ export default function ActivityScreen() {
             </Text>
           </View>
           {!item.read && <View style={[styles.dot, { backgroundColor: colors.primary }]} />}
-        </Pressable>
+        </Touchable>
       );
     },
     [onPress, colors]
@@ -80,10 +82,10 @@ export default function ActivityScreen() {
         title="Activity"
         right={
           unreadCount > 0 ? (
-            <Pressable onPress={markAllAsRead} hitSlop={8} style={styles.readAll}>
+            <Touchable onPress={markAllAsRead} hitSlop={8} style={styles.readAll}>
               <Ionicons name="checkmark-done" size={18} color={colors.primary} />
               <Text style={{ color: colors.primary, fontWeight: '700' }}>Read all</Text>
-            </Pressable>
+            </Touchable>
           ) : undefined
         }
       />
@@ -98,6 +100,7 @@ export default function ActivityScreen() {
           data={notifications}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 8 }}
           ItemSeparatorComponent={() => (
             <View style={[styles.sep, { backgroundColor: colors.border }]} />
           )}

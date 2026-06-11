@@ -1,5 +1,13 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, type DimensionValue } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View, type DimensionValue } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -10,29 +18,45 @@ interface SkeletonProps {
   style?: object;
 }
 
-/** A single pulsing placeholder block. */
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
+
+/** A placeholder block with a sweeping light shimmer (premium loading feel). */
 export function Skeleton({ width = '100%', height = 14, radius = 6, style }: SkeletonProps) {
-  const { colors } = useTheme();
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const { colors, scheme } = useTheme();
+  const [w, setW] = useState(0);
+  const x = useSharedValue(-1);
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
-      ])
+    x.value = withRepeat(
+      withTiming(1, { duration: 1150, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false
     );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+  }, [x]);
+
+  const sweep = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value * (w || 1) }],
+  }));
+
+  const highlight = scheme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.6)';
 
   return (
-    <Animated.View
+    <View
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
       style={[
-        { width, height, borderRadius: radius, backgroundColor: colors.muted, opacity: pulse },
+        { width, height, borderRadius: radius, backgroundColor: colors.muted, overflow: 'hidden' },
         style,
       ]}
-    />
+    >
+      {w > 0 && (
+        <AnimatedGradient
+          colors={['transparent', highlight, 'transparent']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={[styles.sweep, { width: w }, sweep]}
+        />
+      )}
+    </View>
   );
 }
 
@@ -87,6 +111,7 @@ export function ThreadSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  sweep: { position: 'absolute', top: 0, bottom: 0 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -9,6 +8,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { Touchable } from '@/components/ui/Touchable';
+import { glow } from '@/theme/theme';
 import { useTheme } from '@/theme/ThemeProvider';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'destructive';
@@ -52,20 +53,29 @@ export function Button({
     ghost: colors.primary,
   }[variant];
 
+  // Branded lift on filled buttons (only when actionable).
+  const lift =
+    !isDisabled && variant === 'primary'
+      ? glow(colors.primary, 'sm')
+      : !isDisabled && variant === 'destructive'
+        ? glow(colors.destructive, 'sm')
+        : null;
+
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         {
           backgroundColor: bg,
           borderRadius: radius.md,
           borderWidth: variant === 'outline' ? 1 : 0,
           borderColor: colors.border,
-          opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
+          opacity: isDisabled ? 0.5 : 1,
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
         },
+        lift,
         style,
       ]}
     >
@@ -77,7 +87,7 @@ export function Button({
           <Text style={[styles.label, { color: fg }]}>{label}</Text>
         </View>
       )}
-    </Pressable>
+    </Touchable>
   );
 }
 

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -7,12 +8,14 @@ import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
+import { Touchable } from '@/components/ui/Touchable';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function ProfileScreen() {
   const { colors, radius } = useTheme();
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const { profile, session, signOut } = useAuth();
 
   const displayName =
@@ -30,14 +33,17 @@ export default function ProfileScreen() {
   return (
     <Screen edges={['top', 'left', 'right']}>
       <ScreenHeader title="Profile" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Identity card → tap to edit */}
-        <Pressable
+        <Touchable
           onPress={() => router.push('/edit-profile')}
-          style={({ pressed }) => [
+          style={[
             styles.card,
             {
-              backgroundColor: pressed ? colors.secondary : colors.card,
+              backgroundColor: colors.card,
               borderColor: colors.border,
               borderRadius: radius.lg,
             },
@@ -54,7 +60,7 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
-        </Pressable>
+        </Touchable>
 
         {/* Account actions */}
         <View style={[styles.menu, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg }]}>

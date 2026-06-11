@@ -1,6 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { AnimatedEmoji } from '@/components/chat/AnimatedEmoji';
 import { MessageMedia } from '@/components/chat/MessageMedia';
@@ -16,6 +21,10 @@ interface MessageBubbleProps {
   isOwn: boolean;
   /** Show the sender's name (group chats, other people's messages). */
   showSender: boolean;
+  /** This message continues a run from the same sender — tuck it closer. */
+  grouped?: boolean;
+  /** Play a spring pop on appear (newly sent/received messages). */
+  animateIn?: boolean;
   status: Status;
   myId: string;
   onLongPress: (m: MessageWithSender) => void;
@@ -27,6 +36,8 @@ function MessageBubbleBase({
   message,
   isOwn,
   showSender,
+  grouped = false,
+  animateIn = false,
   status,
   myId,
   onLongPress,
@@ -34,6 +45,20 @@ function MessageBubbleBase({
   onRetry,
 }: MessageBubbleProps) {
   const { colors, radius } = useTheme();
+
+  // Spring-in pop for fresh messages. Runs via effect (not Reanimated
+  // `entering`) so it fires reliably even on recycled FlashList cells.
+  const pop = useSharedValue(animateIn ? 0 : 1);
+  useEffect(() => {
+    if (animateIn) {
+      pop.value = 0;
+      pop.value = withSpring(1, { damping: 15, stiffness: 220, mass: 0.6 });
+    }
+  }, [animateIn, pop]);
+  const popStyle = useAnimatedStyle(() => ({
+    opacity: pop.value,
+    transform: [{ scale: 0.9 + pop.value * 0.1 }, { translateY: (1 - pop.value) * 8 }],
+  }));
 
   // Big "live" animated emoji for emoji-only messages (1–3 emojis), like web.
   const emojiInfo = useMemo(
@@ -93,6 +118,10 @@ function MessageBubbleBase({
       borderRadius: radius.lg,
       borderBottomRightRadius: isOwn ? 4 : radius.lg,
       borderBottomLeftRadius: isOwn ? radius.lg : 4,
+      // Tuck the sender-side top corner when continuing a run — visually
+      // stitches grouped bubbles together.
+      borderTopRightRadius: isOwn && grouped ? 4 : radius.lg,
+      borderTopLeftRadius: !isOwn && grouped ? 4 : radius.lg,
     },
     bigEmoji && styles.bigEmojiBubble,
   ];
@@ -171,7 +200,14 @@ function MessageBubbleBase({
   );
 
   return (
-    <View style={[styles.wrap, isOwn ? styles.alignEnd : styles.alignStart]}>
+    <Animated.View
+      style={[
+        styles.wrap,
+        isOwn ? styles.alignEnd : styles.alignStart,
+        grouped && styles.grouped,
+        popStyle,
+      ]}
+    >
       <Pressable
         onLongPress={() => {
           haptics.medium();
@@ -228,7 +264,7 @@ function MessageBubbleBase({
           ))}
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -236,6 +272,7 @@ export const MessageBubble = memo(MessageBubbleBase);
 
 const styles = StyleSheet.create({
   wrap: { marginVertical: 3, paddingHorizontal: 12, maxWidth: '100%' },
+  grouped: { marginTop: 1 },
   alignEnd: { alignItems: 'flex-end' },
   alignStart: { alignItems: 'flex-start' },
   bubble: { maxWidth: '82%', paddingHorizontal: 12, paddingVertical: 8 },

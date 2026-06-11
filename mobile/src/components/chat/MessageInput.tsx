@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 
+import { Touchable } from '@/components/ui/Touchable';
 import { haptics } from '@/lib/haptics';
 import type { PickedAsset } from '@/lib/media';
+import { glow } from '@/theme/theme';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageWithSender } from '@/types';
 
@@ -168,13 +170,13 @@ export function MessageInput({
 
       <View style={styles.row}>
         {!editing && (
-          <Pressable onPress={onAttach} hitSlop={8} style={styles.iconBtn}>
+          <Touchable onPress={onAttach} hitSlop={8} style={styles.iconBtn}>
             <Ionicons name="add-circle-outline" size={28} color={colors.mutedForeground} />
-          </Pressable>
+          </Touchable>
         )}
-        <Pressable onPress={() => setEmojiOpen(true)} hitSlop={8} style={styles.iconBtn}>
+        <Touchable onPress={() => setEmojiOpen(true)} hitSlop={8} style={styles.iconBtn}>
           <Ionicons name="happy-outline" size={26} color={colors.mutedForeground} />
-        </Pressable>
+        </Touchable>
         <TextInput
           value={text}
           onChangeText={(t) => {
@@ -189,12 +191,14 @@ export function MessageInput({
             { color: colors.foreground, backgroundColor: colors.background, borderRadius: radius.lg },
           ]}
         />
-        <Pressable
+        <Touchable
           onPress={submit}
+          haptic="none"
           disabled={!canSend || uploading}
           style={[
             styles.sendBtn,
             { backgroundColor: canSend && !uploading ? colors.primary : colors.secondary },
+            canSend && !uploading ? glow(colors.primary, 'sm') : null,
           ]}
         >
           {uploading ? (
@@ -206,7 +210,7 @@ export function MessageInput({
               color={canSend ? colors.primaryForeground : colors.mutedForeground}
             />
           )}
-        </Pressable>
+        </Touchable>
       </View>
 
       <EmojiPicker
