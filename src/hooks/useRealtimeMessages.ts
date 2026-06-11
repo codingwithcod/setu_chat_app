@@ -54,10 +54,23 @@ export function useRealtimeMessages(conversationId: string | null) {
         async (payload: { new: MessageWithSender }) => {
           const newMessage = payload.new;
           if (newMessage.sender_id !== userIdRef.current) {
-            // Fetch sender + (optional) reply/forward info in parallel instead
-            // of three sequential round-trips, so the incoming message renders
-            // faster. These three lookups are independent.
-            const [senderRes, replyRes, fwdRes] = await Promise.all([
+            const isMediaMessage = ["image", "video", "audio", "file"].includes(
+              newMessage.message_type
+            );
+
+            const fetchFiles = () =>
+              supabase
+                .from("message_files")
+                .select(
+                  "id, message_id, file_url, file_name, file_size, file_type, mime_type, display_order, created_at"
+                )
+                .eq("message_id", newMessage.id)
+                .order("display_order");
+
+            // Fetch sender + (optional) reply/forward/files info in parallel
+            // instead of sequential round-trips, so the incoming message
+            // renders faster. These lookups are independent.
+            const [senderRes, replyRes, fwdRes, filesRes] = await Promise.all([
               supabase
                 .from("profiles")
                 .select(
@@ -89,17 +102,31 @@ export function useRealtimeMessages(conversationId: string | null) {
                     .eq("id", newMessage.forwarded_from)
                     .single()
                 : Promise.resolve({ data: null }),
+              isMediaMessage ? fetchFiles() : Promise.resolve({ data: null }),
             ]);
 
             const sender = senderRes.data;
             // Preserve original semantics: undefined when absent or not found.
             const replyMessage = replyRes.data ?? undefined;
             const forwardedMessage = fwdRes.data ?? undefined;
+            let files = filesRes.data ?? [];
+
+            // The server inserts the message row first and its message_files
+            // rows right after, so this INSERT event can fire before the files
+            // are committed — retry briefly until they appear.
+            if (isMediaMessage && files.length === 0) {
+              for (let attempt = 0; attempt < 4 && files.length === 0; attempt++) {
+                await new Promise((resolve) => setTimeout(resolve, 350));
+                const { data: retryFiles } = await fetchFiles();
+                files = retryFiles ?? [];
+              }
+            }
 
             if (sender) {
               addMessage({
                 ...newMessage,
                 sender,
+                files,
                 reply_message: replyMessage,
                 forwarded_message: forwardedMessage,
               } as MessageWithSender);
