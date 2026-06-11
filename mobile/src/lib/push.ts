@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { api } from './api';
+import { config } from './config';
 import { useChatStore } from '@/stores/chat';
 
 /**
@@ -78,13 +79,32 @@ export async function registerForPush(): Promise<string | null> {
   }
 }
 
-/** Remove this device's registration. Call BEFORE signing out (needs auth). */
-export async function unregisterPush(): Promise<void> {
+/**
+ * Remove this device's push registration. Best-effort (the server also prunes
+ * dead tokens on send).
+ *
+ * Pass `authToken` when calling during sign-out: the session is torn down
+ * immediately for a snappy redirect, so the normal Bearer lookup would race and
+ * fire unauthenticated. With an explicit token we hit the endpoint directly and
+ * stay authenticated regardless.
+ */
+export async function unregisterPush(authToken?: string): Promise<void> {
   if (!registeredToken) return;
-  const token = registeredToken;
+  const endpoint = registeredToken;
   registeredToken = null;
   try {
-    await api.post('/api/push/unsubscribe', { endpoint: token });
+    if (authToken) {
+      await fetch(`${config.apiUrl}/api/push/unsubscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ endpoint }),
+      });
+    } else {
+      await api.post('/api/push/unsubscribe', { endpoint });
+    }
   } catch {
     // best effort — the server also prunes dead tokens on send
   }

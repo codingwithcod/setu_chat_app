@@ -111,11 +111,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    // Remove this device's push registration while we're still authenticated.
-    await unregisterPush();
-    await supabase.auth.signOut();
+    // Capture the current access token BEFORE tearing down the session, so the
+    // push-unregister request below stays authenticated even though we clear the
+    // session immediately.
+    const token = session?.access_token;
+
+    // Fire the push-unregister in the background — don't block the redirect on a
+    // network round-trip (the server also prunes dead tokens on send).
+    void unregisterPush(token);
+
+    // Clear the session LOCALLY: this is instant (no server round-trip) and only
+    // affects THIS device, so the auth listener flips to signed-out and the gate
+    // redirects to login right away. The refresh token simply lapses on expiry.
     setProfile(null);
-  }, []);
+    await supabase.auth.signOut({ scope: 'local' });
+  }, [session]);
 
   const refreshProfile = useCallback(async () => {
     if (currentUserId.current) await loadProfile(currentUserId.current);
