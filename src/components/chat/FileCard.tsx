@@ -15,28 +15,28 @@ interface FileCardProps {
 }
 
 const FILE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
-  "application/pdf": { icon: FileText, color: "text-red-400" },
-  "application/msword": { icon: FileText, color: "text-blue-400" },
+  "application/pdf": { icon: FileText, color: "#f87171" },
+  "application/msword": { icon: FileText, color: "#60a5fa" },
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
     icon: FileText,
-    color: "text-blue-400",
+    color: "#60a5fa",
   },
-  "application/vnd.ms-excel": { icon: FileSpreadsheet, color: "text-success" },
+  "application/vnd.ms-excel": { icon: FileSpreadsheet, color: "#34d399" },
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
     icon: FileSpreadsheet,
-    color: "text-success",
+    color: "#34d399",
   },
-  "application/vnd.ms-powerpoint": { icon: FileText, color: "text-orange-400" },
+  "application/vnd.ms-powerpoint": { icon: FileText, color: "#fb923c" },
   "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
     icon: FileText,
-    color: "text-orange-400",
+    color: "#fb923c",
   },
-  "application/zip": { icon: FileArchive, color: "text-warning" },
-  "application/x-rar-compressed": { icon: FileArchive, color: "text-warning" },
-  "application/vnd.rar": { icon: FileArchive, color: "text-warning" },
-  "audio/mpeg": { icon: Music, color: "text-pink-400" },
-  "audio/wav": { icon: Music, color: "text-pink-400" },
-  "audio/ogg": { icon: Music, color: "text-pink-400" },
+  "application/zip": { icon: FileArchive, color: "#fbbf24" },
+  "application/x-rar-compressed": { icon: FileArchive, color: "#fbbf24" },
+  "application/vnd.rar": { icon: FileArchive, color: "#fbbf24" },
+  "audio/mpeg": { icon: Music, color: "#f472b6" },
+  "audio/wav": { icon: Music, color: "#f472b6" },
+  "audio/ogg": { icon: Music, color: "#f472b6" },
 };
 
 // Code / plain-text extensions get a code icon (their MIME is unreliable).
@@ -51,8 +51,8 @@ const CODE_EXTENSIONS = new Set([
 function getFileIconInfo(mimeType: string | null, fileName: string) {
   if (mimeType && FILE_ICONS[mimeType]) return FILE_ICONS[mimeType];
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-  if (CODE_EXTENSIONS.has(ext)) return { icon: FileCode, color: "text-cyan-400" };
-  return { icon: FileIcon, color: "text-muted-foreground" };
+  if (CODE_EXTENSIONS.has(ext)) return { icon: FileCode, color: "#22d3ee" };
+  return { icon: FileIcon, color: "#94a3b8" };
 }
 
 export function FileCard({ file, isOwn }: FileCardProps) {
@@ -83,26 +83,19 @@ export function FileCard({ file, isOwn }: FileCardProps) {
   return (
     <div
       onClick={handleOpenFile}
-      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors max-w-[280px] ${
-        isOwn
-          ? "bg-primary-foreground/10 hover:bg-primary-foreground/15"
-          : "bg-background/50 hover:bg-background/70"
-      }`}
+      className="file-card-root"
+      data-own={isOwn ? "" : undefined}
     >
       {/* File icon */}
-      <div
-        className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${
-          isOwn ? "bg-primary-foreground/10" : "bg-muted"
-        }`}
-      >
-        <Icon className={`h-5 w-5 ${color}`} />
+      <div className="file-card-icon" data-own={isOwn ? "" : undefined}>
+        <Icon style={{ color }} className="h-5 w-5" />
       </div>
 
       {/* File info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{file.file_name}</p>
+      <div className="file-card-info">
+        <p className="file-card-name">{file.file_name}</p>
         {file.file_size && (
-          <p className="text-[11px] opacity-60">{formatFileSize(file.file_size)}</p>
+          <p className="file-card-size">{formatFileSize(file.file_size)}</p>
         )}
       </div>
 
@@ -111,11 +104,8 @@ export function FileCard({ file, isOwn }: FileCardProps) {
         <TooltipTrigger asChild>
           <button
             onClick={handleDownload}
-            className={`shrink-0 p-2 rounded-full transition-colors ${
-              isOwn
-                ? "hover:bg-primary-foreground/20 text-primary-foreground/70"
-                : "hover:bg-primary/[0.06] text-muted-foreground"
-            }`}
+            className="file-card-download"
+            data-own={isOwn ? "" : undefined}
           >
             <Download className="h-4 w-4" />
           </button>
