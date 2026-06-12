@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
@@ -19,6 +19,8 @@ import {
   Users,
   Pin,
   PinOff,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -58,6 +60,20 @@ export function ChatHeader({
   const { setSidebarOpen, updateConversation } = useChatStore();
   const now = useNow();
   const [showAvatarPreview, setShowAvatarPreview] = useState(false);
+  const [mobileTabOpen, setMobileTabOpen] = useState(false);
+  const mobileTabRef = useRef<HTMLDivElement>(null);
+
+  // Close mobile tab dropdown on outside click
+  useEffect(() => {
+    if (!mobileTabOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (mobileTabRef.current && !mobileTabRef.current.contains(e.target as Node)) {
+        setMobileTabOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobileTabOpen]);
 
   // Check if this conversation is pinned by the current user
   const currentMembership = conversation.members?.find(
@@ -178,16 +194,66 @@ export function ChatHeader({
             {subtitle}
           </p>
         </div>
+
+        {/* Mobile/Tablet: Teams-style dropdown — visible below lg */}
+        <div className="lg:hidden relative mt-3" ref={mobileTabRef}>
+          <button
+            onClick={() => setMobileTabOpen((v) => !v)}
+            className="flex items-center gap-1 px-2 py-1.5 text-sm font-medium text-primary rounded-md hover:bg-accent/50 transition-colors"
+            aria-expanded={mobileTabOpen}
+            aria-haspopup="listbox"
+          >
+            {HEADER_TABS.find((t) => t.key === activeTab)?.label}
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                mobileTabOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {mobileTabOpen && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setMobileTabOpen(false)}
+              />
+              {/* Dropdown */}
+              <div className="absolute left-0 top-full mt-1 z-50 min-w-[150px] rounded-lg border border-border bg-popover p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
+                {HEADER_TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => {
+                      onTabChange(tab.key);
+                      setMobileTabOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 my-0.5 text-sm transition-colors ${
+                      activeTab === tab.key
+                        ? "text-primary font-medium bg-accent/40"
+                        : "text-foreground hover:bg-accent/50"
+                    }`}
+                  >
+                    <span className="w-4 flex items-center justify-center shrink-0">
+                      {activeTab === tab.key && (
+                        <Check className="h-3.5 w-3.5 text-primary" />
+                      )}
+                    </span>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Teams-style tabs — stretch to the header's bottom border so the
-          active underline sits on it (-my-3 cancels the header padding) */}
-      <div className="flex flex-1 items-stretch self-stretch -my-3 ml-4 mr-2 min-w-0 overflow-x-auto">
+      {/* Desktop: inline tabs — visible on lg+ */}
+      <div className="hidden lg:flex flex-1 items-end self-stretch -my-3 ml-4 mr-2 min-w-0">
         {HEADER_TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
-            className={`flex items-center px-3 text-sm font-medium border-b-2 transition-colors shrink-0 ${
+            className={`flex items-center px-3 pb-2 pt-4 text-xs font-medium border-b-2 transition-colors shrink-0 ${
               activeTab === tab.key
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
