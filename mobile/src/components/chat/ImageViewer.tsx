@@ -1,17 +1,19 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Dimensions, Modal, Pressable, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Dimensions, Modal, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
+  interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
+const DISMISS_THRESHOLD = 120;
 
-/** Full-screen image with pinch-zoom, pan, and double-tap to reset/zoom. */
+/** Full-screen image with pinch-zoom, pan, double-tap, and swipe-down to close. */
 export function ImageViewer({
   uri,
   visible,
@@ -21,13 +23,14 @@ export function ImageViewer({
   visible: boolean;
   onClose: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const sx = useSharedValue(0);
   const sy = useSharedValue(0);
+  /** Tracks vertical drag for swipe-to-dismiss (only at scale 1). */
+  const dismissY = useSharedValue(0);
 
   const reset = () => {
     scale.value = withTiming(1);
@@ -36,6 +39,12 @@ export function ImageViewer({
     ty.value = withTiming(0);
     sx.value = 0;
     sy.value = 0;
+    dismissY.value = withTiming(0);
+  };
+
+  const close = () => {
+    reset();
+    onClose();
   };
 
   const pinch = Gesture.Pinch()
@@ -47,13 +56,35 @@ export function ImageViewer({
     });
 
   const pan = Gesture.Pan()
+    .minPointers(1)
+    .maxPointers(1)
     .onUpdate((e) => {
-      tx.value = sx.value + e.translationX;
-      ty.value = sy.value + e.translationY;
+      if (savedScale.value > 1) {
+        tx.value = sx.value + e.translationX;
+        ty.value = sy.value + e.translationY;
+      } else {
+        dismissY.value = e.translationY;
+      }
     })
-    .onEnd(() => {
-      sx.value = tx.value;
-      sy.value = ty.value;
+    .onEnd((e) => {
+      if (savedScale.value > 1) {
+        sx.value = tx.value;
+        sy.value = ty.value;
+      } else {
+        const shouldDismiss =
+          Math.abs(dismissY.value) > DISMISS_THRESHOLD ||
+          Math.abs(e.velocityY) > 800;
+
+        if (shouldDismiss) {
+          dismissY.value = withTiming(
+            dismissY.value > 0 ? height : -height,
+            { duration: 200 },
+          );
+          runOnJS(close)();
+        } else {
+          dismissY.value = withTiming(0);
+        }
+      }
     });
 
   const doubleTap = Gesture.Tap()
@@ -66,6 +97,7 @@ export function ImageViewer({
         ty.value = withTiming(0);
         sx.value = 0;
         sy.value = 0;
+        dismissY.value = withTiming(0);
       } else {
         scale.value = withTiming(2.5);
         savedScale.value = 2.5;
@@ -74,12 +106,21 @@ export function ImageViewer({
 
   const composed = Gesture.Race(doubleTap, Gesture.Simultaneous(pinch, pan));
 
-  const style = useAnimatedStyle(() => ({
+  const imageStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: tx.value },
-      { translateY: ty.value },
+      { translateY: savedScale.value > 1 ? ty.value : dismissY.value },
       { scale: scale.value },
     ],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      Math.abs(dismissY.value),
+      [0, DISMISS_THRESHOLD * 2],
+      [1, 0.1],
+      'clamp',
+    ),
   }));
 
   return (
@@ -87,29 +128,20 @@ export function ImageViewer({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={() => {
-        reset();
-        onClose();
-      }}
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={close}
     >
-      <GestureHandlerRootView style={styles.root}>
-        <Pressable
-          style={[styles.close, { top: insets.top + 8 }]}
-          onPress={() => {
-            reset();
-            onClose();
-          }}
-          hitSlop={12}
-        >
-          <Ionicons name="close" size={28} color="#fff" />
-        </Pressable>
+      <StatusBar style="light" />
+      <GestureHandlerRootView style={styles.flex}>
+        <Animated.View style={[styles.backdrop, backdropStyle]} />
         <GestureDetector gesture={composed}>
           <Animated.View style={styles.center}>
             {uri && (
-              <Animated.View style={style}>
+              <Animated.View style={imageStyle}>
                 <Image
                   source={{ uri }}
-                  style={{ width, height: height * 0.8 }}
+                  style={{ width, height: height * 0.75 }}
                   contentFit="contain"
                   alt="image"
                 />
@@ -123,17 +155,10 @@ export function ImageViewer({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: 'rgba(0,0,0,0.96)' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  close: {
-    position: 'absolute',
-    right: 16,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  flex: { flex: 1 },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.50)',
   },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

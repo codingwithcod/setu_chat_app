@@ -34,7 +34,7 @@ import {
 } from '@/hooks/useConversations';
 import { useThread } from '@/hooks/useThread';
 import { useTyping } from '@/hooks/useTyping';
-import { conversationDisplay } from '@/lib/conversation-display';
+import { conversationDisplay, otherMember } from '@/lib/conversation-display';
 import { formatLastSeen, isDifferentDay } from '@/lib/time';
 import { useChatStore } from '@/stores/chat';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -240,9 +240,15 @@ export default function ChatScreen() {
         </Touchable>
         <Touchable
           style={styles.headerInfo}
-          disabled={!isGroup}
           haptic="none"
-          onPress={() => isGroup && router.push(`/group/${conversationId}`)}
+          onPress={() => {
+            if (isGroup) {
+              router.push(`/group/${conversationId}`);
+            } else if (conversation && !display?.isSelf) {
+              const other = otherMember(conversation, myId);
+              if (other) router.push(`/profile/${other.user_id}`);
+            }
+          }}
         >
           <Avatar uri={display?.avatarUri} name={display?.title} size={40} online={display?.online} />
           <View style={styles.headerText}>

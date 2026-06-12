@@ -97,6 +97,7 @@ function RootNavigator() {
         <Stack.Screen name="chat/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="group/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="new-group" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="profile/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="edit-profile" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="sessions" options={{ animation: 'slide_from_right' }} />
       </Stack>
