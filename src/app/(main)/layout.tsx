@@ -111,7 +111,7 @@ export default function MainLayout({
         clearSessionToken();
         await supabase.auth.signOut({ scope: "local" });
         setUser(null);
-        router.push("/login");
+        router.replace("/login");
       };
       doSignOut();
     }, [router, setUser]),
@@ -293,7 +293,7 @@ export default function MainLayout({
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null);
-        router.push("/login");
+        router.replace("/login");
       }
     });
 
@@ -439,7 +439,15 @@ export default function MainLayout({
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    // User signed out — force redirect to login immediately.
+    // Using window.location ensures we never show a blank screen,
+    // even if the Next.js router is mid-transition.
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.replace("/login");
+    }
+    return null;
+  }
 
   const isConversationView = pathname.startsWith("/chat/");
 

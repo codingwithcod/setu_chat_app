@@ -311,7 +311,7 @@ export default function SettingsPage() {
       .eq("id", user?.id);
     await supabase.auth.signOut({ scope: "local" });
     setUser(null);
-    router.push("/login");
+    router.replace("/login");
   };
 
   return (

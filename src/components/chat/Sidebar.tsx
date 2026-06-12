@@ -70,7 +70,7 @@ export function Sidebar() {
     clearSessionToken();
     await supabase.auth.signOut({ scope: "local" });
     setUser(null);
-    router.push("/login");
+    router.replace("/login");
   };
 
   const handleSelectUser = async (selectedUser: SearchResult) => {
