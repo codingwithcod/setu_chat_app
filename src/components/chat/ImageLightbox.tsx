@@ -219,7 +219,7 @@ export function ImageLightbox({ files, initialIndex, onClose }: ImageLightboxPro
       {/* Thumbnail strip (multi-image only) */}
       {isMultiple && (
         <div className="px-4 py-3 bg-black/50">
-          <div className="flex items-center justify-center gap-2 overflow-x-auto">
+          <div className="flex items-center justify-center gap-2 overflow-x-auto py-2">
             {files.map((file, i) => (
               <button
                 key={file.id}
