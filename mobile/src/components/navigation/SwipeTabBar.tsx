@@ -1,19 +1,19 @@
-import { Ionicons } from '@expo/vector-icons';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { BlurView } from 'expo-blur';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
+import { TabBarIcon, type IconFamily } from '@/components/navigation/TabBarIcon';
 import { TAB_BAR_HEIGHT } from '@/components/navigation/useTabBarHeight';
 import { haptics } from '@/lib/haptics';
 import { useNotificationStore } from '@/stores/notifications';
 import { useTheme } from '@/theme/ThemeProvider';
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-const TABS: Record<string, { name: IconName; active: IconName; label: string }> = {
-  index: { name: 'chatbubble-ellipses-outline', active: 'chatbubble-ellipses', label: 'Chats' },
+const TABS: Record<
+  string,
+  { family?: IconFamily; name: string; active: string; label: string }
+> = {
+  index: { family: 'mci', name: 'forum-outline', active: 'forum', label: 'Chats' },
   contacts: { name: 'people-outline', active: 'people', label: 'Contacts' },
   activity: { name: 'notifications-outline', active: 'notifications', label: 'Activity' },
   profile: { name: 'person-outline', active: 'person', label: 'Profile' },
@@ -74,7 +74,12 @@ export function SwipeTabBar({ state, navigation }: MaterialTopTabBarProps) {
           return (
             <Pressable key={route.key} onPress={onPress} style={styles.tab} hitSlop={6}>
               <View style={styles.iconWrap}>
-                <TabBarIcon name={tab.name} activeName={tab.active} focused={focused} />
+                <TabBarIcon
+                  family={tab.family}
+                  name={tab.name}
+                  activeName={tab.active}
+                  focused={focused}
+                />
                 {route.name === 'activity' && unread > 0 && (
                   <View style={[styles.badge, { backgroundColor: colors.primary }]}>
                     <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>
