@@ -19,6 +19,9 @@ export function ThemeSwitcher() {
 
   const active = presets.find((p) => p.id === preset) ?? presets[0];
   const heroGrad: [string, string] = [colors.primary, colors.primaryGradientEnd];
+  // A theme whose gradient is flattened (e.g. Midnight Black) reads as a solid
+  // color — skip the decorative glow/orb gradients so "black means black".
+  const flat = colors.primary === colors.primaryGradientEnd;
 
   return (
     <View style={styles.wrap}>
@@ -69,14 +72,16 @@ export function ThemeSwitcher() {
           { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg },
         ]}
       >
-        {/* Decorative corner glow */}
-        <LinearGradient
-          colors={[colors.withAlpha('primary', 0.22), 'transparent']}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.heroWash}
-          pointerEvents="none"
-        />
+        {/* Decorative corner glow — omitted for flat (mono) themes */}
+        {!flat && (
+          <LinearGradient
+            colors={[colors.withAlpha('primary', 0.22), 'transparent']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.heroWash}
+            pointerEvents="none"
+          />
+        )}
 
         {/* Received bubble — matches the real chat (colors.muted) */}
         <View style={[styles.recvBubble, { backgroundColor: colors.muted }]}>
@@ -123,15 +128,17 @@ export function ThemeSwitcher() {
       <View style={styles.chipRow}>
         {presets.map((p) => {
           const on = preset === p.id;
-          // Pure single-hue orb (light → primary → deeper shade) so each dot
-          // reads as a clear gradient in its true identity color — no drift
-          // toward primaryGradientEnd.
-          const grad: [string, string, string] = [
-            hsl(p.variables.primaryLight),
-            hsl(p.variables.primary),
-            mixBlack(p.variables.primary, 60),
-          ];
           const tint = hsl(p.variables.primary);
+          // Flat (mono) presets get a solid orb; others a single-hue gradient
+          // (light → primary → deeper shade), no drift toward primaryGradientEnd.
+          const chipFlat = p.variables.primary === p.variables.primaryGradientEnd;
+          const grad: [string, string, string] = chipFlat
+            ? [tint, tint, tint]
+            : [
+                hsl(p.variables.primaryLight),
+                hsl(p.variables.primary),
+                mixBlack(p.variables.primary, 60),
+              ];
           return (
             <Pressable
               key={p.id}
