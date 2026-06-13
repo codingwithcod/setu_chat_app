@@ -27,7 +27,7 @@ export default function ProfileScreen() {
     'Setu user';
 
   return (
-    <Screen edges={['top', 'left', 'right']}>
+    <Screen bare edges={['top', 'left', 'right']}>
       <ScreenHeader title="Profile" />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 24 }]}

@@ -18,19 +18,32 @@ interface ScreenProps {
    * surface. Defaults to true.
    */
   aurora?: boolean;
+  /**
+   * Transparent variant: paints no background and no aurora, letting a shared
+   * background painted further up the tree show through. Used by the swipeable
+   * tab screens so the gradient stays fixed while only content swipes.
+   */
+  bare?: boolean;
 }
 
 /** Themed screen container: safe-area aware, themed background + status bar. */
-export function Screen({ children, padded = false, style, edges, aurora = true }: ScreenProps) {
+export function Screen({
+  children,
+  padded = false,
+  style,
+  edges,
+  aurora = true,
+  bare = false,
+}: ScreenProps) {
   const { colors, scheme } = useTheme();
   return (
     // The root fills edge-to-edge (under the translucent status bar). The Aurora
     // lives here, BEHIND the safe-area padding, so its glow extends up through
     // the status bar. The SafeAreaView on top stays transparent so it shows
     // through.
-    <View style={[styles.flex, { backgroundColor: colors.background }]}>
+    <View style={[styles.flex, { backgroundColor: bare ? 'transparent' : colors.background }]}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      {aurora && <Aurora />}
+      {aurora && !bare && <Aurora />}
       <SafeAreaView edges={edges ?? ['top', 'bottom', 'left', 'right']} style={styles.flex}>
         <View style={[styles.flex, padded && styles.padded, style]}>{children}</View>
       </SafeAreaView>

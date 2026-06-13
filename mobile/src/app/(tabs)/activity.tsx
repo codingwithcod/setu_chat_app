@@ -77,7 +77,7 @@ export default function ActivityScreen() {
   );
 
   return (
-    <Screen edges={['top', 'left', 'right']}>
+    <Screen bare edges={['top', 'left', 'right']}>
       <ScreenHeader
         title="Activity"
         right={

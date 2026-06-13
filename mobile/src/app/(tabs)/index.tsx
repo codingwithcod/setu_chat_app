@@ -36,7 +36,7 @@ export default function ChatsScreen() {
   );
 
   return (
-    <Screen edges={['top', 'left', 'right']}>
+    <Screen bare edges={['top', 'left', 'right']}>
       <ScreenHeader brand />
       {isLoading ? (
         <RowSkeletonList />

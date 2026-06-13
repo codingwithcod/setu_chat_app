@@ -80,7 +80,7 @@ export default function ContactsScreen() {
   const data = showResults ? search.results : suggested;
 
   return (
-    <Screen edges={['top', 'left', 'right']}>
+    <Screen bare edges={['top', 'left', 'right']}>
       <ScreenHeader title="Contacts" />
 
       {/* Search field */}
