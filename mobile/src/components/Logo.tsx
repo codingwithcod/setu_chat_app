@@ -12,7 +12,7 @@ const whiteMark = require('../../assets/images/setu-white-tr.png');
 type LogoSize = 'sm' | 'md' | 'lg';
 
 const SIZES: Record<LogoSize, { tile: number; mark: number; font: number; radius: number; gap: number }> = {
-  sm: { tile: 30, mark: 19, font: 18, radius: 9, gap: 8 },
+  sm: { tile: 36, mark: 23, font: 21, radius: 11, gap: 9 },
   md: { tile: 38, mark: 24, font: 22, radius: 11, gap: 10 },
   lg: { tile: 60, mark: 38, font: 34, radius: 16, gap: 14 },
 };
@@ -36,12 +36,14 @@ export function Logo({ size = 'md', wordmark = true, style }: LogoProps) {
 
   return (
     <View style={[styles.row, { gap: s.gap }, style]}>
-      <View
+      <LinearGradient
+        colors={colors.brandTileGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={{
           width: s.tile,
           height: s.tile,
           borderRadius: s.radius,
-          backgroundColor: colors.brandTile,
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -53,7 +55,7 @@ export function Logo({ size = 'md', wordmark = true, style }: LogoProps) {
           style={{ width: s.mark, height: s.mark }}
           contentFit="contain"
         />
-      </View>
+      </LinearGradient>
 
       {wordmark &&
         (colors.brandWordmark ? (
@@ -69,7 +71,7 @@ export function Logo({ size = 'md', wordmark = true, style }: LogoProps) {
             Setu
           </Text>
         ) : (
-          <GradientWordmark fontSize={s.font} colors={colors.gradient} />
+          <GradientWordmark fontSize={s.font} colors={colors.brandWordmarkGradient} />
         ))}
     </View>
   );

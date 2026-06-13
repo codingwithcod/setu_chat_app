@@ -365,9 +365,14 @@ export interface ThemeColors {
   /** Logo tile background. Defaults to primary; a preset may override (e.g.
    *  Midnight Black uses a dark tile so the white mark reads). */
   brandTile: string;
+  /** Logo tile gradient (tile base → a deeper shade) for a premium, dimensional
+   *  lockup. */
+  brandTileGradient: [string, string];
   /** When set, the "Setu" wordmark renders as this solid color instead of the
    *  gradient (e.g. Midnight Black: white in dark mode, black in light). Null = gradient. */
   brandWordmark: string | null;
+  /** "Setu" wordmark gradient — primary deepening into darker mixed shades. */
+  brandWordmarkGradient: [string, string, string];
   /**
    * Own message bubble gradient stops. Defaults to primary darkened (6% → 20%)
    * to match web, but a preset may override via `bubbleOwnFrom`/`bubbleOwnTo`
@@ -425,7 +430,18 @@ export function buildColors(presetId: ThemePresetId, mode: ColorMode): ThemeColo
     // Matches web .gradient-text: linear-gradient(primary-light, primary, tertiary/0.8)
     gradient: [hsl(t.primaryLight), hsl(t.primary), hsl(t.tertiary, 0.8)],
     brandTile: t.brandTile ? hsl(t.brandTile) : get('primary'),
+    // Tile + wordmark deepen the theme's primary into darker mixed shades for a
+    // premium, dimensional brand lockup.
+    brandTileGradient: [
+      hsl(t.brandTile ?? t.primary),
+      mixBlack(t.brandTile ?? t.primary, 74),
+    ],
     brandWordmark: t.brandWordmark ? hsl(t.brandWordmark) : null,
+    brandWordmarkGradient: [
+      hsl(t.primary),
+      mixBlack(t.primary, 84),
+      mixBlack(t.primary, 70),
+    ],
     // .msg-bubble-sent: linear-gradient(primary 94%/black, primary 80%/black).
     // A preset may override the stops to decouple the bubble from the accent.
     bubbleOwn:
