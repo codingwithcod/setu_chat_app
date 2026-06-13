@@ -4,11 +4,14 @@ import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  Easing,
   interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { AnimatedEmoji } from '@/components/chat/AnimatedEmoji';
@@ -36,8 +39,12 @@ interface MessageBubbleProps {
   animateIn?: boolean;
   status: Status;
   myId: string;
+  /** Briefly glow this bubble (when scrolled to from a reply tap). */
+  highlighted?: boolean;
   onLongPress: (m: MessageWithSender) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
+  /** Tapping a reply preview jumps to the quoted message. */
+  onReplyPress?: (messageId: string) => void;
   onRetry?: (m: MessageWithSender) => void;
 }
 
@@ -49,8 +56,10 @@ function MessageBubbleBase({
   animateIn = false,
   status,
   myId,
+  highlighted = false,
   onLongPress,
   onToggleReaction,
+  onReplyPress,
   onRetry,
 }: MessageBubbleProps) {
   const { colors, radius } = useTheme();
@@ -95,6 +104,27 @@ function MessageBubbleBase({
   const swipeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: swipeX.value }] }));
   const hintStyle = useAnimatedStyle(() => ({
     opacity: interpolate(swipeX.value, [0, SWIPE_TRIGGER], [0, 1], 'clamp'),
+  }));
+
+  // Premium cyan (`info`) glow ring when scrolled to via a reply tap — a quick
+  // bloom, a soft second pulse, then a slow ripple-out fade (mirrors the web's
+  // multi-stage highlight, tuned for mobile).
+  const glow = useSharedValue(0);
+  useEffect(() => {
+    if (highlighted) {
+      glow.value = 0;
+      glow.value = withSequence(
+        withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) }),
+        withTiming(0.55, { duration: 420 }),
+        withTiming(0.85, { duration: 320 }),
+        withTiming(0, { duration: 1100, easing: Easing.in(Easing.quad) }),
+      );
+    }
+  }, [highlighted, glow]);
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glow.value,
+    // Ring eases slightly outward as it fades for a gentle ripple.
+    transform: [{ scale: 1 + (1 - glow.value) * 0.04 }],
   }));
 
   // Big "live" animated emoji for emoji-only messages (1–3 emojis), like web.
@@ -182,7 +212,10 @@ function MessageBubbleBase({
       )}
 
       {message.reply_message && (
-        <View
+        <Pressable
+          onPress={() =>
+            message.reply_message && onReplyPress?.(message.reply_message.id)
+          }
           style={[
             styles.reply,
             {
@@ -203,7 +236,7 @@ function MessageBubbleBase({
           >
             {message.reply_message.content ?? 'Attachment'}
           </Text>
-        </View>
+        </Pressable>
       )}
 
       {message.files && message.files.length > 0 && (
@@ -253,6 +286,20 @@ function MessageBubbleBase({
     >
       <GestureDetector gesture={swipe}>
         <Animated.View style={[styles.swipeRow, swipeStyle]}>
+          {/* Bubble-hugging glow ring (reply jump highlight). */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.glow,
+              {
+                borderColor: colors.info,
+                backgroundColor: colors.withAlpha('info', 0.12),
+                shadowColor: colors.info,
+              },
+              glowStyle,
+            ]}
+          />
+
           <Pressable onLongPress={openActions} delayLongPress={250}>
             {isOwn && !bigEmoji ? (
               <LinearGradient
@@ -320,6 +367,19 @@ export const MessageBubble = memo(MessageBubbleBase);
 
 const styles = StyleSheet.create({
   wrap: { marginVertical: 3, paddingHorizontal: 12, maxWidth: '100%' },
+  glow: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    // Soft colored bloom (iOS; Android shows the ring + tint).
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 12,
+  },
   grouped: { marginTop: 1 },
   alignEnd: { alignItems: 'flex-end' },
   alignStart: { alignItems: 'flex-start' },

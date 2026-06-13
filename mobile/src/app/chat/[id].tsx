@@ -129,8 +129,10 @@ export default function ChatScreen() {
   );
   const [actionMsg, setActionMsg] = useState<MessageWithSender | null>(null);
   const [forwardMsg, setForwardMsg] = useState<MessageWithSender | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const listRef = useRef<FlashListRef<Row>>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nearBottomRef = useRef(true);
   const lastIdRef = useRef<string | null>(null);
 
@@ -204,6 +206,25 @@ export default function ChatScreen() {
     [deleteMessage]
   );
 
+  // Tapping a reply preview jumps to the quoted message and flashes it.
+  const scrollToMessage = useCallback(
+    (messageId: string) => {
+      const index = rows.findIndex(
+        (r) => r.kind === 'message' && r.message.id === messageId
+      );
+      if (index < 0) return;
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+      setHighlightedId(messageId);
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      highlightTimer.current = setTimeout(() => setHighlightedId(null), 2200);
+    },
+    [rows]
+  );
+
+  useEffect(() => () => {
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: Row }) => {
       if (item.kind === 'date') return <DateSeparator iso={item.iso} />;
@@ -224,13 +245,15 @@ export default function ChatScreen() {
           animateIn={animateIn}
           status={statusFor(m)}
           myId={myId}
+          highlighted={m.id === highlightedId}
           onLongPress={setActionMsg}
           onToggleReaction={toggleReaction}
+          onReplyPress={scrollToMessage}
           onRetry={(msg) => msg._clientId && retryMessage(msg._clientId)}
         />
       );
     },
-    [myId, statusFor, toggleReaction, retryMessage]
+    [myId, statusFor, toggleReaction, retryMessage, highlightedId, scrollToMessage]
   );
 
   return (
