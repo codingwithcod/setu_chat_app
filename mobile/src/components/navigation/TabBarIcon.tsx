@@ -4,7 +4,6 @@ import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -12,47 +11,41 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 interface TabBarIconProps {
   name: keyof typeof Ionicons.glyphMap;
-  /** Filled variant shown when focused (e.g. 'chatbubbles'). */
+  /** Filled variant shown when focused (e.g. 'chatbubble-ellipses'). */
   activeName: keyof typeof Ionicons.glyphMap;
-  color: string;
   focused: boolean;
+  size?: number;
 }
 
 /**
- * Animated tab icon: springs up + scales when focused, swaps to the filled
- * glyph, and reveals a small dot underneath. Gives the tab bar a lively,
- * deliberate feel instead of a static color swap.
+ * Tab icon that crossfades from a muted outline glyph to a primary-tinted
+ * filled glyph when focused — no scaling or movement, just a clean themed
+ * swap (WhatsApp-style active state).
  */
-export function TabBarIcon({ name, activeName, color, focused }: TabBarIconProps) {
+export function TabBarIcon({ name, activeName, focused, size = 28 }: TabBarIconProps) {
   const { colors } = useTheme();
   const f = useSharedValue(focused ? 1 : 0);
 
   useEffect(() => {
-    f.value = withSpring(focused ? 1 : 0, { damping: 14, stiffness: 220, mass: 0.6 });
+    f.value = withTiming(focused ? 1 : 0, { duration: 180 });
   }, [focused, f]);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + f.value * 0.12 }, { translateY: -f.value * 2 }],
-  }));
-
-  const dotStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(focused ? 1 : 0, { duration: 150 }),
-    transform: [{ scale: f.value }],
-  }));
+  const outlineStyle = useAnimatedStyle(() => ({ opacity: 1 - f.value }));
+  const filledStyle = useAnimatedStyle(() => ({ opacity: f.value }));
 
   return (
-    <View style={styles.wrap}>
-      <Animated.View style={iconStyle}>
-        <Ionicons name={focused ? activeName : name} size={24} color={color} />
+    <View style={[styles.wrap, { width: size + 4, height: size + 4 }]}>
+      <Animated.View style={[styles.center, outlineStyle]}>
+        <Ionicons name={name} size={size} color={colors.mutedForeground} />
       </Animated.View>
-      <Animated.View
-        style={[styles.dot, { backgroundColor: colors.primary }, dotStyle]}
-      />
+      <Animated.View style={[styles.center, filledStyle]}>
+        <Ionicons name={activeName} size={size} color={colors.primary} />
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', justifyContent: 'center', height: 30 },
-  dot: { position: 'absolute', bottom: -7, width: 5, height: 5, borderRadius: 2.5 },
+  wrap: { alignItems: 'center', justifyContent: 'center' },
+  center: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,7 +1,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Visual height of the bottom tab bar (excluding the safe-area inset). */
-export const TAB_BAR_HEIGHT = 60;
+export const TAB_BAR_HEIGHT = 74;
 
 /**
  * Total tab-bar height including the bottom safe-area inset. Screens pad their

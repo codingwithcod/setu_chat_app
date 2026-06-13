@@ -12,11 +12,11 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-const ICONS: Record<string, { name: IconName; active: IconName }> = {
-  index: { name: 'chatbubbles-outline', active: 'chatbubbles' },
-  contacts: { name: 'people-outline', active: 'people' },
-  activity: { name: 'notifications-outline', active: 'notifications' },
-  profile: { name: 'person-outline', active: 'person' },
+const TABS: Record<string, { name: IconName; active: IconName; label: string }> = {
+  index: { name: 'chatbubble-ellipses-outline', active: 'chatbubble-ellipses', label: 'Chats' },
+  contacts: { name: 'people-outline', active: 'people', label: 'Contacts' },
+  activity: { name: 'notifications-outline', active: 'notifications', label: 'Activity' },
+  profile: { name: 'person-outline', active: 'person', label: 'Profile' },
 };
 
 /**
@@ -35,7 +35,7 @@ export function SwipeTabBar({ state, navigation }: MaterialTopTabBarProps) {
         styles.bar,
         {
           height: TAB_BAR_HEIGHT + insets.bottom,
-          paddingBottom: insets.bottom,
+          paddingBottom: insets.bottom + 16,
           borderTopColor: colors.border,
         },
       ]}
@@ -56,8 +56,8 @@ export function SwipeTabBar({ state, navigation }: MaterialTopTabBarProps) {
       <View style={styles.row}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
-          const icon = ICONS[route.name];
-          const color = focused ? colors.primary : colors.mutedForeground;
+          const tab = TABS[route.name];
+          if (!tab) return null;
 
           const onPress = () => {
             haptics.selection();
@@ -73,10 +73,8 @@ export function SwipeTabBar({ state, navigation }: MaterialTopTabBarProps) {
 
           return (
             <Pressable key={route.key} onPress={onPress} style={styles.tab} hitSlop={6}>
-              <View>
-                {icon && (
-                  <TabBarIcon name={icon.name} activeName={icon.active} color={color} focused={focused} />
-                )}
+              <View style={styles.iconWrap}>
+                <TabBarIcon name={tab.name} activeName={tab.active} focused={focused} />
                 {route.name === 'activity' && unread > 0 && (
                   <View style={[styles.badge, { backgroundColor: colors.primary }]}>
                     <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>
@@ -85,6 +83,18 @@ export function SwipeTabBar({ state, navigation }: MaterialTopTabBarProps) {
                   </View>
                 )}
               </View>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  {
+                    color: focused ? colors.primary : colors.mutedForeground,
+                    fontWeight: focused ? '700' : '500',
+                  },
+                ]}
+              >
+                {tab.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -101,12 +111,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  row: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingTop: 10 },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  row: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingTop: 8 },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  iconWrap: { alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 13, letterSpacing: 0.2 },
   badge: {
     position: 'absolute',
     top: -4,
-    right: -10,
+    right: -12,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
