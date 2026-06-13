@@ -1,5 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -48,7 +49,7 @@ export function MessageInput({
   onRemoveAttachment,
   uploading = false,
 }: MessageInputProps) {
-  const { colors, radius } = useTheme();
+  const { colors } = useTheme();
   const [text, setText] = useState('');
   const [emojiOpen, setEmojiOpen] = useState(false);
   const hasAttachments = attachments.length > 0;
@@ -169,48 +170,60 @@ export function MessageInput({
       )}
 
       <View style={styles.row}>
-        {!editing && (
-          <Touchable onPress={onAttach} hitSlop={8} style={styles.iconBtn}>
-            <Ionicons name="add-circle-outline" size={28} color={colors.mutedForeground} />
-          </Touchable>
-        )}
-        <Touchable onPress={() => setEmojiOpen(true)} hitSlop={8} style={styles.iconBtn}>
-          <Ionicons name="happy-outline" size={26} color={colors.mutedForeground} />
-        </Touchable>
-        <TextInput
-          value={text}
-          onChangeText={(t) => {
-            setText(t);
-            onType();
-          }}
-          placeholder="Message"
-          placeholderTextColor={colors.mutedForeground}
-          multiline
+        <View
           style={[
-            styles.input,
-            { color: colors.foreground, backgroundColor: colors.background, borderRadius: radius.lg },
-          ]}
-        />
-        <Touchable
-          onPress={submit}
-          haptic="none"
-          disabled={!canSend || uploading}
-          style={[
-            styles.sendBtn,
-            { backgroundColor: canSend && !uploading ? colors.primary : colors.secondary },
-            canSend && !uploading ? glow(colors.primary, 'sm') : null,
+            styles.pill,
+            { backgroundColor: colors.background, borderColor: colors.withAlpha('border', 0.9) },
           ]}
         >
-          {uploading ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <Ionicons
-              name={editing ? 'checkmark' : 'send'}
-              size={20}
-              color={canSend ? colors.primaryForeground : colors.mutedForeground}
-            />
+          {!editing && (
+            <Touchable onPress={onAttach} hitSlop={6} style={styles.iconBtn}>
+              <Feather name="paperclip" size={21} color={colors.mutedForeground} />
+            </Touchable>
           )}
-        </Touchable>
+
+          <TextInput
+            value={text}
+            onChangeText={(t) => {
+              setText(t);
+              onType();
+            }}
+            placeholder="Message"
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+            style={[styles.input, { color: colors.foreground }, editing && styles.inputEditing]}
+          />
+
+          <Touchable onPress={() => setEmojiOpen(true)} hitSlop={6} style={styles.iconBtn}>
+            <Feather name="smile" size={21} color={colors.mutedForeground} />
+          </Touchable>
+
+          <Touchable
+            onPress={submit}
+            haptic="none"
+            disabled={!canSend || uploading}
+            style={styles.sendWrap}
+          >
+            {canSend && !uploading ? (
+              <LinearGradient
+                colors={[colors.primary, colors.primaryGradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.sendBtn, glow(colors.primary, 'sm')]}
+              >
+                <Feather name={editing ? 'check' : 'send'} size={18} color={colors.primaryForeground} />
+              </LinearGradient>
+            ) : (
+              <View style={[styles.sendBtn, { backgroundColor: colors.secondary }]}>
+                {uploading ? (
+                  <ActivityIndicator size="small" color={colors.primaryForeground} />
+                ) : (
+                  <Feather name={editing ? 'check' : 'send'} size={18} color={colors.mutedForeground} />
+                )}
+              </View>
+            )}
+          </Touchable>
+        </View>
       </View>
 
       <EmojiPicker
@@ -267,26 +280,41 @@ const styles = StyleSheet.create({
   contextAccent: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
   contextTitle: { fontSize: 13, fontWeight: '700' },
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingTop: 8,
   },
-  iconBtn: { paddingBottom: 8 },
+  // Full-width pill holding the attachment, input, emoji and send — premium.
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    borderRadius: 26,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingLeft: 6,
+    paddingRight: 5,
+    paddingVertical: 5,
+  },
+  iconBtn: {
+    width: 38,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   input: {
     flex: 1,
     maxHeight: 120,
-    minHeight: 42,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 10,
+    minHeight: 40,
+    paddingHorizontal: 6,
+    paddingTop: 9,
+    paddingBottom: 9,
     fontSize: 15.5,
   },
+  // Editing hides the attachment button — keep the text padded from the edge.
+  inputEditing: { paddingLeft: 12 },
+  sendWrap: { marginLeft: 2 },
   sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
