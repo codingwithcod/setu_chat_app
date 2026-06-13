@@ -1,6 +1,9 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { downloadFile } from '@/lib/download';
+import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageFile } from '@/types';
 
@@ -50,10 +53,30 @@ export function iconFor(
 export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean }) {
   const { colors, radius } = useTheme();
   const icon = iconFor(file.mime_type, file.file_name);
+  const [busy, setBusy] = useState(false);
+
+  const onDownload = async () => {
+    if (busy) return;
+    haptics.selection();
+    setBusy(true);
+    const res = await downloadFile(file.file_url, file.file_name, file.mime_type);
+    setBusy(false);
+    if (res.ok) {
+      haptics.success();
+      Alert.alert('Downloaded', `"${file.file_name}" was saved to your device.`);
+    } else if (res.reason === 'permission') {
+      haptics.error();
+      Alert.alert('Permission needed', 'Choose a folder to save your downloads.');
+    } else {
+      haptics.error();
+      Alert.alert('Download failed', 'Could not download the file. Please try again.');
+    }
+  };
 
   return (
     <Pressable
-      onPress={() => Linking.openURL(file.file_url)}
+      onPress={onDownload}
+      disabled={busy}
       style={[
         styles.card,
         {
@@ -78,11 +101,15 @@ export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean })
           {formatBytes(file.file_size)}
         </Text>
       </View>
-      <Feather
-        name="download"
-        size={19}
-        color={onOwn ? 'rgba(255,255,255,0.85)' : colors.mutedForeground}
-      />
+      {busy ? (
+        <ActivityIndicator size="small" color={onOwn ? 'rgba(255,255,255,0.85)' : colors.mutedForeground} />
+      ) : (
+        <Feather
+          name="download"
+          size={19}
+          color={onOwn ? 'rgba(255,255,255,0.85)' : colors.mutedForeground}
+        />
+      )}
     </Pressable>
   );
 }
