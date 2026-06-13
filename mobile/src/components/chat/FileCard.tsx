@@ -1,7 +1,8 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useDialog } from '@/components/ui/DialogProvider';
 import { downloadFile } from '@/lib/download';
 import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -52,6 +53,7 @@ export function iconFor(
 
 export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean }) {
   const { colors, radius } = useTheme();
+  const dialog = useDialog();
   const icon = iconFor(file.mime_type, file.file_name);
   const [busy, setBusy] = useState(false);
 
@@ -63,13 +65,25 @@ export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean })
     setBusy(false);
     if (res.ok) {
       haptics.success();
-      Alert.alert('Downloaded', `"${file.file_name}" was saved to your device.`);
+      dialog.alert({
+        title: 'Downloaded',
+        message: `"${file.file_name}" was saved to your device.`,
+        icon: 'checkmark-circle-outline',
+      });
     } else if (res.reason === 'permission') {
       haptics.error();
-      Alert.alert('Permission needed', 'Choose a folder to save your downloads.');
+      dialog.alert({
+        title: 'Permission needed',
+        message: 'Choose a folder to save your downloads.',
+        icon: 'folder-open-outline',
+      });
     } else {
       haptics.error();
-      Alert.alert('Download failed', 'Could not download the file. Please try again.');
+      dialog.alert({
+        title: 'Download failed',
+        message: 'Could not download the file. Please try again.',
+        icon: 'alert-circle-outline',
+      });
     }
   };
 

@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
   Modal,
@@ -24,6 +23,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { useDialog } from '@/components/ui/DialogProvider';
 import { haptics } from '@/lib/haptics';
 import { saveImageToGallery } from '@/lib/download';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -54,6 +54,7 @@ export function ImageViewer({
   onClose: () => void;
 }) {
   const { colors } = useTheme();
+  const dialog = useDialog();
   const [index, setIndex] = useState(initialIndex);
   /** Disabled while the active image is zoomed so panning doesn't page. */
   const [scrollEnabled, setScrollEnabled] = useState(true);
@@ -111,15 +112,27 @@ export function ImageViewer({
     setSaving(false);
     if (res.ok) {
       haptics.success();
-      Alert.alert('Saved', 'Image saved to your gallery.');
+      dialog.alert({
+        title: 'Saved',
+        message: 'Image saved to your gallery.',
+        icon: 'checkmark-circle-outline',
+      });
     } else if (res.reason === 'permission') {
       haptics.error();
-      Alert.alert('Permission needed', 'Allow photo access to save images to your gallery.');
+      dialog.alert({
+        title: 'Permission needed',
+        message: 'Allow photo access to save images to your gallery.',
+        icon: 'images-outline',
+      });
     } else {
       haptics.error();
-      Alert.alert('Download failed', 'Could not save the image. Please try again.');
+      dialog.alert({
+        title: 'Download failed',
+        message: 'Could not save the image. Please try again.',
+        icon: 'alert-circle-outline',
+      });
     }
-  }, [saving, current]);
+  }, [saving, current, dialog]);
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(

@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
@@ -22,6 +22,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 export default function EditProfileScreen() {
   const { colors } = useTheme();
+  const dialog = useDialog();
   const router = useRouter();
   const { profile, session, refreshProfile } = useAuth();
   const userId = session?.user.id ?? '';
@@ -46,7 +47,11 @@ export default function EditProfileScreen() {
       setAvatarUrl(url);
       await refreshProfile();
     } catch (err) {
-      Alert.alert('Upload failed', err instanceof Error ? err.message : 'Please try again.');
+      dialog.alert({
+        title: 'Upload failed',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
     } finally {
       setUploadingAvatar(false);
     }
@@ -54,7 +59,11 @@ export default function EditProfileScreen() {
 
   const save = async () => {
     if (!firstName.trim()) {
-      Alert.alert('Name required', 'Please enter your first name.');
+      dialog.alert({
+        title: 'Name required',
+        message: 'Please enter your first name.',
+        icon: 'person-outline',
+      });
       return;
     }
     setSaving(true);
@@ -68,7 +77,11 @@ export default function EditProfileScreen() {
       router.back();
     } catch (err) {
       setSaving(false);
-      Alert.alert('Could not save', err instanceof Error ? err.message : 'Please try again.');
+      dialog.alert({
+        title: 'Could not save',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
     }
   };
 

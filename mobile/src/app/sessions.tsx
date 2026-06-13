@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -12,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { useDialog } from '@/components/ui/DialogProvider';
 import { Screen } from '@/components/ui/Screen';
 import { api } from '@/lib/api';
 import { formatLastSeen } from '@/lib/time';
@@ -37,6 +37,7 @@ function deviceLabel(s: UserSession): string {
 
 export default function SessionsScreen() {
   const { colors, radius } = useTheme();
+  const dialog = useDialog();
   const router = useRouter();
 
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -66,31 +67,30 @@ export default function SessionsScreen() {
   }, [load]);
 
   const revoke = useCallback(
-    (s: UserSession) => {
-      Alert.alert(
-        'Revoke session',
-        `Sign out ${s.device_name || 'this device'}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Revoke',
-            style: 'destructive',
-            onPress: async () => {
-              setRevoking(s.id);
-              try {
-                await api.del(`/api/sessions/${s.id}`);
-                setSessions((prev) => prev.filter((x) => x.id !== s.id));
-              } catch (err) {
-                Alert.alert('Error', err instanceof Error ? err.message : 'Please try again.');
-              } finally {
-                setRevoking(null);
-              }
-            },
-          },
-        ]
-      );
+    async (s: UserSession) => {
+      const ok = await dialog.confirm({
+        title: 'Revoke session',
+        message: `Sign out ${s.device_name || 'this device'}?`,
+        confirmLabel: 'Revoke',
+        destructive: true,
+        icon: 'log-out-outline',
+      });
+      if (!ok) return;
+      setRevoking(s.id);
+      try {
+        await api.del(`/api/sessions/${s.id}`);
+        setSessions((prev) => prev.filter((x) => x.id !== s.id));
+      } catch (err) {
+        dialog.alert({
+          title: 'Error',
+          message: err instanceof Error ? err.message : 'Please try again.',
+          icon: 'alert-circle-outline',
+        });
+      } finally {
+        setRevoking(null);
+      }
     },
-    []
+    [dialog]
   );
 
   const renderItem = useCallback(

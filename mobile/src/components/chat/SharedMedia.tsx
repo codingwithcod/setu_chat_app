@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
   Pressable,
@@ -14,6 +13,7 @@ import {
 
 import { formatBytes, iconFor } from '@/components/chat/FileCard';
 import { ImageViewer } from '@/components/chat/ImageViewer';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { downloadFile } from '@/lib/download';
 import { haptics } from '@/lib/haptics';
 import type { SharedAttachment } from '@/hooks/useConversationFiles';
@@ -109,6 +109,7 @@ export function SharedFiles({
   loading: boolean;
 }) {
   const { colors, radius } = useTheme();
+  const dialog = useDialog();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const onDownload = async (item: SharedAttachment) => {
@@ -119,13 +120,25 @@ export function SharedFiles({
     setDownloadingId(null);
     if (res.ok) {
       haptics.success();
-      Alert.alert('Downloaded', `"${item.file_name}" was saved to your device.`);
+      dialog.alert({
+        title: 'Downloaded',
+        message: `"${item.file_name}" was saved to your device.`,
+        icon: 'checkmark-circle-outline',
+      });
     } else if (res.reason === 'permission') {
       haptics.error();
-      Alert.alert('Permission needed', 'Choose a folder to save your downloads.');
+      dialog.alert({
+        title: 'Permission needed',
+        message: 'Choose a folder to save your downloads.',
+        icon: 'folder-open-outline',
+      });
     } else {
       haptics.error();
-      Alert.alert('Download failed', 'Could not download the file. Please try again.');
+      dialog.alert({
+        title: 'Download failed',
+        message: 'Could not download the file. Please try again.',
+        icon: 'alert-circle-outline',
+      });
     }
   };
 

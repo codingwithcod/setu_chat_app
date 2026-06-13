@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserRow } from '@/components/contacts/UserRow';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { useAuth } from '@/context/AuthContext';
 import { CONVERSATIONS_KEY } from '@/hooks/useConversations';
 import { useUserSearch } from '@/hooks/useUsers';
@@ -52,6 +52,7 @@ function previewText(m: MessageWithSender): string {
 
 export function ForwardMessageModal({ message, onClose }: ForwardMessageModalProps) {
   const { colors, radius } = useTheme();
+  const dialog = useDialog();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { session } = useAuth();
@@ -136,9 +137,13 @@ export function ForwardMessageModal({ message, onClose }: ForwardMessageModalPro
       close();
     } catch (err) {
       setSending(false);
-      Alert.alert('Forward failed', err instanceof Error ? err.message : 'Please try again.');
+      dialog.alert({
+        title: 'Forward failed',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
     }
-  }, [message, totalSelected, convIds, userIds, queryClient, close]);
+  }, [message, totalSelected, convIds, userIds, queryClient, close, dialog]);
 
   const Checkbox = ({ checked }: { checked: boolean }) => (
     <View

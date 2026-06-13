@@ -6,7 +6,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   StyleSheet,
   Text,
@@ -24,6 +23,7 @@ import { MessageInput } from '@/components/chat/MessageInput';
 import { TypingIndicator } from '@/components/chat/TypingIndicator';
 import { MAX_FILE_MB, uploadAsset, type PickedAsset } from '@/lib/media';
 import { Avatar } from '@/components/ui/Avatar';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { Screen } from '@/components/ui/Screen';
 import { Touchable } from '@/components/ui/Touchable';
 import { ThreadSkeleton } from '@/components/ui/Skeleton';
@@ -59,6 +59,7 @@ export default function ChatScreen() {
   const { session, profile } = useAuth();
   const myId = session?.user.id ?? '';
   const queryClient = useQueryClient();
+  const dialog = useDialog();
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
 
   const conversation = queryClient
@@ -93,12 +94,13 @@ export default function ChatScreen() {
   const onPicked = useCallback((assets: PickedAsset[], tooLarge: string[]) => {
     if (assets.length) setStaged((prev) => [...prev, ...assets].slice(0, 10));
     if (tooLarge.length) {
-      Alert.alert(
-        'File too large',
-        `These exceed the ${MAX_FILE_MB} MB limit and were skipped:\n${tooLarge.join('\n')}`
-      );
+      dialog.alert({
+        title: 'File too large',
+        message: `These exceed the ${MAX_FILE_MB} MB limit and were skipped:\n${tooLarge.join('\n')}`,
+        icon: 'alert-circle-outline',
+      });
     }
-  }, []);
+  }, [dialog]);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -114,7 +116,7 @@ export default function ChatScreen() {
         } catch (err) {
           const detail =
             err instanceof Error ? err.message : 'Please try again.';
-          Alert.alert('Upload failed', detail);
+          dialog.alert({ title: 'Upload failed', message: detail, icon: 'alert-circle-outline' });
         } finally {
           setUploading(false);
         }
@@ -123,7 +125,7 @@ export default function ChatScreen() {
         sendMessage(text, reply);
       }
     },
-    [staged, replyingTo, sendMessage]
+    [staged, replyingTo, sendMessage, dialog]
   );
   const [actionMsg, setActionMsg] = useState<MessageWithSender | null>(null);
   const [forwardMsg, setForwardMsg] = useState<MessageWithSender | null>(null);

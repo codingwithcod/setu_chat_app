@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -18,6 +17,7 @@ import { SharedFiles, SharedPhotos } from '@/components/chat/SharedMedia';
 import { AddMembersModal } from '@/components/group/AddMembersModal';
 import { UserRow, fullName } from '@/components/contacts/UserRow';
 import { Avatar } from '@/components/ui/Avatar';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { Screen } from '@/components/ui/Screen';
 import { SwipeableTabs } from '@/components/ui/SwipeableTabs';
 import { useAuth } from '@/context/AuthContext';
@@ -40,6 +40,7 @@ type Member = ConversationMember & { profile: Profile };
 
 export default function GroupInfoScreen() {
   const { colors, radius } = useTheme();
+  const dialog = useDialog();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const conversationId = id ?? '';
@@ -108,12 +109,16 @@ export default function GroupInfoScreen() {
             : updated
         );
       } catch (err) {
-        Alert.alert('Error', err instanceof Error ? err.message : 'Please try again.');
+        dialog.alert({
+          title: 'Error',
+          message: err instanceof Error ? err.message : 'Please try again.',
+          icon: 'alert-circle-outline',
+        });
       } finally {
         setBusy(false);
       }
     },
-    []
+    [dialog]
   );
 
   const saveName = useCallback(() => {
@@ -140,11 +145,15 @@ export default function GroupInfoScreen() {
         updateGroup(conversationId, { avatar_url: url }, queryClient)
       );
     } catch (err) {
-      Alert.alert('Upload failed', err instanceof Error ? err.message : 'Please try again.');
+      dialog.alert({
+        title: 'Upload failed',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
     } finally {
       setBusy(false);
     }
-  }, [conversationId, apply, queryClient]);
+  }, [conversationId, apply, queryClient, dialog]);
 
   const onAddMembers = useCallback(
     (userIds: string[]) =>
@@ -153,23 +162,18 @@ export default function GroupInfoScreen() {
   );
 
   const confirmRemove = useCallback(
-    (m: Member) => {
+    async (m: Member) => {
       setMenuMember(null);
-      Alert.alert(
-        'Remove member',
-        `Remove ${fullName(m.profile)} from the group?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () =>
-              apply(() => removeGroupMember(conversationId, m.user_id, queryClient)),
-          },
-        ]
-      );
+      const ok = await dialog.confirm({
+        title: 'Remove member',
+        message: `Remove ${fullName(m.profile)} from the group?`,
+        confirmLabel: 'Remove',
+        destructive: true,
+        icon: 'person-remove-outline',
+      });
+      if (ok) apply(() => removeGroupMember(conversationId, m.user_id, queryClient));
     },
-    [apply, conversationId, queryClient]
+    [apply, conversationId, queryClient, dialog]
   );
 
   const toggleAdmin = useCallback(
@@ -181,47 +185,49 @@ export default function GroupInfoScreen() {
     [apply, conversationId, queryClient]
   );
 
-  const confirmLeave = useCallback(() => {
-    Alert.alert('Leave group', 'Are you sure you want to leave this group?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Leave',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await leaveGroup(conversationId, myId, queryClient);
-            if (router.dismissAll) router.dismissAll();
-            else router.replace('/(tabs)');
-          } catch (err) {
-            Alert.alert('Error', err instanceof Error ? err.message : 'Please try again.');
-          }
-        },
-      },
-    ]);
-  }, [conversationId, myId, queryClient, router]);
+  const confirmLeave = useCallback(async () => {
+    const ok = await dialog.confirm({
+      title: 'Leave group',
+      message: 'Are you sure you want to leave this group?',
+      confirmLabel: 'Leave',
+      destructive: true,
+      icon: 'exit-outline',
+    });
+    if (!ok) return;
+    try {
+      await leaveGroup(conversationId, myId, queryClient);
+      if (router.dismissAll) router.dismissAll();
+      else router.replace('/(tabs)');
+    } catch (err) {
+      dialog.alert({
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
+    }
+  }, [conversationId, myId, queryClient, router, dialog]);
 
-  const confirmDelete = useCallback(() => {
-    Alert.alert(
-      'Delete group',
-      'This deletes the group for everyone. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteGroup(conversationId, queryClient);
-              router.dismissAll?.();
-              router.replace('/(tabs)');
-            } catch (err) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  }, [conversationId, queryClient, router]);
+  const confirmDelete = useCallback(async () => {
+    const ok = await dialog.confirm({
+      title: 'Delete group',
+      message: 'This deletes the group for everyone. This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+      icon: 'trash-outline',
+    });
+    if (!ok) return;
+    try {
+      await deleteGroup(conversationId, queryClient);
+      router.dismissAll?.();
+      router.replace('/(tabs)');
+    } catch (err) {
+      dialog.alert({
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
+    }
+  }, [conversationId, queryClient, router, dialog]);
 
   const roleLabel = (role: Member['role']) =>
     role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : null;

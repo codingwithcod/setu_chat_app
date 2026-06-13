@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { DialogProvider } from '@/components/ui/DialogProvider';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useAppFonts } from '@/theme/fonts';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
@@ -117,9 +118,11 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <ThemeProvider>
-              <AuthProvider>
-                <RootNavigator />
-              </AuthProvider>
+              <DialogProvider>
+                <AuthProvider>
+                  <RootNavigator />
+                </AuthProvider>
+              </DialogProvider>
             </ThemeProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

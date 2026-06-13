@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Pressable,
@@ -19,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserRow, fullName } from '@/components/contacts/UserRow';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { Screen } from '@/components/ui/Screen';
 import { useUserSearch } from '@/hooks/useUsers';
 import { createGroup } from '@/lib/conversation-actions';
@@ -28,6 +28,7 @@ import type { SearchResult } from '@/types';
 
 export default function NewGroupScreen() {
   const { colors, radius } = useTheme();
+  const dialog = useDialog();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -62,12 +63,13 @@ export default function NewGroupScreen() {
       router.replace(`/chat/${id}`);
     } catch (err) {
       setCreating(false);
-      Alert.alert(
-        'Could not create group',
-        err instanceof Error ? err.message : 'Please try again.'
-      );
+      dialog.alert({
+        title: 'Could not create group',
+        message: err instanceof Error ? err.message : 'Please try again.',
+        icon: 'alert-circle-outline',
+      });
     }
-  }, [canCreate, name, selected, queryClient, router]);
+  }, [canCreate, name, selected, queryClient, router, dialog]);
 
   const renderUser = useCallback(
     ({ item }: { item: SearchResult }) => {
