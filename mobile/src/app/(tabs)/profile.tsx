@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useTabBarHeight } from '@/components/navigation/useTabBarHeight';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -17,7 +17,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 export default function ProfileScreen() {
   const { colors, radius } = useTheme();
   const router = useRouter();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useTabBarHeight();
   const { profile, session, signOut } = useAuth();
   const [signOutOpen, setSignOutOpen] = useState(false);
 

@@ -1,4 +1,4 @@
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useTabBarHeight } from '@/components/navigation/useTabBarHeight';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
@@ -19,7 +19,7 @@ export default function ChatsScreen() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const router = useRouter();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useTabBarHeight();
   const myId = session?.user.id ?? '';
   const { data, isLoading, isError, refetch, isRefetching } = useConversations();
 

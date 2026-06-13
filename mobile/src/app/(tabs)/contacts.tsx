@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useTabBarHeight } from '@/components/navigation/useTabBarHeight';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -28,7 +28,7 @@ export default function ContactsScreen() {
   const { colors, radius } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useTabBarHeight();
 
   const [query, setQuery] = useState('');
   const search = useUserSearch(query);
