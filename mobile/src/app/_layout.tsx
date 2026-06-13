@@ -34,9 +34,14 @@ function useAuthGate() {
   useEffect(() => {
     if (initializing) return;
     const inAuthGroup = segments[0] === '(auth)';
+
+    // Google OAuth users land on select-username while authenticated — let them
+    // stay there to finish profile setup instead of bouncing them to (tabs).
+    const onSelectUsername = (segments[1] as string) === 'select-username';
+
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
+    } else if (isAuthenticated && inAuthGroup && !onSelectUsername) {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, initializing, segments, router]);
