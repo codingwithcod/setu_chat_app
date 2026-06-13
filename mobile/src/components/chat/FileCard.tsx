@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
@@ -78,9 +78,9 @@ export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean })
           {formatBytes(file.file_size)}
         </Text>
       </View>
-      <Ionicons
-        name="download-outline"
-        size={20}
+      <Feather
+        name="download"
+        size={19}
         color={onOwn ? 'rgba(255,255,255,0.85)' : colors.mutedForeground}
       />
     </Pressable>

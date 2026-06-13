@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
@@ -180,7 +180,7 @@ export function SharedFiles({
               {busy ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Ionicons name="download-outline" size={20} color={colors.primary} />
+                <Feather name="download" size={19} color={colors.primary} />
               )}
             </Pressable>
           </View>
