@@ -8,6 +8,9 @@ import { useChatStore } from '@/stores/chat';
 import { useNotificationStore } from '@/stores/notifications';
 import type { ConversationWithDetails, Message } from '@/types';
 
+/** See useThread: unique topic per mount avoids reusing a lingering channel. */
+let activitySeq = 0;
+
 function snippet(m: Message): string {
   switch (m.message_type) {
     case 'image':
@@ -39,7 +42,7 @@ export function useActivityFeed() {
     if (!myId) return;
 
     const channel = supabase
-      .channel('mobile-activity')
+      .channel(`mobile-activity:${++activitySeq}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },

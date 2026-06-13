@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -18,11 +18,14 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ImageViewer } from '@/components/chat/ImageViewer';
+import { SharedFiles, SharedPhotos } from '@/components/chat/SharedMedia';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
+import { SwipeableTabs } from '@/components/ui/SwipeableTabs';
 import { Touchable } from '@/components/ui/Touchable';
 import { useAuth } from '@/context/AuthContext';
+import { useConversationFiles } from '@/hooks/useConversationFiles';
 import { api } from '@/lib/api';
 import { isUserOnline } from '@/lib/presence';
 import { formatLastSeen } from '@/lib/time';
@@ -117,7 +120,10 @@ function InfoCard({
 export default function PublicProfileScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, conversationId } = useLocalSearchParams<{
+    id: string;
+    conversationId?: string;
+  }>();
   const { session } = useAuth();
   const myId = session?.user.id ?? '';
 
@@ -144,6 +150,18 @@ export default function PublicProfileScreen() {
   const online = isUserOnline(profile);
   const isSelf = myId === profile?.id;
   const [avatarViewer, setAvatarViewer] = useState(false);
+
+  // Shared media tabs — only when we know which conversation to read from.
+  const showTabs = !!conversationId;
+  const { files: sharedFiles, loading: filesLoading } = useConversationFiles(conversationId);
+  const photos = useMemo(
+    () => sharedFiles.filter((f) => f.file_type === 'image'),
+    [sharedFiles],
+  );
+  const docs = useMemo(
+    () => sharedFiles.filter((f) => f.file_type !== 'image'),
+    [sharedFiles],
+  );
 
   // ── Loading state ──────────────────────────────────────────────────
   if (loading) {
@@ -185,6 +203,74 @@ export default function PublicProfileScreen() {
     );
   }
 
+  // ── Info tab content (also the whole page when there are no tabs) ───
+  const infoContent = (
+    <ScrollView
+      style={profileStyles.scroll}
+      contentContainerStyle={profileStyles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      bounces
+    >
+      {/* ── Info cards ──────────────────────────────────────── */}
+      <View style={profileStyles.cardsContainer}>
+        <InfoCard
+          icon="mail-outline"
+          label="EMAIL"
+          value={maskEmail(profile.email)}
+          colors={colors}
+          delay={280}
+        />
+
+        {profile.username ? (
+          <InfoCard
+            icon="at"
+            label="USERNAME"
+            value={`@${profile.username}`}
+            colors={colors}
+            delay={360}
+          />
+        ) : null}
+
+        <InfoCard
+          icon="calendar-outline"
+          label="MEMBER SINCE"
+          value={new Date(profile.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+          colors={colors}
+          delay={440}
+        />
+
+        <InfoCard
+          icon="shield-checkmark-outline"
+          label="ACCOUNT STATUS"
+          value={profile.is_email_verified ? 'Verified' : 'Unverified'}
+          colors={colors}
+          delay={520}
+        />
+      </View>
+
+      {/* ── Send Message button ───────────────────────────────── */}
+      {!isSelf && (
+        <Animated.View
+          entering={FadeInDown.delay(600).duration(360).springify()}
+          style={profileStyles.ctaWrap}
+        >
+          <Button
+            label="Send Message"
+            onPress={() => router.back()}
+            left={<Ionicons name="chatbubble-outline" size={18} color={colors.primaryForeground} />}
+          />
+        </Animated.View>
+      )}
+
+      {/* Bottom padding */}
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+
   // ── Profile view ───────────────────────────────────────────────────
   return (
     <Screen edges={['top', 'left', 'right']}>
@@ -197,133 +283,83 @@ export default function PublicProfileScreen() {
         <View style={{ width: 42 }} />
       </View>
 
-      <ScrollView
-        style={profileStyles.scroll}
-        contentContainerStyle={profileStyles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces
+      {/* ── Fixed hero: avatar ────────────────────────────────────── */}
+      <Animated.View
+        entering={FadeInUp.delay(80).duration(400).springify()}
+        style={profileStyles.avatarSection}
       >
-        {/* ── Avatar section ────────────────────────────────────────── */}
-        <Animated.View
-          entering={FadeInUp.delay(80).duration(400).springify()}
-          style={profileStyles.avatarSection}
+        <Touchable
+          onPress={() => profile.avatar_url && setAvatarViewer(true)}
+          disabled={!profile.avatar_url}
+          scaleTo={0.94}
         >
-          <Touchable
-            onPress={() => profile.avatar_url && setAvatarViewer(true)}
-            disabled={!profile.avatar_url}
-            scaleTo={0.94}
+          <View
+            style={[
+              profileStyles.avatarRing,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+              },
+              Elevation.md,
+            ]}
           >
+            <Avatar uri={profile.avatar_url} name={profile.full_name} size={AVATAR_SIZE} />
+          </View>
+        </Touchable>
+        {online && <ProfileOnlineDot color={colors.success} bgColor={colors.card} />}
+      </Animated.View>
+
+      {/* ── Fixed hero: name & status ─────────────────────────────── */}
+      <Animated.View
+        entering={FadeInDown.delay(200).duration(360)}
+        style={profileStyles.nameSection}
+      >
+        <Text style={[profileStyles.fullName, { color: colors.foreground }]}>
+          {profile.first_name} {profile.last_name}
+        </Text>
+        {profile.username ? (
+          <Text style={[profileStyles.username, { color: colors.mutedForeground }]}>
+            @{profile.username}
+          </Text>
+        ) : null}
+
+        {/* Online / Last seen badge */}
+        <View style={profileStyles.statusRow}>
+          {online ? (
             <View
               style={[
-                profileStyles.avatarRing,
-                {
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                },
-                Elevation.md,
+                profileStyles.statusBadge,
+                { backgroundColor: colors.withAlpha('success', 0.12) },
               ]}
             >
-              <Avatar uri={profile.avatar_url} name={profile.full_name} size={AVATAR_SIZE} />
+              <View style={[profileStyles.statusDot, { backgroundColor: colors.success }]} />
+              <Text style={[profileStyles.statusText, { color: colors.success }]}>Online</Text>
             </View>
-          </Touchable>
-          {online && <ProfileOnlineDot color={colors.success} bgColor={colors.card} />}
-        </Animated.View>
-
-        {/* ── Name & username ───────────────────────────────────────── */}
-        <Animated.View
-          entering={FadeInDown.delay(200).duration(360)}
-          style={profileStyles.nameSection}
-        >
-          <Text style={[profileStyles.fullName, { color: colors.foreground }]}>
-            {profile.first_name} {profile.last_name}
-          </Text>
-          {profile.username ? (
-            <Text style={[profileStyles.username, { color: colors.mutedForeground }]}>
-              @{profile.username}
-            </Text>
-          ) : null}
-
-          {/* Online / Last seen badge */}
-          <View style={profileStyles.statusRow}>
-            {online ? (
-              <View
-                style={[
-                  profileStyles.statusBadge,
-                  { backgroundColor: colors.withAlpha('success', 0.12) },
-                ]}
-              >
-                <View style={[profileStyles.statusDot, { backgroundColor: colors.success }]} />
-                <Text style={[profileStyles.statusText, { color: colors.success }]}>Online</Text>
-              </View>
-            ) : (
-              <View style={[profileStyles.statusBadge, { backgroundColor: colors.muted }]}>
-                <Ionicons name="time-outline" size={13} color={colors.mutedForeground} />
-                <Text style={[profileStyles.statusText, { color: colors.mutedForeground }]}>
-                  {formatLastSeen(profile.last_seen)}
-                </Text>
-              </View>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* ── Info cards ────────────────────────────────────────────── */}
-        <View style={profileStyles.cardsContainer}>
-          <InfoCard
-            icon="mail-outline"
-            label="EMAIL"
-            value={maskEmail(profile.email)}
-            colors={colors}
-            delay={280}
-          />
-
-          {profile.username ? (
-            <InfoCard
-              icon="at"
-              label="USERNAME"
-              value={`@${profile.username}`}
-              colors={colors}
-              delay={360}
-            />
-          ) : null}
-
-          <InfoCard
-            icon="calendar-outline"
-            label="MEMBER SINCE"
-            value={new Date(profile.created_at).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-            colors={colors}
-            delay={440}
-          />
-
-          <InfoCard
-            icon="shield-checkmark-outline"
-            label="ACCOUNT STATUS"
-            value={profile.is_email_verified ? 'Verified' : 'Unverified'}
-            colors={colors}
-            delay={520}
-          />
+          ) : (
+            <View style={[profileStyles.statusBadge, { backgroundColor: colors.muted }]}>
+              <Ionicons name="time-outline" size={13} color={colors.mutedForeground} />
+              <Text style={[profileStyles.statusText, { color: colors.mutedForeground }]}>
+                {formatLastSeen(profile.last_seen)}
+              </Text>
+            </View>
+          )}
         </View>
+      </Animated.View>
 
-        {/* ── Send Message button ───────────────────────────────────── */}
-        {!isSelf && (
-          <Animated.View
-            entering={FadeInDown.delay(600).duration(360).springify()}
-            style={profileStyles.ctaWrap}
-          >
-            <Button
-              label="Send Message"
-              onPress={() => router.back()}
-              left={<Ionicons name="chatbubble-outline" size={18} color={colors.primaryForeground} />}
-            />
-          </Animated.View>
-        )}
-
-        {/* Bottom padding */}
-        <View style={{ height: 40 }} />
-      </ScrollView>
+      {/* ── Tabs (swipeable) — only with a conversation context ───── */}
+      {showTabs ? (
+        <SwipeableTabs
+          tabBarStyle={profileStyles.tabBarWrap}
+          tabs={[
+            { key: 'info', label: 'Info', icon: 'person-outline' },
+            { key: 'photos', label: 'Photos', icon: 'images-outline' },
+            { key: 'files', label: 'Files', icon: 'folder-outline' },
+          ]}
+          pages={[infoContent, <SharedPhotos key="p" photos={photos} loading={filesLoading} />, <SharedFiles key="f" files={docs} loading={filesLoading} />]}
+        />
+      ) : (
+        infoContent
+      )}
 
       {/* Full-screen avatar viewer with pinch-zoom */}
       <ImageViewer
@@ -367,7 +403,13 @@ const profileStyles = StyleSheet.create({
   // ── Avatar ──
   avatarSection: {
     alignItems: 'center',
-    marginTop: Spacing.xl,
+    marginTop: Spacing.lg,
+  },
+  // ── Tab bar ──
+  tabBarWrap: {
+    paddingHorizontal: 20,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   avatarRing: {
     width: AVATAR_SIZE + AVATAR_BORDER * 2,

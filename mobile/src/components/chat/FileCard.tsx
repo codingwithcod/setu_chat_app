@@ -25,10 +25,13 @@ const CODE_EXTENSIONS = new Set([
   'java', 'kt', 'go', 'rs', 'c', 'cpp', 'h', 'cs', 'rb', 'php', 'swift', 'dart', 'sql', 'html', 'svg',
 ]);
 
-function iconFor(
+export function iconFor(
   mime?: string | null,
-  name?: string | null
+  name?: string | null,
+  fileType?: string | null
 ): { name: keyof typeof Ionicons.glyphMap; color: string } {
+  if (fileType === 'video') return { name: 'videocam', color: '#8b5cf6' };
+  if (fileType === 'audio') return { name: 'musical-notes', color: '#ec4899' };
   const m = mime ?? '';
   if (m.includes('pdf')) return { name: 'document-text', color: '#ef4444' };
   if (m.includes('word') || m.includes('msword') || m.includes('document'))

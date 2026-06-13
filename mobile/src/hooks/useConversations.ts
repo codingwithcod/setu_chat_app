@@ -14,6 +14,9 @@ import type {
 
 export const CONVERSATIONS_KEY = ['conversations'] as const;
 
+/** See useThread: unique topic per mount avoids reusing a lingering channel. */
+let sidebarSeq = 0;
+
 type ConvList = ConversationWithDetails[];
 
 function sortByRecent(list: ConvList): ConvList {
@@ -100,8 +103,11 @@ export function useConversations() {
       );
     };
 
+    // Unique topic per mount: supabase.channel() reuses by topic and
+    // removeChannel() drops it only after an async round-trip, so a re-subscribe
+    // could grab a still-subscribed channel and throw on postgres_changes.
     const channel = supabase
-      .channel('mobile-sidebar')
+      .channel(`mobile-sidebar:${++sidebarSeq}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },

@@ -246,7 +246,8 @@ export default function ChatScreen() {
               router.push(`/group/${conversationId}`);
             } else if (conversation && !display?.isSelf) {
               const other = otherMember(conversation, myId);
-              if (other) router.push(`/profile/${other.user_id}`);
+              if (other)
+                router.push(`/profile/${other.user_id}?conversationId=${conversationId}`);
             }
           }}
         >

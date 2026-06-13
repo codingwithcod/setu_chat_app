@@ -23,6 +23,17 @@ import { computeStatus } from '@/lib/receipts';
 const LIMIT = 30;
 const MEDIA_TYPES = ['image', 'video', 'audio', 'file'];
 
+/**
+ * Monotonic suffix for postgres_changes channel topics. `supabase.channel()`
+ * REUSES any channel with a matching topic, and `removeChannel()` only drops it
+ * from the client after an async server round-trip — so a quick re-subscribe
+ * (fast nav, members change, dev fast-refresh) would otherwise grab a still-
+ * subscribed channel and `.on('postgres_changes')` throws "after subscribe()".
+ * A unique topic per subscription avoids the reuse (topic names don't affect
+ * postgres_changes delivery — the binding filter does).
+ */
+let realtimeSeq = 0;
+
 interface MessagesEnvelope {
   data: MessageWithSender[];
   hasMore: boolean;
@@ -168,8 +179,12 @@ export function useThread(conversationId: string) {
         );
     };
 
+    // Unique per subscription so a lingering, already-subscribed channel from a
+    // previous mount is never reused (which would throw on postgres_changes).
+    const sub = ++realtimeSeq;
+
     const msgChannel = supabase
-      .channel(`messages:${conversationId}`)
+      .channel(`messages:${conversationId}:${sub}`)
       .on(
         'postgres_changes',
         {
@@ -228,7 +243,7 @@ export function useThread(conversationId: string) {
       .subscribe();
 
     const receiptChannel = supabase
-      .channel(`read-receipts:${conversationId}`)
+      .channel(`read-receipts:${conversationId}:${sub}`)
       .on(
         'postgres_changes',
         {
@@ -248,22 +263,28 @@ export function useThread(conversationId: string) {
       )
       .subscribe();
 
-    const reactionChannel = supabase
-      .channel(`reaction-sync:${conversationId}`)
-      .on('broadcast', { event: 'reaction_update' }, async (payload) => {
-        const messageId = (payload.payload as { message_id?: string })?.message_id;
-        if (!messageId) return;
-        const { data } = await supabase
-          .from('message_reactions')
-          .select('*')
-          .eq('message_id', messageId);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId ? { ...m, reactions: (data as MessageReaction[]) ?? [] } : m
-          )
-        );
-      })
-      .subscribe();
+    // Broadcast channel — the topic MUST stay stable so it matches the web's
+    // sender. Reuse a lingering instance instead of re-binding (which would
+    // stack duplicate handlers); broadcast .on/.subscribe don't throw on reuse.
+    const reactionTopic = `reaction-sync:${conversationId}`;
+    const reactionChannel =
+      supabase.getChannels().find((c) => c.topic === `realtime:${reactionTopic}`) ??
+      supabase
+        .channel(reactionTopic)
+        .on('broadcast', { event: 'reaction_update' }, async (payload) => {
+          const messageId = (payload.payload as { message_id?: string })?.message_id;
+          if (!messageId) return;
+          const { data } = await supabase
+            .from('message_reactions')
+            .select('*')
+            .eq('message_id', messageId);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, reactions: (data as MessageReaction[]) ?? [] } : m
+            )
+          );
+        })
+        .subscribe();
     reactionChannelRef.current = reactionChannel;
 
     return () => {

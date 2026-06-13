@@ -14,12 +14,15 @@ import {
   View,
 } from 'react-native';
 
+import { SharedFiles, SharedPhotos } from '@/components/chat/SharedMedia';
 import { AddMembersModal } from '@/components/group/AddMembersModal';
 import { UserRow, fullName } from '@/components/contacts/UserRow';
 import { Avatar } from '@/components/ui/Avatar';
 import { Screen } from '@/components/ui/Screen';
+import { SwipeableTabs } from '@/components/ui/SwipeableTabs';
 import { useAuth } from '@/context/AuthContext';
 import { CONVERSATIONS_KEY } from '@/hooks/useConversations';
+import { useConversationFiles } from '@/hooks/useConversationFiles';
 import {
   addGroupMembers,
   changeMemberRole,
@@ -58,6 +61,17 @@ export default function GroupInfoScreen() {
   const [busy, setBusy] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [menuMember, setMenuMember] = useState<Member | null>(null);
+
+  // Shared media for the Photos / Files tabs.
+  const { files: sharedFiles, loading: filesLoading } = useConversationFiles(conversationId);
+  const photos = useMemo(
+    () => sharedFiles.filter((f) => f.file_type === 'image'),
+    [sharedFiles],
+  );
+  const docs = useMemo(
+    () => sharedFiles.filter((f) => f.file_type !== 'image'),
+    [sharedFiles],
+  );
 
   // Fresh fetch (members + roles may be stale in the list cache).
   useEffect(() => {
@@ -241,8 +255,8 @@ export default function GroupInfoScreen() {
           <Text style={{ color: colors.mutedForeground }}>Conversation not found.</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* Avatar + name */}
+        <>
+          {/* Avatar + name (fixed hero) */}
           <View style={styles.hero}>
             <Pressable onPress={isAdmin ? changeAvatar : undefined}>
               {conv.avatar_url ? (
@@ -300,8 +314,18 @@ export default function GroupInfoScreen() {
             </Text>
           </View>
 
-          {/* Description */}
-          <View style={[styles.section, { borderTopColor: colors.border }]}>
+          {/* Tabs (swipeable) */}
+          <SwipeableTabs
+            tabBarStyle={styles.tabBarWrap}
+            tabs={[
+              { key: 'info', label: 'Info', icon: 'information-circle-outline' },
+              { key: 'photos', label: 'Photos', icon: 'images-outline' },
+              { key: 'files', label: 'Files', icon: 'folder-outline' },
+            ]}
+            pages={[
+              <ScrollView key="info" contentContainerStyle={{ paddingBottom: 40 }}>
+              {/* Description */}
+              <View style={[styles.section, { borderTopColor: colors.border }]}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
               Description
             </Text>
@@ -412,8 +436,13 @@ export default function GroupInfoScreen() {
                 </Text>
               </Pressable>
             )}
-          </View>
-        </ScrollView>
+              </View>
+            </ScrollView>,
+              <SharedPhotos key="photos" photos={photos} loading={filesLoading} />,
+              <SharedFiles key="files" files={docs} loading={filesLoading} />,
+            ]}
+          />
+        </>
       )}
 
       {busy && (
@@ -521,6 +550,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   memberCount: { fontSize: 14 },
+  tabBarWrap: { paddingHorizontal: 16, paddingBottom: 12 },
   section: {
     paddingHorizontal: 16,
     paddingVertical: 16,
