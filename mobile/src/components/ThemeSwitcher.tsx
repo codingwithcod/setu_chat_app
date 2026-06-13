@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -78,17 +78,17 @@ export function ThemeSwitcher() {
           pointerEvents="none"
         />
 
-        {/* Received bubble */}
-        <View style={[styles.recvBubble, { backgroundColor: colors.secondary }]}>
+        {/* Received bubble — matches the real chat (colors.muted) */}
+        <View style={[styles.recvBubble, { backgroundColor: colors.muted }]}>
           <Text style={[styles.recvText, { color: colors.foreground }]}>Hey! 👋</Text>
         </View>
 
-        {/* Sent bubble — the live gradient */}
+        {/* Sent bubble — the exact gradient the chat uses (colors.bubbleOwn) */}
         <LinearGradient
-          colors={heroGrad}
+          colors={colors.bubbleOwn}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.sentBubble, glow(colors.primary, 'sm')]}
+          end={{ x: 0, y: 1 }}
+          style={styles.sentBubble}
         >
           <Text style={[styles.sentText, { color: colors.primaryForeground }]}>
             Love this theme 🔥
@@ -106,7 +106,7 @@ export function ThemeSwitcher() {
             end={{ x: 1, y: 1 }}
             style={[styles.heroSend, glow(colors.primary, 'sm')]}
           >
-            <Ionicons name="send" size={14} color={colors.primaryForeground} />
+            <Feather name="send" size={15} color={colors.primaryForeground} />
           </LinearGradient>
         </View>
 
@@ -123,7 +123,9 @@ export function ThemeSwitcher() {
       <View style={styles.chipRow}>
         {presets.map((p) => {
           const on = preset === p.id;
-          const grad: [string, string] = [hsl(p.variables.primary), hsl(p.variables.primaryGradientEnd)];
+          // Pure single-hue orb (light → primary) so each dot reads as its true
+          // identity color — no drift toward primaryGradientEnd.
+          const grad: [string, string] = [hsl(p.variables.primaryLight), hsl(p.variables.primary)];
           const tint = hsl(p.variables.primary);
           return (
             <Pressable
@@ -150,7 +152,9 @@ export function ThemeSwitcher() {
                   end={{ x: 1, y: 1 }}
                   style={styles.chipOrb}
                 >
-                  {on && <Ionicons name="checkmark" size={22} color="#fff" />}
+                  {on && (
+                    <Ionicons name="checkmark" size={22} color={colors.primaryForeground} />
+                  )}
                 </LinearGradient>
               </View>
               <Text
