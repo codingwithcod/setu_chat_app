@@ -9,22 +9,22 @@ const W = 244;
 const GAP = 3;
 
 export function ImageGrid({ files }: { files: MessageFile[] }) {
-  const [viewer, setViewer] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const urls = files.map((f) => f.file_url);
 
   const Img = ({
-    uri,
+    index,
     w,
     h,
     overlay,
   }: {
-    uri: string;
+    index: number;
     w: number;
     h: number;
     overlay?: number;
   }) => (
-    <Pressable onPress={() => setViewer(uri)}>
-      <Image source={{ uri }} style={{ width: w, height: h }} contentFit="cover" alt="image" transition={150} />
+    <Pressable onPress={() => setViewerIndex(index)}>
+      <Image source={{ uri: urls[index] }} style={{ width: w, height: h }} contentFit="cover" alt="image" transition={150} />
       {!!overlay && (
         <View style={[styles.overlay, { width: w, height: h }]}>
           <Text style={styles.overlayText}>+{overlay}</Text>
@@ -37,23 +37,23 @@ export function ImageGrid({ files }: { files: MessageFile[] }) {
   let grid: React.ReactNode;
 
   if (n === 1) {
-    grid = <Img uri={urls[0]} w={W} h={260} />;
+    grid = <Img index={0} w={W} h={260} />;
   } else if (n === 2) {
     const w = (W - GAP) / 2;
     grid = (
       <View style={styles.row}>
-        <Img uri={urls[0]} w={w} h={160} />
-        <Img uri={urls[1]} w={w} h={160} />
+        <Img index={0} w={w} h={160} />
+        <Img index={1} w={w} h={160} />
       </View>
     );
   } else if (n === 3) {
     const half = (W - GAP) / 2;
     grid = (
       <View style={{ gap: GAP }}>
-        <Img uri={urls[0]} w={W} h={130} />
+        <Img index={0} w={W} h={130} />
         <View style={styles.row}>
-          <Img uri={urls[1]} w={half} h={110} />
-          <Img uri={urls[2]} w={half} h={110} />
+          <Img index={1} w={half} h={110} />
+          <Img index={2} w={half} h={110} />
         </View>
       </View>
     );
@@ -63,12 +63,12 @@ export function ImageGrid({ files }: { files: MessageFile[] }) {
     grid = (
       <View style={{ gap: GAP }}>
         <View style={styles.row}>
-          <Img uri={urls[0]} w={half} h={110} />
-          <Img uri={urls[1]} w={half} h={110} />
+          <Img index={0} w={half} h={110} />
+          <Img index={1} w={half} h={110} />
         </View>
         <View style={styles.row}>
-          <Img uri={urls[2]} w={half} h={110} />
-          <Img uri={urls[3]} w={half} h={110} overlay={extra > 0 ? extra : undefined} />
+          <Img index={2} w={half} h={110} />
+          <Img index={3} w={half} h={110} overlay={extra > 0 ? extra : undefined} />
         </View>
       </View>
     );
@@ -77,7 +77,12 @@ export function ImageGrid({ files }: { files: MessageFile[] }) {
   return (
     <View style={styles.wrap}>
       {grid}
-      <ImageViewer uri={viewer} visible={!!viewer} onClose={() => setViewer(null)} />
+      <ImageViewer
+        files={files}
+        initialIndex={viewerIndex ?? 0}
+        visible={viewerIndex !== null}
+        onClose={() => setViewerIndex(null)}
+      />
     </View>
   );
 }

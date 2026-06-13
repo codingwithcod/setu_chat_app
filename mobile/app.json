@@ -60,6 +60,14 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Setu needs access to your photos to save images you receive in chats.",
+          "savePhotosPermission": "Setu needs permission to save images to your gallery.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

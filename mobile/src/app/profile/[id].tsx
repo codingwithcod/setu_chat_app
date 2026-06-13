@@ -327,7 +327,12 @@ export default function PublicProfileScreen() {
 
       {/* Full-screen avatar viewer with pinch-zoom */}
       <ImageViewer
-        uri={profile.avatar_url}
+        files={
+          profile.avatar_url
+            ? [{ id: profile.id, file_url: profile.avatar_url, file_name: `${profile.username ?? 'avatar'}.jpg` }]
+            : []
+        }
+        initialIndex={0}
         visible={avatarViewer}
         onClose={() => setAvatarViewer(false)}
       />
