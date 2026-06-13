@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
+import { glow, hsl } from '@/theme/theme';
 import type { ThemeModePreference } from '@/theme/theme';
 
 const MODES: { id: ThemeModePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -11,16 +13,19 @@ const MODES: { id: ThemeModePreference; label: string; icon: keyof typeof Ionico
   { id: 'system', label: 'System', icon: 'phone-portrait-outline' },
 ];
 
-/** Appearance controls: light/dark/system mode + the 3 color presets. */
+/** Appearance controls: light/dark/system mode + a live gradient theme picker. */
 export function ThemeSwitcher() {
   const { colors, radius, mode, setMode, preset, setPreset, presets } = useTheme();
+
+  const active = presets.find((p) => p.id === preset) ?? presets[0];
+  const heroGrad: [string, string] = [colors.primary, colors.primaryGradientEnd];
 
   return (
     <View style={styles.wrap}>
       <Text style={[styles.section, { color: colors.mutedForeground }]}>MODE</Text>
       <View style={[styles.segment, { backgroundColor: colors.secondary, borderRadius: radius.md }]}>
         {MODES.map((m) => {
-          const active = mode === m.id;
+          const on = mode === m.id;
           return (
             <Pressable
               key={m.id}
@@ -31,18 +36,18 @@ export function ThemeSwitcher() {
               style={[
                 styles.segmentItem,
                 { borderRadius: radius.sm },
-                active && { backgroundColor: colors.background },
+                on && { backgroundColor: colors.background },
               ]}
             >
               <Ionicons
                 name={m.icon}
                 size={18}
-                color={active ? colors.primary : colors.mutedForeground}
+                color={on ? colors.primary : colors.mutedForeground}
               />
               <Text
                 style={{
-                  color: active ? colors.foreground : colors.mutedForeground,
-                  fontWeight: active ? '700' : '500',
+                  color: on ? colors.foreground : colors.mutedForeground,
+                  fontWeight: on ? '700' : '500',
                   fontSize: 13,
                 }}
               >
@@ -56,9 +61,70 @@ export function ThemeSwitcher() {
       <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 18 }]}>
         COLOR THEME
       </Text>
-      <View style={{ gap: 10 }}>
+
+      {/* Live preview — morphs to the active theme's gradient */}
+      <View
+        style={[
+          styles.hero,
+          { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.lg },
+        ]}
+      >
+        {/* Decorative corner glow */}
+        <LinearGradient
+          colors={[colors.withAlpha('primary', 0.22), 'transparent']}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.heroWash}
+          pointerEvents="none"
+        />
+
+        {/* Received bubble */}
+        <View style={[styles.recvBubble, { backgroundColor: colors.secondary }]}>
+          <Text style={[styles.recvText, { color: colors.foreground }]}>Hey! 👋</Text>
+        </View>
+
+        {/* Sent bubble — the live gradient */}
+        <LinearGradient
+          colors={heroGrad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.sentBubble, glow(colors.primary, 'sm')]}
+        >
+          <Text style={[styles.sentText, { color: colors.primaryForeground }]}>
+            Love this theme 🔥
+          </Text>
+        </LinearGradient>
+
+        {/* Mini input mock with gradient send orb */}
+        <View style={styles.heroInputRow}>
+          <View style={[styles.heroInput, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>Message…</Text>
+          </View>
+          <LinearGradient
+            colors={heroGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.heroSend, glow(colors.primary, 'sm')]}
+          >
+            <Ionicons name="send" size={14} color={colors.primaryForeground} />
+          </LinearGradient>
+        </View>
+
+        <Text style={[styles.heroLabel, { color: colors.foreground }]}>
+          {active.name}
+          <Text style={{ color: colors.mutedForeground, fontWeight: '500' }}>
+            {'  ·  '}
+            {active.description}
+          </Text>
+        </Text>
+      </View>
+
+      {/* Gradient chips */}
+      <View style={styles.chipRow}>
         {presets.map((p) => {
-          const active = preset === p.id;
+          const on = preset === p.id;
+          const grad: [string, string] = [hsl(p.variables.primary), hsl(p.variables.primaryGradientEnd)];
+          const tint = hsl(p.variables.primary);
           return (
             <Pressable
               key={p.id}
@@ -66,29 +132,37 @@ export function ThemeSwitcher() {
                 haptics.selection();
                 setPreset(p.id);
               }}
-              style={[
-                styles.presetRow,
-                {
-                  borderColor: active ? colors.primary : colors.border,
-                  borderWidth: active ? 2 : 1,
-                  backgroundColor: colors.card,
-                  borderRadius: radius.md,
-                  paddingHorizontal: active ? 13 : 14,
-                },
-              ]}
+              style={styles.chip}
             >
-              <View style={[styles.swatch, { backgroundColor: p.swatch }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.presetName, { color: colors.foreground }]}>
-                  {p.name}
-                </Text>
-                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                  {p.description}
-                </Text>
+              <View
+                style={[
+                  styles.chipRing,
+                  {
+                    borderColor: on ? tint : 'transparent',
+                    transform: [{ scale: on ? 1 : 0.92 }],
+                  },
+                  on && glow(tint, 'sm'),
+                ]}
+              >
+                <LinearGradient
+                  colors={grad}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.chipOrb}
+                >
+                  {on && <Ionicons name="checkmark" size={22} color="#fff" />}
+                </LinearGradient>
               </View>
-              {active && (
-                <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-              )}
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: on ? colors.foreground : colors.mutedForeground,
+                  fontWeight: on ? '700' : '500',
+                  fontSize: 12,
+                }}
+              >
+                {p.name}
+              </Text>
             </Pressable>
           );
         })}
@@ -109,12 +183,60 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  presetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
+
+  hero: {
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 16,
+    overflow: 'hidden',
+    gap: 8,
   },
-  swatch: { width: 36, height: 36, borderRadius: 18 },
-  presetName: { fontSize: 16, fontWeight: '700' },
+  heroWash: { position: 'absolute', top: 0, right: 0, width: 220, height: 160 },
+  recvBubble: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 16,
+    borderBottomLeftRadius: 5,
+  },
+  recvText: { fontSize: 14, fontWeight: '500' },
+  sentBubble: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 16,
+    borderBottomRightRadius: 5,
+  },
+  sentText: { fontSize: 14, fontWeight: '600' },
+  heroInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  heroInput: {
+    flex: 1,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  heroSend: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLabel: { fontSize: 15, fontWeight: '800', marginTop: 4 },
+
+  chipRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 6 },
+  chip: { alignItems: 'center', gap: 8, flex: 1 },
+  chipRing: {
+    padding: 3,
+    borderRadius: 34,
+    borderWidth: 2,
+  },
+  chipOrb: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
