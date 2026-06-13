@@ -1,7 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -15,6 +19,11 @@ import { haptics } from '@/lib/haptics';
 import { formatMessageTime } from '@/lib/time';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageStatus as Status, MessageWithSender } from '@/types';
+
+/** Drag distance (px) past which releasing opens the action menu. */
+const SWIPE_TRIGGER = 60;
+/** Hard cap on how far the bubble follows the finger. */
+const SWIPE_MAX = 84;
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -60,6 +69,34 @@ function MessageBubbleBase({
     transform: [{ scale: 0.9 + pop.value * 0.1 }, { translateY: (1 - pop.value) * 8 }],
   }));
 
+  // Swipe-left to reveal the message actions (reply / forward / edit / …).
+  const openActions = useCallback(() => {
+    haptics.medium();
+    onLongPress(message);
+  }, [onLongPress, message]);
+
+  const swipeX = useSharedValue(0);
+  const swipe = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-15, 15])
+        .failOffsetY([-12, 12])
+        .onUpdate((e) => {
+          // Follow the finger rightward only, with a hard cap.
+          swipeX.value = Math.min(Math.max(e.translationX, 0), SWIPE_MAX);
+        })
+        .onEnd(() => {
+          if (swipeX.value >= SWIPE_TRIGGER) runOnJS(openActions)();
+          swipeX.value = withSpring(0, { damping: 18, stiffness: 240 });
+        }),
+    [swipeX, openActions],
+  );
+
+  const swipeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: swipeX.value }] }));
+  const hintStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(swipeX.value, [0, SWIPE_TRIGGER], [0, 1], 'clamp'),
+  }));
+
   // Big "live" animated emoji for emoji-only messages (1–3 emojis), like web.
   const emojiInfo = useMemo(
     () =>
@@ -102,8 +139,11 @@ function MessageBubbleBase({
             { backgroundColor: colors.secondary, borderRadius: radius.lg },
           ]}
         >
-          <Text style={[styles.deleted, { color: colors.mutedForeground }]}>
-            🚫 This message was deleted
+          <Text
+            numberOfLines={1}
+            style={[styles.deleted, { color: colors.mutedForeground }]}
+          >
+            This message was deleted
           </Text>
         </View>
       </View>
@@ -124,6 +164,9 @@ function MessageBubbleBase({
       borderTopLeftRadius: !isOwn && grouped ? 4 : radius.lg,
     },
     bigEmoji && styles.bigEmojiBubble,
+    // Replies pack a quoted preview inside — give them a wider minimum so the
+    // preview doesn't look cramped.
+    !!message.reply_message && styles.replyBubble,
   ];
 
   const bubbleInner = (
@@ -208,37 +251,42 @@ function MessageBubbleBase({
         popStyle,
       ]}
     >
-      <Pressable
-        onLongPress={() => {
-          haptics.medium();
-          onLongPress(message);
-        }}
-        delayLongPress={250}
-      >
-        {isOwn && !bigEmoji ? (
-          <LinearGradient
-            colors={colors.bubbleOwn}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={bubbleStyle}
-          >
-            {bubbleInner}
-          </LinearGradient>
-        ) : (
-          <View
-            style={[
-              bubbleStyle,
-              {
-                backgroundColor: bigEmoji ? 'transparent' : colors.muted,
-                borderWidth: bigEmoji || isOwn ? 0 : StyleSheet.hairlineWidth,
-                borderColor: colors.withAlpha('border', 0.6),
-              },
-            ]}
-          >
-            {bubbleInner}
-          </View>
-        )}
-      </Pressable>
+      <GestureDetector gesture={swipe}>
+        <Animated.View style={[styles.swipeRow, swipeStyle]}>
+          <Pressable onLongPress={openActions} delayLongPress={250}>
+            {isOwn && !bigEmoji ? (
+              <LinearGradient
+                colors={colors.bubbleOwn}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={bubbleStyle}
+              >
+                {bubbleInner}
+              </LinearGradient>
+            ) : (
+              <View
+                style={[
+                  bubbleStyle,
+                  {
+                    backgroundColor: bigEmoji ? 'transparent' : colors.muted,
+                    borderWidth: bigEmoji || isOwn ? 0 : StyleSheet.hairlineWidth,
+                    borderColor: colors.withAlpha('border', 0.6),
+                  },
+                ]}
+              >
+                {bubbleInner}
+              </View>
+            )}
+
+            {/* Options hint revealed as the bubble is swiped left. */}
+            <Animated.View style={[styles.swipeHint, hintStyle]} pointerEvents="none">
+              <View style={[styles.swipeHintCircle, { backgroundColor: colors.secondary }]}>
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.mutedForeground} />
+              </View>
+            </Animated.View>
+          </Pressable>
+        </Animated.View>
+      </GestureDetector>
 
       {reactionGroups.length > 0 && (
         <View style={[styles.reactions, isOwn ? styles.alignEnd : styles.alignStart]}>
@@ -275,8 +323,28 @@ const styles = StyleSheet.create({
   grouped: { marginTop: 1 },
   alignEnd: { alignItems: 'flex-end' },
   alignStart: { alignItems: 'flex-start' },
-  bubble: { maxWidth: '82%', paddingHorizontal: 12, paddingVertical: 8 },
-  bigEmojiBubble: { paddingHorizontal: 0, paddingVertical: 2 },
+  bubble: { minWidth: 88, paddingHorizontal: 12, paddingVertical: 8 },
+  replyBubble: { minWidth: 140 },
+  // The swipeable wrapper carries the width cap (kept off the inner bubble so
+  // the %max resolves against the full-width row, not a shrink-wrapped parent).
+  swipeRow: { maxWidth: '82%' },
+  swipeHint: {
+    position: 'absolute',
+    right: '100%',
+    marginRight: 10,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swipeHintCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bigEmojiBubble: { minWidth: 0, paddingHorizontal: 0, paddingVertical: 2 },
   bigEmojiRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
   sender: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
   forwarded: { fontSize: 12, fontStyle: 'italic', marginBottom: 2 },
