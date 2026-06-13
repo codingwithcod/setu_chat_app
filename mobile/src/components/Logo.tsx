@@ -41,7 +41,7 @@ export function Logo({ size = 'md', wordmark = true, style }: LogoProps) {
           width: s.tile,
           height: s.tile,
           borderRadius: s.radius,
-          backgroundColor: colors.primary,
+          backgroundColor: colors.brandTile,
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
@@ -55,7 +55,22 @@ export function Logo({ size = 'md', wordmark = true, style }: LogoProps) {
         />
       </View>
 
-      {wordmark && <GradientWordmark fontSize={s.font} colors={colors.gradient} />}
+      {wordmark &&
+        (colors.brandWordmark ? (
+          // Solid wordmark (e.g. Midnight Black: white on dark / black on white).
+          <Text
+            style={{
+              fontSize: s.font,
+              fontWeight: '800',
+              letterSpacing: -0.5,
+              color: colors.brandWordmark,
+            }}
+          >
+            Setu
+          </Text>
+        ) : (
+          <GradientWordmark fontSize={s.font} colors={colors.gradient} />
+        ))}
     </View>
   );
 }

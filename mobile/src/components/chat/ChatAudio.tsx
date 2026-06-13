@@ -17,8 +17,8 @@ export function ChatAudio({ file, onOwn }: { file: MessageFile; onOwn: boolean }
   const player = useAudioPlayer(file.file_url);
   const status = useAudioPlayerStatus(player);
 
-  const fg = onOwn ? '#fff' : colors.foreground;
-  const sub = onOwn ? 'rgba(255,255,255,0.7)' : colors.mutedForeground;
+  const fg = onOwn ? colors.bubbleOwnText : colors.foreground;
+  const sub = onOwn ? colors.bubbleOwnText : colors.mutedForeground;
   const duration = status.duration || 0;
   const position = status.currentTime || 0;
   const progress = duration > 0 ? Math.min(1, position / duration) : 0;
@@ -40,12 +40,12 @@ export function ChatAudio({ file, onOwn }: { file: MessageFile; onOwn: boolean }
     >
       <Pressable
         onPress={toggle}
-        style={[styles.playBtn, { backgroundColor: onOwn ? '#fff' : colors.primary }]}
+        style={[styles.playBtn, { backgroundColor: onOwn ? colors.bubbleOwnText : colors.primary }]}
       >
         <Ionicons
           name={status.playing ? 'pause' : 'play'}
           size={20}
-          color={onOwn ? colors.primary : colors.primaryForeground}
+          color={onOwn ? colors.bubbleOwn[0] : colors.primaryForeground}
         />
       </Pressable>
       <View style={styles.body}>
@@ -56,11 +56,11 @@ export function ChatAudio({ file, onOwn }: { file: MessageFile; onOwn: boolean }
           <View
             style={[
               styles.fill,
-              { width: `${progress * 100}%`, backgroundColor: onOwn ? '#fff' : colors.primary },
+              { width: `${progress * 100}%`, backgroundColor: onOwn ? colors.bubbleOwnText : colors.primary },
             ]}
           />
         </View>
-        <Text style={[styles.time, { color: sub }]}>
+        <Text style={[styles.time, { color: sub, opacity: onOwn ? 0.7 : 1 }]}>
           {fmt(position)} / {fmt(duration)}
         </Text>
       </View>

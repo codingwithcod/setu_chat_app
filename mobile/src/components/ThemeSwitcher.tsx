@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
-import { glow, hsl } from '@/theme/theme';
+import { glow, hsl, mixBlack } from '@/theme/theme';
 import type { ThemeModePreference } from '@/theme/theme';
 
 const MODES: { id: ThemeModePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -90,7 +90,7 @@ export function ThemeSwitcher() {
           end={{ x: 0, y: 1 }}
           style={styles.sentBubble}
         >
-          <Text style={[styles.sentText, { color: colors.primaryForeground }]}>
+          <Text style={[styles.sentText, { color: colors.bubbleOwnText }]}>
             Love this theme 🔥
           </Text>
         </LinearGradient>
@@ -123,9 +123,14 @@ export function ThemeSwitcher() {
       <View style={styles.chipRow}>
         {presets.map((p) => {
           const on = preset === p.id;
-          // Pure single-hue orb (light → primary) so each dot reads as its true
-          // identity color — no drift toward primaryGradientEnd.
-          const grad: [string, string] = [hsl(p.variables.primaryLight), hsl(p.variables.primary)];
+          // Pure single-hue orb (light → primary → deeper shade) so each dot
+          // reads as a clear gradient in its true identity color — no drift
+          // toward primaryGradientEnd.
+          const grad: [string, string, string] = [
+            hsl(p.variables.primaryLight),
+            hsl(p.variables.primary),
+            mixBlack(p.variables.primary, 60),
+          ];
           const tint = hsl(p.variables.primary);
           return (
             <Pressable
@@ -153,7 +158,11 @@ export function ThemeSwitcher() {
                   style={styles.chipOrb}
                 >
                   {on && (
-                    <Ionicons name="checkmark" size={22} color={colors.primaryForeground} />
+                    <Ionicons
+                      name="checkmark"
+                      size={22}
+                      color={hsl(p.variables.primaryForeground)}
+                    />
                   )}
                 </LinearGradient>
               </View>
@@ -194,7 +203,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     gap: 8,
   },
-  heroWash: { position: 'absolute', top: 0, right: 0, width: 220, height: 160 },
+  heroWash: { ...StyleSheet.absoluteFillObject },
   recvBubble: {
     alignSelf: 'flex-start',
     paddingHorizontal: 14,

@@ -34,7 +34,7 @@ export function Aurora({ variant = 'top', intensity = 1 }: AuroraProps) {
         <Image
           source={GLOW}
           alt=""
-          tintColor={colors.primary}
+          tintColor={colors.auroraFrom}
           style={[styles.centerBlob, { opacity: 0.16 * intensity }]}
         />
       </View>
@@ -46,13 +46,13 @@ export function Aurora({ variant = 'top', intensity = 1 }: AuroraProps) {
       <Image
         source={GLOW}
         alt=""
-        tintColor={colors.primary}
+        tintColor={colors.auroraFrom}
         style={[styles.blob, { top: -260, left: -170, opacity: 0.22 * intensity }]}
       />
       <Image
         source={GLOW}
         alt=""
-        tintColor={colors.primaryGradientEnd}
+        tintColor={colors.auroraTo}
         style={[styles.blob, { top: -320, right: -200, opacity: 0.15 * intensity }]}
       />
     </View>

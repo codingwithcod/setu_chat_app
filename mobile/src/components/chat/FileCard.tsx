@@ -104,24 +104,29 @@ export function FileCard({ file, onOwn }: { file: MessageFile; onOwn: boolean })
       </View>
       <View style={styles.meta}>
         <Text
-          style={[styles.name, { color: onOwn ? '#fff' : colors.foreground }]}
+          style={[styles.name, { color: onOwn ? colors.bubbleOwnText : colors.foreground }]}
           numberOfLines={1}
         >
           {file.file_name}
         </Text>
         <Text
-          style={{ color: onOwn ? 'rgba(255,255,255,0.7)' : colors.mutedForeground, fontSize: 12 }}
+          style={[
+            { fontSize: 12 },
+            onOwn
+              ? { color: colors.bubbleOwnText, opacity: 0.7 }
+              : { color: colors.mutedForeground },
+          ]}
         >
           {formatBytes(file.file_size)}
         </Text>
       </View>
       {busy ? (
-        <ActivityIndicator size="small" color={onOwn ? 'rgba(255,255,255,0.85)' : colors.mutedForeground} />
+        <ActivityIndicator size="small" color={onOwn ? colors.bubbleOwnText : colors.mutedForeground} />
       ) : (
         <Feather
           name="download"
           size={19}
-          color={onOwn ? 'rgba(255,255,255,0.85)' : colors.mutedForeground}
+          color={onOwn ? colors.bubbleOwnText : colors.mutedForeground}
         />
       )}
     </Pressable>

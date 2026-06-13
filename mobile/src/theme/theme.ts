@@ -11,7 +11,11 @@
  * ThemeProvider — never hardcode a color anywhere.
  */
 
-export type ThemePresetId = 'rose-ember' | 'midnight-violet' | 'ocean-sapphire';
+export type ThemePresetId =
+  | 'rose-ember'
+  | 'midnight-violet'
+  | 'ocean-sapphire'
+  | 'midnight-black';
 export type ColorMode = 'light' | 'dark';
 export type ThemeModePreference = 'light' | 'dark' | 'system';
 
@@ -137,6 +141,55 @@ export const THEME_PRESETS: ThemePreset[] = [
       accentForeground: '217 80% 25%',
     },
   },
+  {
+    id: 'midnight-black',
+    name: 'Midnight Black',
+    description: 'Pure black & white',
+    swatch: '#111111',
+    // Pure-grayscale (0% saturation) monochrome. These are the LIGHT-mode
+    // values (white theme); DARK_OVERRIDES['midnight-black'] flips them to a pure-black
+    // theme. Accent is a mode-appropriate soft gray, so the derived own-bubble
+    // (mixBlack(primary)) + primaryForeground naturally give a light bubble with
+    // dark text in the black theme. auroraFrom/auroraTo == background mute the
+    // page glow; primaryGradientEnd == primary flattens every UI gradient.
+    variables: {
+      background: '0 0% 100%',
+      foreground: '0 0% 9%',
+      card: '0 0% 100%',
+      cardForeground: '0 0% 9%',
+      popover: '0 0% 100%',
+      popoverForeground: '0 0% 9%',
+      surface: '0 0% 97%',
+      secondary: '0 0% 94%',
+      secondaryForeground: '0 0% 12%',
+      muted: '0 0% 95%',
+      mutedForeground: '0 0% 40%',
+      border: '0 0% 88%',
+      input: '0 0% 88%',
+      sidebar: '0 0% 98%',
+      sidebarForeground: '0 0% 9%',
+      primary: '0 0% 20%',
+      primaryForeground: '0 0% 100%',
+      primaryLight: '0 0% 45%',
+      primaryGradientEnd: '0 0% 20%',
+      tertiary: '0 0% 35%',
+      ring: '0 0% 20%',
+      accent: '0 0% 92%',
+      accentForeground: '0 0% 15%',
+      sidebarAccent: '0 0% 92%',
+      auroraFrom: '0 0% 100%',
+      auroraTo: '0 0% 100%',
+      // Own bubble decoupled from the accent: light surface, dark text (the
+      // mirror of the dark theme below).
+      bubbleOwnFrom: '0 0% 90%',
+      bubbleOwnTo: '0 0% 85%',
+      bubbleOwnText: '0 0% 10%',
+      replyOwnBg: '0 0% 80%',
+      // Dark logo tile + near-black wordmark (white theme).
+      brandTile: '0 0% 12%',
+      brandWordmark: '0 0% 9%',
+    },
+  },
 ];
 
 // Dark-mode overrides for the accent family (theme-config.ts DARK_OVERRIDES).
@@ -155,6 +208,47 @@ const DARK_OVERRIDES: Record<ThemePresetId, Record<string, Hsl>> = {
     sidebarAccent: '340 70% 12%',
     accent: '340 70% 15%',
     accentForeground: '340 30% 90%',
+  },
+  // Midnight Black flips to a pure-black theme. Every token set in its
+  // `variables` (light values) is re-stated here with its dark value, since
+  // variables apply to both modes. Accent becomes a light soft-gray (visible on
+  // black); the own bubble is a deep near-black with white text.
+  'midnight-black': {
+    background: '0 0% 0%',
+    foreground: '0 0% 96%',
+    card: '0 0% 6%',
+    cardForeground: '0 0% 96%',
+    popover: '0 0% 6%',
+    popoverForeground: '0 0% 96%',
+    surface: '0 0% 9%',
+    secondary: '0 0% 14%',
+    secondaryForeground: '0 0% 96%',
+    muted: '0 0% 14%',
+    mutedForeground: '0 0% 60%',
+    border: '0 0% 16%',
+    input: '0 0% 16%',
+    sidebar: '0 0% 4%',
+    sidebarForeground: '0 0% 96%',
+    primary: '0 0% 82%',
+    primaryForeground: '0 0% 8%',
+    primaryLight: '0 0% 92%',
+    primaryGradientEnd: '0 0% 82%',
+    tertiary: '0 0% 70%',
+    ring: '0 0% 82%',
+    accent: '0 0% 16%',
+    accentForeground: '0 0% 90%',
+    sidebarAccent: '0 0% 16%',
+    auroraFrom: '0 0% 0%',
+    auroraTo: '0 0% 0%',
+    // Deep, near-black own bubble + white text (darker than the charcoal
+    // incoming bubble so your messages read as the darkest surface).
+    bubbleOwnFrom: '0 0% 12%',
+    bubbleOwnTo: '0 0% 7%',
+    bubbleOwnText: '0 0% 98%',
+    replyOwnBg: '0 0% 18%',
+    // Dark logo tile (distinct from the black bg) + white wordmark.
+    brandTile: '0 0% 18%',
+    brandWordmark: '0 0% 98%',
   },
 };
 
@@ -254,14 +348,35 @@ export interface ThemeColors {
   warning: string;
   warningForeground: string;
   info: string;
+  /**
+   * Tint stops for the ambient page Aurora glow. Default to primary /
+   * primaryGradientEnd so every colored theme adjusts automatically; a preset
+   * may override them (e.g. Midnight Black sets both to `background`) to mute the glow —
+   * all controlled by color, with no per-screen conditions.
+   */
+  auroraFrom: string;
+  auroraTo: string;
   /** Raw triplets, for callers that need alpha via withAlpha(). */
   raw: ThemeTokens;
   /** hsla() of a token at the given alpha (0..1). */
   withAlpha: (token: keyof ThemeColors | string, alpha: number) => string;
   /** The brand wordmark gradient stops (primary-light → primary → tertiary). */
   gradient: [string, string, string];
-  /** Own message bubble gradient stops (primary darkened 6% → 20%), matches web. */
+  /** Logo tile background. Defaults to primary; a preset may override (e.g.
+   *  Midnight Black uses a dark tile so the white mark reads). */
+  brandTile: string;
+  /** When set, the "Setu" wordmark renders as this solid color instead of the
+   *  gradient (e.g. Midnight Black: white in dark mode, black in light). Null = gradient. */
+  brandWordmark: string | null;
+  /**
+   * Own message bubble gradient stops. Defaults to primary darkened (6% → 20%)
+   * to match web, but a preset may override via `bubbleOwnFrom`/`bubbleOwnTo`
+   * tokens to decouple the bubble from the accent (e.g. Midnight Black: a dark bubble with
+   * a light accent).
+   */
   bubbleOwn: [string, string];
+  /** Text/meta color on your own bubble. Defaults to primaryForeground. */
+  bubbleOwnText: string;
   /** Reply-preview inset background inside own bubbles (near-black w/ primary tint). */
   replyOwnBg: string;
 }
@@ -301,14 +416,26 @@ export function buildColors(presetId: ThemePresetId, mode: ColorMode): ThemeColo
     warning: get('warning'),
     warningForeground: get('warningForeground'),
     info: get('info'),
+    // Default the aurora tint to the brand gradient so any colored theme works
+    // out of the box; presets can override `auroraFrom`/`auroraTo` to mute it.
+    auroraFrom: t.auroraFrom ? hsl(t.auroraFrom) : get('primary'),
+    auroraTo: t.auroraTo ? hsl(t.auroraTo) : get('primaryGradientEnd'),
     raw: t,
     withAlpha: (token, alpha) => hsl(t[token as string] ?? t.primary, alpha),
     // Matches web .gradient-text: linear-gradient(primary-light, primary, tertiary/0.8)
     gradient: [hsl(t.primaryLight), hsl(t.primary), hsl(t.tertiary, 0.8)],
-    // .msg-bubble-sent: linear-gradient(primary 94%/black, primary 80%/black)
-    bubbleOwn: [mixBlack(t.primary, 94), mixBlack(t.primary, 80)],
-    // .reply-preview-own: color-mix(primary 12%, #000 88%)
-    replyOwnBg: mixBlack(t.primary, 12),
+    brandTile: t.brandTile ? hsl(t.brandTile) : get('primary'),
+    brandWordmark: t.brandWordmark ? hsl(t.brandWordmark) : null,
+    // .msg-bubble-sent: linear-gradient(primary 94%/black, primary 80%/black).
+    // A preset may override the stops to decouple the bubble from the accent.
+    bubbleOwn:
+      t.bubbleOwnFrom && t.bubbleOwnTo
+        ? [hsl(t.bubbleOwnFrom), hsl(t.bubbleOwnTo)]
+        : [mixBlack(t.primary, 94), mixBlack(t.primary, 80)],
+    bubbleOwnText: t.bubbleOwnText ? hsl(t.bubbleOwnText) : get('primaryForeground'),
+    // .reply-preview-own: color-mix(primary 12%, #000 88%) — overridable so it
+    // tracks the bubble surface when the bubble is decoupled from the accent.
+    replyOwnBg: t.replyOwnBg ? hsl(t.replyOwnBg) : mixBlack(t.primary, 12),
   };
 }
 

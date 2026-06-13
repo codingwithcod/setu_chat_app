@@ -141,11 +141,11 @@ function MessageBubbleBase({
     !message.forwarded_from &&
     !(message.files && message.files.length > 0);
 
-  const textColor = isOwn ? colors.primaryForeground : colors.foreground;
+  const textColor = isOwn ? colors.bubbleOwnText : colors.foreground;
   const metaColor = bigEmoji
     ? colors.mutedForeground
     : isOwn
-      ? colors.primaryForeground
+      ? colors.bubbleOwnText
       : colors.mutedForeground;
 
   // Aggregate reactions by emoji.
@@ -230,7 +230,9 @@ function MessageBubbleBase({
           <Text
             style={[
               styles.replyText,
-              { color: isOwn ? 'rgba(255,255,255,0.78)' : colors.mutedForeground },
+              isOwn
+                ? { color: metaColor, opacity: 0.78 }
+                : { color: colors.mutedForeground },
             ]}
             numberOfLines={1}
           >
