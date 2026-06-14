@@ -1,6 +1,10 @@
 import type { Session } from '@supabase/supabase-js';
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import {
   createContext,
   useCallback,
@@ -16,6 +20,13 @@ import { api } from '@/lib/api';
 import { unregisterPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Configure Google Sign-In once at module level.
+// ---------------------------------------------------------------------------
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
+});
 
 interface SignUpInput {
   firstName: string;
@@ -42,7 +53,7 @@ interface AuthContextValue {
   initializing: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  /** Signs in with Google OAuth via system browser and deep link. */
+  /** Signs in with Google OAuth via the native account picker. */
   signInWithGoogle: () => Promise<GoogleCallbackResult>;
   /** Registers the account; the user must then verify their email to log in. */
   signUp: (input: SignUpInput) => Promise<{ message: string }>;
@@ -118,69 +129,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Google OAuth via system browser + deep link.
+   * Google OAuth via the native Google Sign-In SDK.
    *
    * Flow:
-   *   1. Get OAuth URL from Supabase (skipBrowserRedirect)
-   *   2. Open in system browser via WebBrowser.openAuthSessionAsync
-   *   3. Supabase redirects to setu://callback#access_token=...&refresh_token=...
-   *   4. Extract tokens, call supabase.auth.setSession()
-   *   5. Call POST /api/auth/google-callback to run server-side logic
-   *   6. Return action for the caller to navigate accordingly
+   *   1. GoogleSignin.signIn() — shows the native account picker
+   *   2. Get the idToken from the sign-in response
+   *   3. Exchange idToken with Supabase via signInWithIdToken()
+   *   4. Call POST /api/auth/google-callback to run server-side logic
+   *   5. Return action for the caller to navigate accordingly
    */
   const signInWithGoogle = useCallback(async (): Promise<GoogleCallbackResult> => {
-    const redirectTo = Linking.createURL('callback');
+    // 1. Show the native Google account picker.
+    const response = await GoogleSignin.signIn();
 
-    // 1. Get the OAuth URL from Supabase.
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        skipBrowserRedirect: true,
-      },
-    });
-
-    if (error || !data?.url) {
-      throw new Error(error?.message ?? 'Failed to start Google sign-in.');
-    }
-
-    // 2. Open in the system browser.
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
-    if (result.type !== 'success' || !result.url) {
+    if (!isSuccessResponse(response)) {
       throw new Error('Google sign-in was cancelled.');
     }
 
-    // 3. Extract tokens from the redirect URL.
-    //    Supabase returns tokens in the URL fragment (#access_token=...&refresh_token=...)
-    const url = result.url;
-    const fragmentString = url.includes('#') ? url.split('#')[1] : '';
-    const queryString = url.includes('?') ? url.split('?')[1]?.split('#')[0] : '';
-
-    // Parse both fragment and query params — Supabase may use either depending on flow.
-    const params = new URLSearchParams(fragmentString || queryString);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (!accessToken) {
-      // Could be PKCE code flow — try code exchange.
-      const code = new URLSearchParams(queryString).get('code');
-      if (code) {
-        const { error: codeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (codeError) throw new Error(codeError.message);
-      } else {
-        throw new Error('No authentication tokens received from Google.');
-      }
-    } else {
-      // 4. Set the session with the received tokens.
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken ?? '',
-      });
-      if (sessionError) throw new Error(sessionError.message);
+    const idToken = response.data?.idToken;
+    if (!idToken) {
+      throw new Error('No ID token received from Google.');
     }
 
-    // 5. Call the server-side callback to process the Google login.
+    // 2. Exchange the Google idToken with Supabase for a session.
+    const { error: sessionError } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: idToken,
+    });
+    if (sessionError) throw new Error(sessionError.message);
+
+    // 3. Call the server-side callback to process the Google login.
     const callbackResult = await api.post<GoogleCallbackResult>(
       '/api/auth/google-callback'
     );
