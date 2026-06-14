@@ -71,6 +71,30 @@ export function HomeJsonLd() {
     ],
   };
 
+  const organization = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Setu",
+    alternateName: ["Setu Chat", "Setu Chat App", "Setu by TheAbhiPatel"],
+    url: baseUrl,
+    logo: {
+      "@type": "ImageObject",
+      url: `${baseUrl}/icons/setu-512x512.png`,
+      width: 512,
+      height: 512,
+    },
+    image: `${baseUrl}/icons/setu-512x512.png`,
+    founder: {
+      "@type": "Person",
+      name: "Abhishek Patel",
+      alternateName: "TheAbhiPatel",
+      url: "https://www.theabhipatel.com/",
+    },
+    sameAs: [
+      "https://github.com/theabhipatel/setu_chat_app",
+    ],
+  };
+
   const website = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -81,6 +105,16 @@ export function HomeJsonLd() {
       "Setu by Abhishek Patel",
     ],
     url: baseUrl,
+    publisher: {
+      "@type": "Organization",
+      name: "Setu",
+      logo: {
+        "@type": "ImageObject",
+        url: `${baseUrl}/icons/setu-512x512.png`,
+        width: 512,
+        height: 512,
+      },
+    },
     creator: {
       "@type": "Person",
       name: "Abhishek Patel",
@@ -112,6 +146,7 @@ export function HomeJsonLd() {
 
   return (
     <>
+      <JsonLd data={organization} />
       <JsonLd data={softwareApp} />
       <JsonLd data={website} />
       <JsonLd data={person} />
