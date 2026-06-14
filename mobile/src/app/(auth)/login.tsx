@@ -111,13 +111,14 @@ export default function LoginScreen() {
   return (
     <Screen padded>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
           <View style={styles.header}>
             <Logo size="lg" />
@@ -201,7 +202,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', paddingVertical: 32, gap: 32 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingVertical: 32, paddingBottom: 48, gap: 32 },
   header: { alignItems: 'center', gap: 10 },
   title: { fontSize: 26, fontWeight: '800', marginTop: 8 },
   subtitle: { fontSize: 15, textAlign: 'center' },

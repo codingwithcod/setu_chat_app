@@ -143,13 +143,14 @@ export default function RegisterScreen() {
   return (
     <Screen padded>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
           <View style={styles.header}>
             <Logo size="md" />
@@ -208,7 +209,7 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', paddingVertical: 32, gap: 28 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingVertical: 32, paddingBottom: 48, gap: 28 },
   header: { alignItems: 'center', gap: 12 },
   title: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
   subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22 },

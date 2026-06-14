@@ -46,12 +46,13 @@ export default function ForgotPasswordScreen() {
   return (
     <Screen padded>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
           <View style={[styles.icon, { backgroundColor: colors.accent }]}>
             <Ionicons name="lock-closed-outline" size={36} color={colors.primary} />
@@ -94,7 +95,7 @@ export default function ForgotPasswordScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16, paddingVertical: 32 },
+  content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16, paddingVertical: 32, paddingBottom: 48 },
   icon: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
   subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, paddingHorizontal: 8 },
