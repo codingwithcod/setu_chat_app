@@ -196,6 +196,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // redirects to login right away. The refresh token simply lapses on expiry.
     setProfile(null);
     await supabase.auth.signOut({ scope: 'local' });
+
+    // Clear Google Sign-In's cached account so the native account picker always
+    // appears on the next sign-in instead of auto-selecting the previous account.
+    try { await GoogleSignin.signOut(); } catch { /* no-op if not signed in via Google */ }
   }, [session]);
 
   const refreshProfile = useCallback(async () => {
