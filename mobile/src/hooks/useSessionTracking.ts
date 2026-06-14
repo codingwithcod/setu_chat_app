@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
 
+import type { AlertOptions } from '@/components/ui/DialogProvider';
+import { useDialog } from '@/components/ui/DialogProvider';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeSessions } from '@/hooks/useRealtimeSessions';
 import { api } from '@/lib/api';
@@ -25,6 +26,7 @@ import type { UserSession } from '@/types';
  */
 export function useSessionTracking() {
   const { isAuthenticated, session, signOut } = useAuth();
+  const dialog = useDialog();
   const userId = session?.user?.id;
   const tracked = useRef(false);
 
@@ -105,22 +107,24 @@ export function useSessionTracking() {
   // -----------------------------------------------------------------------
   const handleSessionRevoked = useCallback(async () => {
     await clearSessionToken();
-    Alert.alert(
-      'Session ended',
-      'Your session was signed out from another device.',
-      [{ text: 'OK' }]
-    );
+    // Show themed dialog, then sign out once the user dismisses it.
+    await dialog.alert({
+      title: 'Session ended',
+      message: 'Your session was signed out from another device.',
+      icon: 'log-out-outline',
+      destructive: true,
+    } as AlertOptions);
     await signOut();
-  }, [signOut]);
+  }, [signOut, dialog]);
 
   const handleNewLogin = useCallback((newSession: UserSession) => {
-    // Informational — let the user know another device signed in.
-    Alert.alert(
-      'New login detected',
-      `A new sign-in was detected on ${newSession.device_name || 'another device'}.${newSession.location ? `\nLocation: ${newSession.location}` : ''}`,
-      [{ text: 'OK' }]
-    );
-  }, []);
+    const location = newSession.location ? `\nLocation: ${newSession.location}` : '';
+    void dialog.alert({
+      title: 'New login detected',
+      message: `A new sign-in was detected on ${newSession.device_name || 'another device'}.${location}`,
+      icon: 'alert-circle-outline',
+    } as AlertOptions);
+  }, [dialog]);
 
   useRealtimeSessions({
     onNewLogin: handleNewLogin,
