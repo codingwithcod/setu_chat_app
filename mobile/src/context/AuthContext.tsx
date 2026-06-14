@@ -61,6 +61,8 @@ interface AuthContextValue {
   requestPasswordReset: (email: string) => Promise<{ message: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  /** Release the pending-auth gate (call from select-username after profile setup). */
+  releasePendingAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // gate on the login screen until the callback resolves (mirrors the web's
   // single-redirect validation flow).
   const [pendingGoogleAuth, setPendingGoogleAuth] = useState(false);
+  const pendingGoogleResult = useRef<string | null>(null);
   const currentUserId = useRef<string | null>(null);
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -186,13 +189,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      pendingGoogleResult.current = callbackResult.action;
       return callbackResult;
     } finally {
-      // Always release the gate — whether the flow succeeded, was blocked,
-      // or threw an error.  On success this lets isAuthenticated flip to
-      // true and triggers navigation; on failure/blocked the session is
-      // already cleared so isAuthenticated stays false.
-      setPendingGoogleAuth(false);
+      // Release the gate UNLESS the user needs to complete profile setup on
+      // select-username. In that case we keep the gate closed so the auth
+      // gate doesn't redirect to /(tabs) while the user is still on the
+      // login page, before they've navigated to select-username.
+      // The select-username screen calls releasePendingAuth() after saving.
+      if (pendingGoogleResult.current !== 'select_username') {
+        setPendingGoogleAuth(false);
+      }
     }
   }, []);
 
@@ -240,6 +247,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentUserId.current) await loadProfile(currentUserId.current);
   }, [loadProfile]);
 
+  const releasePendingAuth = useCallback(() => {
+    setPendingGoogleAuth(false);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -252,8 +263,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       requestPasswordReset,
       signOut,
       refreshProfile,
+      releasePendingAuth,
     }),
-    [session, profile, initializing, pendingGoogleAuth, signIn, signInWithGoogle, signUp, requestPasswordReset, signOut, refreshProfile]
+    [session, profile, initializing, pendingGoogleAuth, signIn, signInWithGoogle, signUp, requestPasswordReset, signOut, refreshProfile, releasePendingAuth]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

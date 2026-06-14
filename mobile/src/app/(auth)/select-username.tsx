@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -25,7 +24,7 @@ export default function SelectUsernameScreen() {
     firstName?: string;
     lastName?: string;
   }>();
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, releasePendingAuth } = useAuth();
 
   const [firstName, setFirstName] = useState(params.firstName ?? '');
   const [lastName, setLastName] = useState(params.lastName ?? '');
@@ -127,15 +126,42 @@ export default function SelectUsernameScreen() {
         return;
       }
 
-      // Create "Saved Messages" self-conversation.
+      // Create "Saved Messages" self-conversation via the Next.js API.
+      // Use fetch directly (not the api wrapper) with explicit auth header
+      // and full error logging so failures are never silent.
       try {
-        await api.post('/api/conversations/self');
-      } catch {
-        // Non-fatal — the conversation will be created on next login.
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const accessToken = currentSession?.access_token;
+        if (!accessToken) {
+          console.warn('[SelectUsername] No access token for self-conv creation');
+        } else {
+          const selfRes = await fetch(
+            `${require('@/lib/config').config.apiUrl}/api/conversations/self`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          const selfJson = await selfRes.json();
+          if (!selfRes.ok) {
+            console.warn('[SelectUsername] Self-conv API error:', selfRes.status, selfJson);
+          } else {
+            console.log('[SelectUsername] Self-conv created:', selfJson.created);
+          }
+        }
+      } catch (selfErr) {
+        console.warn('[SelectUsername] Self-conv fetch failed:', selfErr);
       }
 
       // Refresh profile data in auth context.
       await refreshProfile();
+
+      // Release the Google auth gate — this flips isAuthenticated to true
+      // which triggers the auth gate to navigate to /(tabs) automatically.
+      releasePendingAuth();
 
       // Navigate to the main app.
       router.replace('/(tabs)');
