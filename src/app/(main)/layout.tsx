@@ -449,7 +449,7 @@ export default function MainLayout({
     return null;
   }
 
-  const isConversationView = pathname.startsWith("/chat/");
+  const isConversationView = pathname.startsWith("/chat/") || pathname.startsWith("/user/") || pathname.startsWith("/profile") || pathname.startsWith("/settings");
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
