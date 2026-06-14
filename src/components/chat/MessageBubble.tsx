@@ -32,6 +32,35 @@ import {
 import dynamic from "next/dynamic";
 import type { MessageWithSender, ConversationMember, Profile } from "@/types";
 
+// Regex to detect URLs in message text
+const URL_REGEX = /https?:\/\/[^\s<>'")\]]+/gi;
+
+/** Splits text into plain-text and clickable link segments. */
+function linkifyContent(text: string) {
+  const parts = text.split(URL_REGEX);
+  const urls = text.match(URL_REGEX);
+  if (!urls) return text;
+
+  const result: (string | JSX.Element)[] = [];
+  parts.forEach((part, i) => {
+    if (part) result.push(part);
+    if (urls[i]) {
+      result.push(
+        <a
+          key={i}
+          href={urls[i]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+        >
+          {urls[i]}
+        </a>
+      );
+    }
+  });
+  return result;
+}
+
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
   loading: () => (
@@ -480,7 +509,7 @@ export function MessageBubble({
               ) : (
                 message.content && (
                   <p className="text-base leading-relaxed whitespace-pre-wrap">
-                    {message.content}
+                    {linkifyContent(message.content)}
                   </p>
                 )
               )}
