@@ -36,7 +36,7 @@ import type { MessageWithSender, ConversationMember, Profile } from "@/types";
 const URL_REGEX = /https?:\/\/[^\s<>'")\]]+/gi;
 
 /** Splits text into plain-text and clickable link segments. */
-function linkifyContent(text: string) {
+function linkifyContent(text: string, isOwn: boolean) {
   const parts = text.split(URL_REGEX);
   const urls = text.match(URL_REGEX);
   if (!urls) return text;
@@ -52,6 +52,7 @@ function linkifyContent(text: string) {
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+          style={isOwn ? undefined : { color: 'hsl(var(--info))' }}
         >
           {urls[i]}
         </a>
@@ -509,7 +510,7 @@ export function MessageBubble({
               ) : (
                 message.content && (
                   <p className="text-base leading-relaxed whitespace-pre-wrap">
-                    {linkifyContent(message.content)}
+                    {linkifyContent(message.content, isOwn)}
                   </p>
                 )
               )}

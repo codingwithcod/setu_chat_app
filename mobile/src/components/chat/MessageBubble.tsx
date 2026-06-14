@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useEffect, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -22,6 +22,34 @@ import { haptics } from '@/lib/haptics';
 import { formatMessageTime } from '@/lib/time';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MessageStatus as Status, MessageWithSender } from '@/types';
+
+/** Regex to detect URLs in message text. */
+const URL_REGEX = /https?:\/\/[^\s<>'"\)\]]+/gi;
+
+/** Splits text into plain-text and tappable link segments. */
+function linkifyContent(text: string, linkColor: string) {
+  const parts = text.split(URL_REGEX);
+  const urls = text.match(URL_REGEX);
+  if (!urls) return <Text>{text}</Text>;
+
+  const elements: React.ReactNode[] = [];
+  parts.forEach((part, i) => {
+    if (part) elements.push(<Text key={`t${i}`}>{part}</Text>);
+    if (urls[i]) {
+      const url = urls[i];
+      elements.push(
+        <Text
+          key={`u${i}`}
+          style={{ textDecorationLine: 'underline', color: linkColor }}
+          onPress={() => Linking.openURL(url)}
+        >
+          {url}
+        </Text>
+      );
+    }
+  });
+  return <>{elements}</>;
+}
 
 /** Drag distance (px) past which releasing opens the action menu. */
 const SWIPE_TRIGGER = 60;
@@ -253,7 +281,9 @@ function MessageBubbleBase({
         </View>
       ) : (
         !!message.content && (
-          <Text style={[styles.content, { color: textColor }]}>{message.content}</Text>
+          <Text style={[styles.content, { color: textColor }]}>
+            {linkifyContent(message.content, isOwn ? colors.bubbleOwnText : colors.info)}
+          </Text>
         )
       )}
 
