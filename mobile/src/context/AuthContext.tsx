@@ -18,6 +18,7 @@ import {
 
 import { api } from '@/lib/api';
 import { unregisterPush } from '@/lib/push';
+import { clearSessionToken } from '@/lib/session-manager';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types';
 
@@ -219,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // affects THIS device, so the auth listener flips to signed-out and the gate
     // redirects to login right away. The refresh token simply lapses on expiry.
     setProfile(null);
+    await clearSessionToken();
     await supabase.auth.signOut({ scope: 'local' });
 
     // Revoke Google access so the native account picker always appears on the

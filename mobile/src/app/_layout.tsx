@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DialogProvider } from '@/components/ui/DialogProvider';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { useAppFonts } from '@/theme/fonts';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
@@ -53,6 +54,7 @@ function RootNavigator() {
   const { hydrated, colors, scheme } = useTheme();
   const fontsLoaded = useAppFonts();
   useAuthGate();
+  useSessionTracking();
 
   useEffect(() => {
     if (!initializing && hydrated && fontsLoaded) SplashScreen.hideAsync();

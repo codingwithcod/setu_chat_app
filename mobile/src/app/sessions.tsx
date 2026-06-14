@@ -13,7 +13,11 @@ import {
 
 import { useDialog } from '@/components/ui/DialogProvider';
 import { Screen } from '@/components/ui/Screen';
+import { markSessionAsRevoking } from '@/hooks/useRealtimeSessions';
 import { api } from '@/lib/api';
+import { config } from '@/lib/config';
+import { getSessionToken } from '@/lib/session-manager';
+import { supabase } from '@/lib/supabase';
 import { formatLastSeen } from '@/lib/time';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { UserSession } from '@/types';
@@ -47,8 +51,21 @@ export default function SessionsScreen() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.get<UserSession[]>('/api/sessions');
-      setSessions(data ?? []);
+      // Fetch sessions with the session token header so the server can
+      // identify which session belongs to this device (is_current).
+      const token = getSessionToken();
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const accessToken = authSession?.access_token;
+      const headers: Record<string, string> = {};
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+      if (token) headers['x-session-token'] = token;
+
+      const res = await fetch(
+        `${config.apiUrl}/api/sessions`,
+        { headers }
+      );
+      const json = await res.json();
+      setSessions(json.data ?? []);
     } catch {
       setSessions([]);
     } finally {
@@ -77,6 +94,8 @@ export default function SessionsScreen() {
       });
       if (!ok) return;
       setRevoking(s.id);
+      // Mark as locally revoking so the realtime listener doesn't sign us out.
+      markSessionAsRevoking(s.id);
       try {
         await api.del(`/api/sessions/${s.id}`);
         setSessions((prev) => prev.filter((x) => x.id !== s.id));
