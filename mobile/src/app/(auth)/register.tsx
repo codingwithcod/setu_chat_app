@@ -104,8 +104,7 @@ export default function RegisterScreen() {
           break;
         case 'blocked':
           setError(
-            result.message ??
-              'Your account was created with email & password. Connect Google from Settings first.'
+            'Google account not linked\n\nYour account was created with email and password. To sign in with Google, first log in with your password, then connect Google from Settings → Linked Accounts.'
           );
           break;
         case 'proceed':

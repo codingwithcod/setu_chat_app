@@ -68,6 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [initializing, setInitializing] = useState(true);
+  // When true, a Google OAuth flow is in progress — the Supabase session may
+  // already exist but we haven't validated it server-side yet.  Keep the auth
+  // gate on the login screen until the callback resolves (mirrors the web's
+  // single-redirect validation flow).
+  const [pendingGoogleAuth, setPendingGoogleAuth] = useState(false);
   const currentUserId = useRef<string | null>(null);
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -151,24 +156,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('No ID token received from Google.');
     }
 
-    // 2. Exchange the Google idToken with Supabase for a session.
-    const { error: sessionError } = await supabase.auth.signInWithIdToken({
-      provider: 'google',
-      token: idToken,
-    });
-    if (sessionError) throw new Error(sessionError.message);
+    // Gate navigation: keep isAuthenticated false until the server-side
+    // callback validates the login.  This prevents the brief flash where the
+    // auth gate navigates to home before the callback returns "blocked".
+    setPendingGoogleAuth(true);
 
-    // 3. Call the server-side callback to process the Google login.
-    const callbackResult = await api.post<GoogleCallbackResult>(
-      '/api/auth/google-callback'
-    );
+    try {
+      // 2. Exchange the Google idToken with Supabase for a session.
+      //    onAuthStateChange will fire and set `session`, but isAuthenticated
+      //    stays false because pendingGoogleAuth is true.
+      const { error: sessionError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (sessionError) throw new Error(sessionError.message);
 
-    // If blocked, sign out immediately so the user can try again.
-    if (callbackResult.action === 'blocked') {
-      await supabase.auth.signOut({ scope: 'local' });
+      // 3. Call the server-side callback to process the Google login.
+      const callbackResult = await api.post<GoogleCallbackResult>(
+        '/api/auth/google-callback'
+      );
+
+      // If blocked, sign out of both Supabase and Google so the user can
+      // pick a different account on the next attempt.
+      if (callbackResult.action === 'blocked') {
+        await supabase.auth.signOut({ scope: 'local' });
+        try { await GoogleSignin.revokeAccess(); } catch {
+          try { await GoogleSignin.signOut(); } catch { /* no-op */ }
+        }
+      }
+
+      return callbackResult;
+    } finally {
+      // Always release the gate — whether the flow succeeded, was blocked,
+      // or threw an error.  On success this lets isAuthenticated flip to
+      // true and triggers navigation; on failure/blocked the session is
+      // already cleared so isAuthenticated stays false.
+      setPendingGoogleAuth(false);
     }
-
-    return callbackResult;
   }, []);
 
   const signUp = useCallback(async (input: SignUpInput) => {
@@ -219,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       initializing,
-      isAuthenticated: !!session,
+      isAuthenticated: !!session && !pendingGoogleAuth,
       signIn,
       signInWithGoogle,
       signUp,
@@ -227,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refreshProfile,
     }),
-    [session, profile, initializing, signIn, signInWithGoogle, signUp, requestPasswordReset, signOut, refreshProfile]
+    [session, profile, initializing, pendingGoogleAuth, signIn, signInWithGoogle, signUp, requestPasswordReset, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
