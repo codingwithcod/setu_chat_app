@@ -26,7 +26,7 @@ export function SuggestedPeopleCard({ onPress }: { onPress: () => void }) {
         end={{ x: 1, y: 1 }}
         style={[styles.badge, glow(colors.primary, 'md')]}
       >
-        <Ionicons name="sparkles" size={34} color={colors.primaryForeground} />
+        <Ionicons name="sparkles" size={26} color={colors.primaryForeground} />
       </LinearGradient>
 
       <Text style={[styles.title, { color: colors.foreground }]}>Start connecting</Text>
@@ -61,9 +61,9 @@ export function SuggestedPeopleCard({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 10 },
   badge: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,

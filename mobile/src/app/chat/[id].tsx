@@ -276,7 +276,13 @@ export default function ChatScreen() {
             }
           }}
         >
-          <Avatar uri={display?.avatarUri} name={display?.title} size={40} online={display?.online} />
+          {display?.isSelf ? (
+            <View style={[styles.selfHeaderAvatar, { backgroundColor: colors.primary }]}>
+              <Ionicons name="bookmark" size={20} color={colors.primaryForeground} />
+            </View>
+          ) : (
+            <Avatar uri={display?.avatarUri} name={display?.title} size={40} online={display?.online} />
+          )}
           <View style={styles.headerText}>
             <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
               {display?.title ?? 'Chat'}
@@ -423,6 +429,13 @@ const styles = StyleSheet.create({
   },
   back: { paddingHorizontal: 8, height: '100%', justifyContent: 'center' },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  selfHeaderAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerText: { flex: 1 },
   title: { fontSize: 17, fontWeight: '700' },
   subtitle: { fontSize: 13 },

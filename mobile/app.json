@@ -4,7 +4,7 @@
     "slug": "setu",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon-dark.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "setu",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#0A0A0B",
@@ -17,8 +17,8 @@
       "package": "app.setu.mobile",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#060608",
-        "foregroundImage": "./assets/images/android-icon-foreground-dark.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/images/app-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
