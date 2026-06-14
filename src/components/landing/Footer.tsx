@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Github, Linkedin } from "lucide-react";
+import { Github, Linkedin, Globe } from "lucide-react";
 import setuLogo from "@/app/setu-white-tr.png";
 import { DevelopedBy } from "@/components/shared/DevelopedBy";
 
@@ -65,6 +65,15 @@ export default function Footer() {
                 aria-label="GitHub - TheAbhiPatel"
               >
                 <Github className="h-4 w-4" />
+              </a>
+              <a
+                href="https://www.theabhipatel.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Portfolio - TheAbhiPatel"
+              >
+                <Globe className="h-4 w-4" />
               </a>
             </div>
           </div>
