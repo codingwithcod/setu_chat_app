@@ -113,9 +113,9 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Admin area — first line of defense. Only role='admin' may proceed.
-    // The /admin layout re-verifies server-side; this keeps the area
+    // The admin layout re-verifies server-side; this keeps the area
     // invisible to normal users by bouncing them to /chat.
-    if (user && request.nextUrl.pathname.startsWith("/admin")) {
+    if (user && request.nextUrl.pathname.startsWith("/setuabhiadmin")) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("role, is_banned")
@@ -139,7 +139,7 @@ export async function updateSession(request: NextRequest) {
         isAuthPage ||
         isPublicPage ||
         isMaintenancePage ||
-        pathname.startsWith("/admin");
+        pathname.startsWith("/setuabhiadmin");
 
       if (!exempt) {
         let isAdmin = false;

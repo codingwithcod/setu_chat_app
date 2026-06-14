@@ -12,7 +12,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/api/",
           "/chat/",
-          "/admin/",
           "/developer/",
           "/settings/",
           "/profile/",

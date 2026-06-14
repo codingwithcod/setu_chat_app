@@ -19,14 +19,14 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/groups", label: "Groups", icon: UsersRound },
-  { href: "/admin/reports", label: "Reports", icon: Flag },
-  { href: "/admin/sessions", label: "Sessions", icon: MonitorSmartphone },
-  { href: "/admin/developers", label: "Developers", icon: Code2 },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/setuabhiadmin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/setuabhiadmin/users", label: "Users", icon: Users },
+  { href: "/setuabhiadmin/groups", label: "Groups", icon: UsersRound },
+  { href: "/setuabhiadmin/reports", label: "Reports", icon: Flag },
+  { href: "/setuabhiadmin/sessions", label: "Sessions", icon: MonitorSmartphone },
+  { href: "/setuabhiadmin/developers", label: "Developers", icon: Code2 },
+  { href: "/setuabhiadmin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/setuabhiadmin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminSidebar({ email }: { email: string }) {
