@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
   if (status === "online") query = query.eq("is_online", true);
   if (status === "banned") query = query.eq("is_banned", true);
   if (status === "verified") query = query.eq("is_email_verified", true);
+  if (status === "not_verified") query = query.eq("is_email_verified", false);
 
   const { data, count, error } = await query;
   if (error) {

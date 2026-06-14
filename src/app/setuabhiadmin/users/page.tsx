@@ -45,6 +45,7 @@ const STATUS_FILTERS = [
   { key: "", label: "All" },
   { key: "online", label: "Online" },
   { key: "verified", label: "Verified" },
+  { key: "not_verified", label: "Not Verified" },
   { key: "banned", label: "Banned" },
 ];
 
@@ -145,7 +146,7 @@ export default function AdminUsersPage() {
                 setStatus(f.key);
               }}
             >
-              {f.label}
+              {f.label}{status === f.key && !loading ? ` (${total})` : ""}
             </Button>
           ))}
           <Button
@@ -156,7 +157,7 @@ export default function AdminUsersPage() {
               setRole(role === "admin" ? "" : "admin");
             }}
           >
-            Admins
+            Admins{role === "admin" && !loading ? ` (${total})` : ""}
           </Button>
         </div>
       </div>
