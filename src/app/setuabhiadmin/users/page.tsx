@@ -18,7 +18,6 @@ import {
   Search,
   MoreVertical,
   ShieldCheck,
-  ShieldOff,
   Ban,
   LogOut,
   Trash2,
@@ -250,15 +249,6 @@ export default function AdminUsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        {u.role === "admin" ? (
-                          <DropdownMenuItem onClick={() => act(u.id, "demote")}>
-                            <ShieldOff className="mr-2 h-4 w-4" /> Remove admin
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => act(u.id, "promote")}>
-                            <ShieldCheck className="mr-2 h-4 w-4" /> Make admin
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuItem onClick={() => act(u.id, "logout")}>
                           <LogOut className="mr-2 h-4 w-4" /> Force logout
                         </DropdownMenuItem>
