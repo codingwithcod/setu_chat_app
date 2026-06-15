@@ -1,8 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Shield, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Zap,
+  Shield,
+  Users,
+  Download,
+  Smartphone,
+  Monitor,
+  Wifi,
+  Battery,
+  Signal,
+} from "lucide-react";
+import setuLogo from "@/app/setu-white-tr.png";
+
+/* ---- CDN icons (same source as DownloadSection) ---- */
+const ANDROID_ICON =
+  "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/android/android-original.svg";
 
 /* ---- Inline SVG tech decorations ---- */
 const ChipSvg = ({ className }: { className?: string }) => (
@@ -41,6 +58,170 @@ const BoltSvg = ({ className }: { className?: string }) => (
   </svg>
 );
 
+/* ======== Shared chat messages for both devices ======== */
+const chatMessages = [
+  { text: "Hey! Welcome to Setu 🎉", time: "10:30 AM", sent: false, delay: "0.2s" },
+  { text: "This looks amazing! 🚀", time: "10:31 AM", sent: true, delay: "0.6s" },
+  { text: "Try the group chat feature! 👥", time: "10:31 AM", sent: false, delay: "1s" },
+  { text: "On it! Love the design ✨", time: "10:32 AM", sent: true, delay: "1.4s" },
+];
+
+/* ======== Laptop Chat Mockup ======== */
+function LaptopMockup() {
+  return (
+    <div className="hero-laptop-frame shimmer-border w-[370px]">
+      {/* Title bar */}
+      <div className="flex items-center gap-3 border-b border-border/50 px-5 py-3.5">
+        <div className="flex gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-red-500/80" />
+          <span className="w-3 h-3 rounded-full bg-warning/80" />
+          <span className="w-3 h-3 rounded-full bg-success/80" />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-2 px-4 py-1 rounded-md bg-muted/40 text-[10px] text-muted-foreground">
+            <Monitor className="h-2.5 w-2.5" />
+            setu.chat
+          </div>
+        </div>
+      </div>
+
+      {/* Chat header */}
+      <div className="flex items-center gap-3 border-b border-border/50 px-4 py-3">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+          S
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-sm">Setu Team</p>
+          <p className="text-xs text-success flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-pulse" />
+            Online
+          </p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="p-3.5 space-y-2.5 min-h-[180px]">
+        {chatMessages.map((msg, i) => (
+          <div
+            key={i}
+            className={`chat-bubble-animate flex ${msg.sent ? "justify-end" : "justify-start"}`}
+            style={{ animationDelay: msg.delay }}
+          >
+            <div
+              className={`rounded-2xl px-3.5 py-2 max-w-[75%] ${
+                msg.sent
+                  ? "rounded-tr-sm bg-primary text-primary-foreground"
+                  : "rounded-tl-sm bg-muted"
+              }`}
+            >
+              <p className="text-[12px]">{msg.text}</p>
+              <p
+                className={`text-[9px] mt-0.5 ${
+                  msg.sent ? "text-primary-foreground/60" : "text-muted-foreground"
+                }`}
+              >
+                {msg.time}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-border/50 px-3.5 py-2.5 flex items-center gap-2">
+        <div className="flex-1 rounded-full bg-muted/50 px-3.5 py-1.5 text-[11px] text-muted-foreground flex items-center">
+          Type a message...
+          <span className="hero-typing-cursor" />
+        </div>
+        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+          <ArrowRight className="h-3 w-3 text-primary-foreground" />
+        </div>
+      </div>
+
+      {/* Laptop base */}
+      <div className="hero-laptop-base" />
+    </div>
+  );
+}
+
+/* ======== Phone Chat Mockup ======== */
+function PhoneMockup() {
+  return (
+    <div className="hero-phone-frame shimmer-border w-[190px]">
+      {/* Phone notch */}
+      <div className="hero-phone-notch" />
+
+      {/* Status bar */}
+      <div className="hero-phone-status">
+        <span>9:41</span>
+        <div className="flex items-center gap-1">
+          <Signal className="h-2.5 w-2.5" />
+          <Wifi className="h-2.5 w-2.5" />
+          <Battery className="h-2.5 w-2.5" />
+        </div>
+      </div>
+
+      {/* Chat header */}
+      <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2">
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-[9px] font-bold">
+          S
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-[11px]">Setu Team</p>
+          <p className="text-[8px] text-success flex items-center gap-0.5">
+            <span className="w-1 h-1 rounded-full bg-success inline-block animate-pulse" />
+            Online
+          </p>
+        </div>
+      </div>
+
+      {/* Messages (compact) */}
+      <div className="p-2.5 space-y-1.5 min-h-[150px]">
+        {chatMessages.map((msg, i) => (
+          <div
+            key={i}
+            className={`chat-bubble-animate flex ${msg.sent ? "justify-end" : "justify-start"}`}
+            style={{ animationDelay: `${parseFloat(msg.delay) + 0.3}s` }}
+          >
+            <div
+              className={`rounded-xl px-2.5 py-1.5 max-w-[80%] ${
+                msg.sent
+                  ? "rounded-tr-sm bg-primary text-primary-foreground"
+                  : "rounded-tl-sm bg-muted"
+              }`}
+            >
+              <p className="text-[10px] leading-tight">{msg.text}</p>
+              <p
+                className={`text-[7px] mt-0.5 ${
+                  msg.sent ? "text-primary-foreground/60" : "text-muted-foreground"
+                }`}
+              >
+                {msg.time}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-border/50 px-2.5 py-2 flex items-center gap-1.5">
+        <div className="flex-1 rounded-full bg-muted/50 px-2.5 py-1 text-[9px] text-muted-foreground">
+          Message...
+        </div>
+        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+          <ArrowRight className="h-2.5 w-2.5 text-primary-foreground" />
+        </div>
+      </div>
+
+      {/* Phone home indicator */}
+      <div className="flex justify-center py-1.5">
+        <div className="w-16 h-1 rounded-full bg-muted-foreground/20" />
+      </div>
+    </div>
+  );
+}
+
+/* ======== Main Hero Section ======== */
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 noise-overlay">
@@ -104,17 +285,42 @@ export default function HeroSection() {
               & group messaging, real-time presence, and end-to-end security.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link href="/register">
-                <Button size="lg" className="h-12 px-8 text-base font-semibold gap-2 w-full sm:w-auto group">
-                  Start Chatting Free
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link href="/login">
+                <Button size="lg" className="h-12 px-8 text-base font-semibold gap-2.5 w-full sm:w-auto group">
+                  <Image src={setuLogo} alt="Setu" width={20} height={20} className="object-contain" />
+                  Chat Now
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
-              <a href="#features">
-                <Button variant="outline" size="lg" className="h-12 px-8 text-base font-medium w-full sm:w-auto">
-                  Explore Features
-                </Button>
+
+              <a href="/setu.v1.0.apk" download>
+                <button
+                  className="h-12 px-6 text-base font-semibold gap-2.5 w-full sm:w-auto group inline-flex items-center justify-center rounded-md bg-card/80 backdrop-blur-sm border border-border/60 text-foreground shadow-lg shadow-primary/5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                >
+                  <Image
+                    src={ANDROID_ICON}
+                    alt="Android"
+                    width={22}
+                    height={22}
+                    className="drop-shadow-md"
+                    unoptimized
+                  />
+                  <span>Download APK</span>
+                  <Download className="h-4 w-4 opacity-70 group-hover:opacity-100 transition-opacity" />
+                </button>
+              </a>
+            </div>
+
+            {/* Explore features text link */}
+            <div className="flex items-center gap-1 justify-center lg:justify-start">
+              <a
+                href="#features"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors group inline-flex items-center gap-1.5"
+              >
+                Explore Features
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
               </a>
             </div>
 
@@ -124,6 +330,7 @@ export default function HeroSection() {
                 { icon: Zap, label: "Blazing Fast", color: "text-warning" },
                 { icon: Shield, label: "Secure", color: "text-success" },
                 { icon: Users, label: "Groups & 1-on-1", color: "text-blue-500" },
+                { icon: Smartphone, label: "Mobile + Web", color: "text-primary" },
               ].map((t) => (
                 <div
                   key={t.label}
@@ -136,73 +343,46 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Right — Chat mockup */}
+          {/* Right — Dual Device Mockup */}
           <div className="hidden lg:flex justify-center">
-            <div className="relative">
-              {/* Pulse rings behind the mockup */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px]">
+            <div className="relative hero-perspective">
+              {/* Pulse rings behind everything */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px]">
                 <div className="absolute inset-0 rounded-full border border-primary/10 pulse-ring" />
                 <div className="absolute inset-0 rounded-full border border-primary/10 pulse-ring" style={{ animationDelay: "0.7s" }} />
                 <div className="absolute inset-0 rounded-full border border-primary/10 pulse-ring" style={{ animationDelay: "1.4s" }} />
               </div>
 
-              <div className="relative animate-float">
-                <div className="w-[380px] rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl shadow-2xl shadow-primary/10 overflow-hidden shimmer-border">
-                  {/* Mockup header */}
-                  <div className="flex items-center gap-3 border-b border-border/50 px-5 py-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-sm font-bold">S</div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm">Setu Team</p>
-                      <p className="text-xs text-success flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-pulse" />
-                        Online
-                      </p>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-red-500/80" />
-                      <span className="w-3 h-3 rounded-full bg-warning/80" />
-                      <span className="w-3 h-3 rounded-full bg-success/80" />
-                    </div>
-                  </div>
-                  {/* Messages */}
-                  <div className="p-4 space-y-3 min-h-[260px]">
-                    <div className="chat-bubble-animate flex justify-start" style={{ animationDelay: "0.2s" }}>
-                      <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 max-w-[75%]">
-                        <p className="text-sm">Hey! Welcome to Setu 🎉</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">10:30 AM</p>
-                      </div>
-                    </div>
-                    <div className="chat-bubble-animate flex justify-end" style={{ animationDelay: "0.6s" }}>
-                      <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-4 py-2.5 max-w-[75%]">
-                        <p className="text-sm">This looks amazing! 🚀</p>
-                        <p className="text-[10px] text-primary-foreground/70 mt-1">10:31 AM</p>
-                      </div>
-                    </div>
-                    <div className="chat-bubble-animate flex justify-start" style={{ animationDelay: "1s" }}>
-                      <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 max-w-[75%]">
-                        <p className="text-sm">Try the group chat feature! 👥</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">10:31 AM</p>
-                      </div>
-                    </div>
-                    <div className="chat-bubble-animate flex justify-end" style={{ animationDelay: "1.4s" }}>
-                      <div className="rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-4 py-2.5 max-w-[75%]">
-                        <p className="text-sm">On it! Love the design ✨</p>
-                        <p className="text-[10px] text-primary-foreground/70 mt-1">10:32 AM</p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Input */}
-                  <div className="border-t border-border/50 px-4 py-3 flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-muted/50 px-4 py-2 text-xs text-muted-foreground">Type a message...</div>
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:scale-105 transition-transform">
-                      <ArrowRight className="h-3.5 w-3.5 text-primary-foreground" />
-                    </div>
+              {/* Glow effects */}
+              <div className="hero-device-glow hero-device-glow-primary w-[300px] h-[300px] -top-10 -left-10" />
+              <div className="hero-device-glow hero-device-glow-android w-[200px] h-[200px] bottom-0 right-0" />
+
+              {/* Laptop — background, slightly left */}
+              <div className="relative animate-float-slow">
+                <LaptopMockup />
+              </div>
+
+              {/* Phone — foreground, overlapping bottom-right */}
+              <div className="absolute -bottom-8 -right-8 animate-float-delay z-10">
+                <PhoneMockup />
+
+                {/* Android available badge */}
+                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                  <div className="hero-android-badge rounded-full px-3 py-1 text-[10px] font-semibold flex items-center gap-1.5 shadow-lg">
+                    <Image
+                      src={ANDROID_ICON}
+                      alt="Android"
+                      width={12}
+                      height={12}
+                      unoptimized
+                    />
+                    Available on Android
                   </div>
                 </div>
               </div>
 
-              {/* Floating status card */}
-              <div className="absolute -bottom-6 -left-12 animate-float-delay">
+              {/* Floating status card — bottom-left of laptop */}
+              <div className="absolute -bottom-6 -left-14 animate-float-delay z-20">
                 <div className="rounded-xl bg-card/80 backdrop-blur-xl border border-border/50 px-4 py-3 shadow-lg flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
                     <Users className="h-4 w-4 text-success" />
@@ -214,13 +394,26 @@ export default function HeroSection() {
                 </div>
               </div>
 
-              {/* Floating notification */}
-              <div className="absolute -top-4 -right-10 animate-float-slow">
+              {/* Floating notification — top-right of phone */}
+              <div className="absolute -top-4 -right-12 animate-float-slow z-20">
                 <div className="rounded-xl bg-card/80 backdrop-blur-xl border border-border/50 px-3 py-2 shadow-lg flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                     <Zap className="h-3 w-3 text-primary" />
                   </div>
                   <p className="text-[10px] font-medium">Message delivered</p>
+                </div>
+              </div>
+
+              {/* Sync indicator between devices */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+                <div className="flex items-center gap-1">
+                  {[0, 0.2, 0.4].map((d) => (
+                    <span
+                      key={d}
+                      className="w-1 h-1 rounded-full bg-primary animate-pulse"
+                      style={{ animationDelay: `${d}s` }}
+                    />
+                  ))}
                 </div>
               </div>
             </div>

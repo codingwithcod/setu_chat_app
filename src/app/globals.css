@@ -1413,6 +1413,149 @@ html {
   animation: pulseRing 2s ease-out infinite;
 }
 
+/* ===== Hero Dual-Device Mockup ===== */
+
+/* 3D perspective wrapper */
+.hero-perspective {
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
+}
+
+/* Laptop frame */
+.hero-laptop-frame {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 8px 40px hsl(var(--primary) / 0.08),
+    0 1px 3px hsl(0 0% 0% / 0.06);
+  transform: rotateY(-4deg) rotateX(2deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-laptop-frame:hover {
+  transform: rotateY(-1deg) rotateX(0.5deg) scale(1.01);
+}
+
+/* Laptop bottom bezel (keyboard hint) */
+.hero-laptop-base {
+  height: 18px;
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--border) / 0.4),
+    hsl(var(--card) / 0.3)
+  );
+  border-top: 1px solid hsl(var(--border) / 0.3);
+  border-radius: 0 0 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-laptop-base::after {
+  content: '';
+  width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: hsl(var(--border) / 0.5);
+}
+
+/* Phone frame */
+.hero-phone-frame {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(24px);
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 12px 48px hsl(var(--primary) / 0.12),
+    0 2px 6px hsl(0 0% 0% / 0.08);
+  transform: rotateY(4deg) rotateX(-2deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-phone-frame:hover {
+  transform: rotateY(1deg) rotateX(-0.5deg) scale(1.02);
+}
+
+/* Phone notch */
+.hero-phone-notch {
+  width: 96px;
+  height: 22px;
+  background: hsl(var(--background));
+  border-radius: 0 0 16px 16px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.hero-phone-notch::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--muted-foreground) / 0.15);
+  top: 6px;
+  right: 16px;
+}
+
+/* Phone status bar */
+.hero-phone-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 16px 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground) / 0.6);
+}
+
+/* Device glow effect behind frames */
+.hero-device-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.hero-device-glow-primary {
+  background: hsl(var(--primary) / 0.35);
+}
+
+.hero-device-glow-android {
+  background: hsl(142 71% 45% / 0.3);
+}
+
+/* Typing cursor blink */
+@keyframes heroTypingBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.hero-typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 12px;
+  background: hsl(var(--primary));
+  border-radius: 1px;
+  animation: heroTypingBlink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 1px;
+}
+
+/* Android badge */
+.hero-android-badge {
+  background: linear-gradient(135deg, hsl(142 71% 45% / 0.12), hsl(142 71% 45% / 0.05));
+  border: 1px solid hsl(142 71% 45% / 0.25);
+  color: hsl(142 71% 45%);
+}
+
+
 /* ===== MCP connection animation ===== */
 /* Flowing dashes along connection spokes (data traveling toward the hub) */
 @keyframes mcpFlow {
