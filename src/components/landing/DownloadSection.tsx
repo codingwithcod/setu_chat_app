@@ -16,15 +16,16 @@ const ICONS = {
 const mobilePlatforms = [
   {
     name: "Android",
-    subtitle: "Google Play Store",
-    version: "v2.4.1",
-    size: "48 MB",
+    subtitle: "Preview Build (APK)",
+    version: "v1.0",
+    size: "42 MB",
     requirement: "Android 8.0+",
     icon: ICONS.android,
     brandColor: "#3DDC84",
     gradient: "from-[#3DDC84] to-[#2EA165]",
     hoverShadow: "hover:shadow-[0_8px_40px_-8px_rgba(61,220,132,0.4)]",
     features: ["Material You", "Widgets", "Notifications"],
+    downloadUrl: "/setu.v1.0.apk",
   },
   {
     name: "iPhone & iPad",
@@ -151,10 +152,22 @@ export default function DownloadSection() {
                   </div>
                 </div>
 
-                <div className="w-full mt-5 h-11 rounded-md border border-primary/20 bg-primary/[0.04] flex items-center justify-center gap-2.5 text-sm font-semibold text-foreground/70">
-                  <Clock className="h-4 w-4 text-primary/60 animate-pulse" />
-                  Coming Soon
-                </div>
+                {p.downloadUrl ? (
+                  <a
+                    href={p.downloadUrl}
+                    download
+                    className={`w-full mt-5 h-11 rounded-md bg-gradient-to-r ${p.gradient} flex items-center justify-center gap-2.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300`}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download APK
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <div className="w-full mt-5 h-11 rounded-md border border-primary/20 bg-primary/[0.04] flex items-center justify-center gap-2.5 text-sm font-semibold text-foreground/70">
+                    <Clock className="h-4 w-4 text-primary/60 animate-pulse" />
+                    Coming Soon
+                  </div>
+                )}
               </div>
             ))}
           </div>
